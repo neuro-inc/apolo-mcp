@@ -1,0 +1,4 @@
+interface:
+  display_name: "Apolo Platform Context"
+  short_description: "Resolve Apolo context and platform terminology"
+  default_prompt: "Use $apolo-platform-context to discover my Apolo context and resolve this resource reference."

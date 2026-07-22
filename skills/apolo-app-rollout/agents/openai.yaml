@@ -1,0 +1,4 @@
+interface:
+  display_name: "Apolo App Rollout"
+  short_description: "Plan, apply, verify, and roll back Apolo Apps"
+  default_prompt: "Use $apolo-app-rollout to plan and verify this service deployment."

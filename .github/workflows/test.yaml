@@ -1,0 +1,97 @@
+name: Tests
+
+on:
+  workflow_call: {}
+
+jobs:
+  lint:
+    name: Linter
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.11.31"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+      - name: Install project Python
+        run: uv python install
+      - name: Cache pre-commit hooks
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit|${{ runner.os }}|${{ hashFiles('.python-version', '.pre-commit-config.yaml') }}
+      - name: Install dependencies
+        run: make setup
+      - name: Run linters
+        run: make lint
+        env:
+          CI_LINT_RUN: 1
+
+  unit:
+    name: Unit tests (${{ matrix.os }}, Python ${{ matrix.python-version }})
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        os: [ubuntu, macos]
+    runs-on: ${{ matrix.os }}-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout commit
+        uses: actions/checkout@v7
+      - name: Install uv and set Python version
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.11.31"
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+      - name: Install dependencies
+        run: make setup
+      - name: Run unit tests
+        run: make test PYTEST_ARGS="-vvv"
+        env:
+          COLOR: yes
+
+  build:
+    name: Build distributions
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout commit
+        uses: actions/checkout@v7
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.11.31"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+      - name: Install project Python
+        run: uv python install
+      - name: Install dependencies
+        run: make setup
+      - name: Build package
+        run: make build
+
+  check:
+    # This job does nothing and is only used for branch protection.
+    name: Check
+    needs: [lint, unit, build]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check
+        if: ${{ needs.lint.result != 'success' || needs.unit.result != 'success' || needs.build.result != 'success' }}
+        run: |
+          echo "lint result: ${{ needs.lint.result }}"
+          echo "unit result: ${{ needs.unit.result }}"
+          echo "build result: ${{ needs.build.result }}"
+          exit 1
+      - name: Success
+        run: echo "All checks have passed"
