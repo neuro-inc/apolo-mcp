@@ -160,7 +160,7 @@ async def test_install_plan_and_apply_exact_yaml_once(tools) -> None:
         app_name="web",
     )
     assert Path(planned["inputs_path"]).exists()
-    assert any("ports/ingress" in item for item in planned["validation"])
+    assert any("discovered schema fields" in item for item in planned["validation"])
     result = await fn(mcp, "install_app")(planned["plan_id"], True)
     assert result["plan_status"] == "applied"
     exact = app_plans.load_yaml_exact(Path(planned["inputs_path"]))

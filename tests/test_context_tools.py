@@ -4,6 +4,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from yarl import URL
 
 from apolo_mcp._client import reset_client_provider, set_client_provider
 from apolo_mcp.server import mcp
@@ -55,7 +56,17 @@ def fake_sdk(tmp_path: Path):
         projects=projects,
         path=tmp_path,
     )
-    return SimpleNamespace(config=config)
+    parser = SimpleNamespace(
+        str_to_uri=lambda value, **kwargs: URL.build(
+            scheme=next(iter(kwargs["allowed_schemes"])),
+            host=kwargs["cluster_name"],
+            path=(
+                f"/{kwargs['org_name']}/{kwargs['project_name']}/"
+                f"{value.split(':', 1)[1].lstrip('/')}"
+            ),
+        )
+    )
+    return SimpleNamespace(config=config, parse=parser)
 
 
 @pytest.fixture(autouse=True)

@@ -25,6 +25,7 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
 ]
 dependencies = [
+    "apolo-flow>=26.7.1",
     "apolo-sdk>=26.3",
     "async-timeout>=5",
     "mcp>=1.28",

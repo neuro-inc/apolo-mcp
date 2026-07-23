@@ -46,10 +46,11 @@ def tools(monkeypatch):
         },
     )
     parser = SimpleNamespace(
+        local_image=lambda value: apolo_sdk.LocalImage(value),
         remote_image=lambda value, **kwargs: image(
             value.rsplit("/", 1)[-1].split(":", 1)[0],
             value.rsplit(":", 1)[1] if ":" in value.rsplit("/", 1)[-1] else None,
-        )
+        ),
     )
     images = SimpleNamespace(
         list=AsyncMock(return_value=[image(), image("other", project="elsewhere")]),
@@ -57,6 +58,8 @@ def tools(monkeypatch):
         digest=AsyncMock(return_value="sha256:" + "a" * 64),
         tag_info=AsyncMock(return_value=apolo_sdk.Tag("v1", 123)),
         rm=AsyncMock(),
+        push=AsyncMock(return_value=image("model", "v1")),
+        pull=AsyncMock(return_value=apolo_sdk.LocalImage("local:model")),
     )
     sdk = SimpleNamespace(config=cfg, parse=parser, images=images)
     token = set_client_provider(Provider(sdk))
@@ -107,3 +110,23 @@ async def test_remove_revalidates_digest_and_annotations(tools):
         await fn(tools, "remove_image")("model", "v1", digest, True)
     assert tools[0]["inspect_image"].annotations.readOnlyHint is True
     assert tools[0]["remove_image"].annotations.destructiveHint is True
+
+
+async def test_push_and_pull_use_sdk_with_exact_context(tools, tmp_path, monkeypatch):
+    monkeypatch.setenv("APOLO_MCP_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
+    pushed = await fn(tools, "push_image")("local:model", "model", "v1", approved=True)
+    assert pushed["image"]["project"] == "default"
+    tools[1].images.push.assert_awaited_once()
+    assert '"resource_type":"image"' in (tmp_path / "ledger.jsonl").read_text()
+
+    pulled = await fn(tools, "pull_image")("model", "v1", "local:copy", approved=True)
+    assert pulled["local_image"] == "local:model"
+    tools[1].images.pull.assert_awaited_once()
+    assert str(tools[1].images.pull.await_args.args[1]) == "local:copy"
+
+    with pytest.raises(PermissionError, match="approved=true"):
+        await fn(tools, "push_image")("local:model", "model", "v1")
+    with pytest.raises(ValueError, match="timeout_seconds"):
+        await fn(tools, "pull_image")(
+            "model", "v1", timeout_seconds=1801, approved=True
+        )

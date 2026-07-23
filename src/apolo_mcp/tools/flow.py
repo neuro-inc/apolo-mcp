@@ -1,10 +1,10 @@
-"""Bounded MCP exposure for the optional typed ``apolo-flow`` facade."""
+"""Bounded MCP exposure for the released typed ``apolo-flow`` facade."""
 
 from __future__ import annotations
 
 import dataclasses
 import enum
-import importlib
+import os
 from collections.abc import AsyncIterator, Callable, Mapping, Sequence
 from contextlib import asynccontextmanager
 from contextvars import ContextVar, Token
@@ -12,6 +12,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, AsyncContextManager, Protocol
 
+import apolo_sdk
+from apolo_flow.api import open_flow_api
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 
@@ -69,33 +71,22 @@ class FlowAPIProvider(Protocol):
 
 
 class LocalFlowAPIProvider:
-    """Fail when the installed facade has no safe public bootstrap API.
-
-    ``apolo-flow`` 26.7 publishes the accepted facade, but its public constructor
-    requires already initialized live and batch adapters.  The package does not expose
-    a factory that initializes those adapters for an explicit cluster/org/project.
-    Changing the SDK's saved context would make the server unsafe, so embedding
-    applications must inject a provider until such a factory is available.
-    """
+    """Open the released Flow facade without changing the saved SDK context."""
 
     @asynccontextmanager
     async def api(self, scope: FlowScope) -> AsyncIterator[Any]:
-        try:
-            module = importlib.import_module("apolo_flow.api")
-            getattr(module, "FlowAPI")
-        except (ImportError, AttributeError) as exc:
-            raise RuntimeError(
-                "Flow tools require apolo-flow exposing apolo_flow.api.FlowAPI; "
-                "install a compatible release or inject FlowAPIProvider"
-            ) from exc
-        raise RuntimeError(
-            "Automatic FlowAPI bootstrap is unavailable: the installed apolo-flow "
-            "facade requires initialized live and batch adapters but exposes no "
-            "public factory for explicit cluster/org/project construction; inject "
-            "FlowAPIProvider without changing saved context"
-        )
-        if False:  # pragma: no cover - makes this an async context manager generator
-            yield None
+        config_path = Path(
+            os.environ.get("APOLO_CONFIG", apolo_sdk.DEFAULT_CONFIG_PATH)
+        ).expanduser()
+        async with open_flow_api(
+            cluster=scope.cluster,
+            org=scope.org,
+            project=scope.project,
+            allowed_workspace_root=scope.allowed_workspace_root,
+            config_path=config_path,
+            project_path=scope.workspace_path,
+        ) as api:
+            yield api
 
 
 _provider: ContextVar[FlowAPIProvider] = ContextVar(

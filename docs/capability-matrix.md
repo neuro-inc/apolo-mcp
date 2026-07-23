@@ -68,7 +68,6 @@ annotated destructive. Generated credentials go only to approved protected sinks
 | app `rollback` | Native plan/apply | `plan_app_rollback`, `apply_app_rollback` | Destructive/high-risk policy, exact app/revision/current-state binding; no fake YAML. |
 | app `uninstall` | Native plan/apply | `plan_app_uninstall`, `apply_app_uninstall` | Destructive/high-risk policy and fresh single-use plan. |
 | app bounded health polling | Native | `wait_for_app` | Deadline, poll interval, terminal/health summary. |
-| service-deployment workflow | Skill + native tools | `apolo-app-rollout` | Derives live schema and verifies image/preset/networking/autoscaling/storage/secrets/probes/endpoints/logs/events/output. |
 
 ## Storage and disks
 
@@ -83,7 +82,7 @@ annotated destructive. Generated credentials go only to approved protected sinks
 | storage/root `mv` | Future-scoped | none | A safe move needs exact source/destination preflight and failure/rollback semantics across local and remote boundaries; use a separately reviewed manual CLI operation in v1. |
 | disk `ls` | Native | `list_disks` | Bounded explicit context. |
 | disk `get` | Native | `get_disk` | Exact ID/name and context. |
-| disk `create` | Native | `create_disk` | Size/unused-timeout/context bounds, approval/policy, ledger. |
+| disk `create` | Native | `create_disk` | Size/context bounds, unused timeout up to 10 years, approval/policy, ledger. |
 | disk `rm` | Native | `delete_disk` | Destructive approval/policy and exact ID/name; automatic cleanup only for ledger-owned IDs. |
 
 ## Images
@@ -91,9 +90,9 @@ annotated destructive. Generated credentials go only to approved protected sinks
 | Public capability | Classification | MCP/fallback | Rationale and future plan |
 |---|---|---|---|
 | image/root `ls`, root `images`; image `tags` | Native | `list_image_repositories`, `list_image_tags` | Bounded metadata only. |
+| image `push`, image `pull` | Native | `push_image`, `pull_image` | Uses the Docker engine on the MCP host; explicit context plus approval/policy and a 30-minute deadline, and pushed images are ledgered. Transfer size is not limited. |
 | image `digest`, `size` | Native | `get_image` | Exact tag/digest metadata. |
 | image `rm` | Native | `delete_image` | Exact tag/digest, destructive policy/approval. |
-| image/root `push`, `pull` | Future-scoped | none in this environment | Docker is unavailable and registry-layer size cannot be reliably preflighted through the supported SDK. A future local wrapper must enforce a byte budget, deadline, explicit image reference, and no model-visible layers before it is exercised. |
 | job/root `save` | Native | `save_job_image` | Listed under Jobs; exact platform image and bounded progress. |
 
 ## Buckets / blob storage
@@ -114,7 +113,7 @@ annotated destructive. Generated credentials go only to approved protected sinks
 | Public capability | Classification | MCP/fallback | Rationale and future plan |
 |---|---|---|---|
 | secret `ls` | Native | `list_secrets` | Names/owners/context only. |
-| secret `get` | Prohibited | none | SDK secret-value disclosure is never model-visible. |
+| secret `get` | Native | `get_secret_to_file` | Writes only to a new mode-0600 file beneath the allowed workspace; never returns the value to the model. |
 | secret `add` | Native secure-source only | `create_secret_from_source` with an environment name, protected file path, or same-context secret key | Value never appears in MCP arguments/results/logs; protected source validation. |
 | secret `rm` | Native | `delete_secret` | Exact key, destructive approval/policy. |
 | service-account `ls`, `get` | Native | list/get service account | Metadata only. |
@@ -126,7 +125,7 @@ annotated destructive. Generated credentials go only to approved protected sinks
 
 | Public capability | Classification | MCP/fallback | Rationale and future plan |
 |---|---|---|---|
-| flow `ps`, `status`, `logs` | Native | `flow_live_list`, `flow_live_get`, `flow_live_logs` | Bounded typed facade results; default bootstrap requires the coordinated public Flow release. |
+| flow `ps`, `status`, `logs` | Native | `flow_live_list`, `flow_live_get`, `flow_live_logs` | Bounded typed facade results through `apolo-flow>=26.7.1` explicit-context lifecycle. |
 | flow `run` | Native | `flow_live_run` | Project root confinement, explicit context, Flow-compatible suffix/parameter resolution, policy, and approval. |
 | flow `kill` | Native | `flow_live_kill`, `flow_live_kill_all` | Destructive approval/policy; exact/all semantics explicit. |
 | flow `bake`, `bakes`, `show`, `inspect`, `logs` | Native | `flow_bake_start`, `flow_bake_list`, `flow_bake_get`, `flow_bake_logs` | Start uses Flow orchestration, never raw persistence API. |

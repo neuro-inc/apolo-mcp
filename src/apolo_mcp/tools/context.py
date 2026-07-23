@@ -215,14 +215,16 @@ def register(mcp: FastMCP) -> None:
                     raise ValueError(
                         "resource must be a short reference without credentials"
                     )
-                path = value.lstrip("/")
-                if not path:
+                if not value.lstrip("/"):
                     raise ValueError("resource must not be empty")
-                uri = (
-                    f"{resource_type}://{resolved.cluster}/{resolved.org}/"
-                    f"{resolved.project}/{path}"
+                uri = sdk.parse.str_to_uri(
+                    f"{resource_type}:{value}",
+                    allowed_schemes=(resource_type,),
+                    cluster_name=resolved.cluster,
+                    org_name=resolved.org,
+                    project_name=resolved.project,
                 )
-                return {"uri": uri, "context": resolved.as_dict()}
+                return {"uri": str(uri), "context": resolved.as_dict()}
         except Exception as exc:
             raise normalize_error(
                 exc, operation="resolve_resource_uri", resource=resource

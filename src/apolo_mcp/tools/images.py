@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import re
 from typing import Any
 
@@ -13,6 +14,7 @@ from yarl import URL
 from .._client import client
 from ..context import ApoloContext, resolve_context
 from ..errors import normalize_error
+from ..ledger import ensure_ledger_writable, record_created_resource
 from ..policy import Policy
 
 
@@ -21,6 +23,13 @@ READ_ONLY = ToolAnnotations(
     readOnlyHint=True,
     destructiveHint=False,
     idempotentHint=True,
+    openWorldHint=True,
+)
+WRITE = ToolAnnotations(
+    title="Transfer an image between the local Docker engine and Apolo",
+    readOnlyHint=False,
+    destructiveHint=False,
+    idempotentHint=False,
     openWorldHint=True,
 )
 DESTRUCTIVE = ToolAnnotations(
@@ -32,6 +41,7 @@ DESTRUCTIVE = ToolAnnotations(
 )
 
 MAX_LIST_RESULTS = 100
+MAX_TRANSFER_SECONDS = 1800.0
 _DIGEST = re.compile(r"sha256:[0-9a-f]{64}\Z")
 
 
@@ -106,6 +116,94 @@ def _image(remote: apolo_sdk.RemoteImage) -> dict[str, Any]:
 
 
 def register(mcp: FastMCP) -> None:
+    @mcp.tool(annotations=WRITE)
+    async def push_image(
+        local_image: str,
+        repository: str,
+        tag: str,
+        timeout_seconds: float = 1800,
+        approved: bool = False,
+        cluster: str | None = None,
+        org: str | None = None,
+        project: str | None = None,
+    ) -> dict[str, Any]:
+        """Push a local Docker image to one exact Apolo repository and tag."""
+        Policy.load().require_high_risk("push_image")
+        if not approved:
+            raise PermissionError("push_image requires approved=true")
+        if not 1 <= timeout_seconds <= MAX_TRANSFER_SECONDS:
+            raise ValueError("timeout_seconds must be between 1 and 1800")
+        resolved: ApoloContext | None = None
+        try:
+            async with client() as sdk:
+                resolved = _context(sdk, cluster, org, project)
+                ensure_ledger_writable()
+                local = sdk.parse.local_image(local_image)
+                remote = _remote(sdk, repository, resolved, tag)
+                pushed = await asyncio.wait_for(
+                    sdk.images.push(local, remote), timeout_seconds
+                )
+                record_created_resource(
+                    resource_type="image",
+                    resource_id=str(pushed),
+                    cluster=resolved.cluster,
+                    org=resolved.org,
+                    project=resolved.project,
+                    operation="push_image",
+                )
+                return {
+                    "status": "pushed",
+                    "image": _image(pushed),
+                    "context": resolved.as_dict(),
+                }
+        except Exception as exc:
+            raise normalize_error(
+                exc,
+                operation="push_image",
+                context=resolved.as_dict() if resolved else None,
+                resource=f"{repository}:{tag}",
+            ) from None
+
+    @mcp.tool(annotations=WRITE)
+    async def pull_image(
+        repository: str,
+        tag: str,
+        local_image: str | None = None,
+        timeout_seconds: float = 1800,
+        approved: bool = False,
+        cluster: str | None = None,
+        org: str | None = None,
+        project: str | None = None,
+    ) -> dict[str, Any]:
+        """Pull one exact Apolo image into the MCP host's local Docker engine."""
+        Policy.load().require_high_risk("pull_image")
+        if not approved:
+            raise PermissionError("pull_image requires approved=true")
+        if not 1 <= timeout_seconds <= MAX_TRANSFER_SECONDS:
+            raise ValueError("timeout_seconds must be between 1 and 1800")
+        resolved: ApoloContext | None = None
+        try:
+            async with client() as sdk:
+                resolved = _context(sdk, cluster, org, project)
+                remote = _remote(sdk, repository, resolved, tag)
+                local = sdk.parse.local_image(local_image) if local_image else None
+                pulled = await asyncio.wait_for(
+                    sdk.images.pull(remote, local), timeout_seconds
+                )
+                return {
+                    "status": "pulled",
+                    "local_image": str(pulled),
+                    "source": _image(remote),
+                    "context": resolved.as_dict(),
+                }
+        except Exception as exc:
+            raise normalize_error(
+                exc,
+                operation="pull_image",
+                context=resolved.as_dict() if resolved else None,
+                resource=f"{repository}:{tag}",
+            ) from None
+
     @mcp.tool(annotations=READ_ONLY)
     async def list_image_repositories(
         limit: int = 50,

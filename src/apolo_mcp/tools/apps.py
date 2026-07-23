@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import json
 import re
 from collections.abc import Mapping
@@ -65,7 +66,12 @@ MAX_LOG_BYTES = 1_048_576
 MAX_LOG_LINES = 10_000
 MAX_WAIT_SECONDS = 600.0
 MAX_STRUCTURED_CHARS = 100_000
-TERMINAL_STATES = {"healthy", "degraded", "errored", "uninstalled"}
+TERMINAL_STATES = {
+    apolo_sdk.AppState.HEALTHY,
+    apolo_sdk.AppState.DEGRADED,
+    apolo_sdk.AppState.ERRORED,
+    apolo_sdk.AppState.UNINSTALLED,
+}
 _SENSITIVE = re.compile(
     r"(?i)(password|passwd|token|secret(?:_?value)?|api[-_]?key|private[-_]?key)"
 )
@@ -367,47 +373,17 @@ def _schema_paths(
     return paths
 
 
-def _service_validation(template_name: str, schema: Mapping[str, Any]) -> list[str]:
-    if template_name != "service-deployment":
+def _template_validation(schema: Mapping[str, Any]) -> list[str]:
+    paths = sorted(set(_schema_paths(schema)))
+    if not paths:
         return ["input validated against the discovered template schema"]
-    paths = _schema_paths(schema)
-    categories = {
-        "image": ("image", "repository", "tag"),
-        "preset": ("preset",),
-        "commands/env": ("command", "args", "env"),
-        "storage/secrets": ("storage", "volume", "secret"),
-        "ports/ingress/auth/exposure": (
-            "port",
-            "ingress",
-            "auth",
-            "exposure",
-            "public",
-        ),
-        "autoscaling": ("autoscal", "replica"),
-        "startup/readiness/liveness probes": (
-            "startup",
-            "readiness",
-            "liveness",
-            "probe",
-        ),
-    }
-    validation: list[str] = []
-    for label, terms in categories.items():
-        matched = sorted(
-            {path for path in paths if any(term in path for term in terms)}
-        )
-        if not matched:
-            validation.append(
-                f"service-deployment {label}: not present in discovered schema"
-            )
-            continue
-        selected = ", ".join(matched[:20])
-        if len(matched) > 20:
-            selected += f" (+{len(matched) - 20} more)"
-        validation.append(
-            f"service-deployment {label}: derived from schema fields {selected}"
-        )
-    return validation
+    selected = ", ".join(paths[:40])
+    if len(paths) > 40:
+        selected += f" (+{len(paths) - 40} more)"
+    return [
+        "input validated against the discovered template schema",
+        f"discovered schema fields: {selected}",
+    ]
 
 
 async def _revision(sdk: Any, app_id: str) -> int | None:
@@ -614,7 +590,7 @@ def register(mcp: FastMCP) -> None:
             while True:
                 app = await sdk.apps.get(app_id)
                 _assert_app_context(app, context)
-                state = str(getattr(app.state, "value", app.state))
+                state = apolo_sdk.AppState(app.state)
                 if state in TERMINAL_STATES:
                     return {
                         "app": _app_dict(app),
@@ -724,26 +700,9 @@ def register(mcp: FastMCP) -> None:
                 project_name=context.project,
             ) as iterator:
                 async for event in iterator:
-                    items.append(
-                        _redact(
-                            {
-                                "created_at": _iso(event.created_at),
-                                "state": event.state,
-                                "reason": event.reason,
-                                "message": event.message,
-                                "resources": [
-                                    {
-                                        "kind": resource.kind,
-                                        "name": resource.name,
-                                        "uid": resource.uid,
-                                        "health_status": resource.health_status,
-                                        "health_message": resource.health_message,
-                                    }
-                                    for resource in event.resources
-                                ],
-                            }
-                        )
-                    )
+                    serialized = dataclasses.asdict(event)
+                    serialized["created_at"] = _iso(event.created_at)
+                    items.append(_redact(serialized))
                     if len(items) > bounded:
                         break
         return {
@@ -893,7 +852,7 @@ def register(mcp: FastMCP) -> None:
                     **effects,
                     "validation": [
                         "schema version derived from the resolved template",
-                        *_service_validation(template.name, template.input or {}),
+                        *_template_validation(template.input or {}),
                     ],
                     "destructive_effects": [
                         "creates a new application and its declared resources"
@@ -969,7 +928,7 @@ def register(mcp: FastMCP) -> None:
                     "validation": [
                         "configuration seeded from SDK get_input",
                         "schema version derived from the installed template",
-                        *_service_validation(app.template_name, schema),
+                        *_template_validation(schema),
                     ],
                     "destructive_effects": [
                         "creates a new configuration revision and may replace "

@@ -9,6 +9,7 @@ from mcp.server.fastmcp import FastMCP
 from apolo_mcp.errors import ApoloToolError
 from apolo_mcp.tools.flow import (
     MAX_LIST,
+    FlowScope,
     LocalFlowAPIProvider,
     register,
     reset_flow_api_provider,
@@ -297,33 +298,43 @@ async def test_provider_errors_are_normalized(tools):
     assert "should-not-leak" not in str(info.value)
 
 
-async def test_default_provider_reports_explicit_bootstrap_prerequisite(
-    monkeypatch,
+async def test_default_provider_uses_released_explicit_context_factory(
+    tmp_path, monkeypatch
 ):
     provider = LocalFlowAPIProvider()
-    scope = type("Scope", (), {})()
-    monkeypatch.setattr(
-        "apolo_mcp.tools.flow.importlib.import_module",
-        lambda name: type("FlowModule", (), {"FlowAPI": object})(),
+    workspace = tmp_path / "workspace"
+    flow_dir = workspace / ".apolo"
+    flow_dir.mkdir(parents=True)
+    sdk_config = tmp_path / "sdk-config"
+    sdk_config.mkdir()
+    scope = FlowScope(
+        cluster="cluster-a",
+        org="org-a",
+        project="project-a",
+        allowed_workspace_root=workspace,
+        workspace_path=workspace,
+        config_path=flow_dir / "live.yml",
+        project_path=None,
     )
-    with pytest.raises(
-        RuntimeError, match="public factory for explicit cluster/org/project"
-    ):
-        async with provider.api(scope):
-            pass
+    seen = {}
 
+    @asynccontextmanager
+    async def fake_open_flow_api(**kwargs):
+        seen.update(kwargs)
+        yield "flow-api"
 
-async def test_default_provider_reports_missing_facade(monkeypatch):
-    provider = LocalFlowAPIProvider()
-    scope = type("Scope", (), {})()
-
-    def missing(name):
-        raise ModuleNotFoundError(name)
-
+    monkeypatch.setenv("APOLO_CONFIG", str(sdk_config))
     monkeypatch.setattr(
-        "apolo_mcp.tools.flow.importlib.import_module",
-        missing,
+        "apolo_mcp.tools.flow.open_flow_api",
+        fake_open_flow_api,
     )
-    with pytest.raises(RuntimeError, match="install a compatible release"):
-        async with provider.api(scope):
-            pass
+    async with provider.api(scope) as api:
+        assert api == "flow-api"
+    assert seen == {
+        "cluster": "cluster-a",
+        "org": "org-a",
+        "project": "project-a",
+        "allowed_workspace_root": workspace,
+        "config_path": sdk_config,
+        "project_path": workspace,
+    }

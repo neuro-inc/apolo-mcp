@@ -131,6 +131,32 @@ async def test_create_from_same_context_secret_is_internal_and_ledgered(tools):
     assert '"resource_id":"copy"' in ledger
 
 
+async def test_get_secret_writes_new_protected_file_without_returning_value(
+    tools, tmp_path: Path, monkeypatch
+):
+    mcp, sdk = tools
+    sdk.secrets.get.side_effect = None
+    sdk.secrets.get.return_value = b"downloaded-private-value"
+    destination = tmp_path / "downloaded"
+    result = await fn(mcp, "get_secret_to_file")("api", str(destination), approved=True)
+    assert "downloaded-private-value" not in repr(result)
+    assert result["bytes"] == len(b"downloaded-private-value")
+    assert destination.read_bytes() == b"downloaded-private-value"
+    assert destination.stat().st_mode & 0o777 == 0o600
+    with pytest.raises(Exception, match="must not already exist"):
+        await fn(mcp, "get_secret_to_file")("api", str(destination), approved=True)
+
+    real_root = tmp_path / "real-root"
+    real_root.mkdir()
+    linked_root = tmp_path / "linked-root"
+    linked_root.symlink_to(real_root, target_is_directory=True)
+    monkeypatch.setenv("APOLO_MCP_ALLOWED_WORKSPACE", str(linked_root))
+    with pytest.raises(ValueError, match="must not be a symlink"):
+        await fn(mcp, "get_secret_to_file")(
+            "api", str(linked_root / "secret"), approved=True
+        )
+
+
 async def test_creation_ledger_preflight_happens_before_sdk_write(
     tools, monkeypatch, tmp_path: Path
 ):
@@ -169,6 +195,8 @@ async def test_every_write_requires_policy_and_approval(tools, monkeypatch):
     monkeypatch.setenv("NAMED_SOURCE", "value")
     with pytest.raises(PermissionError, match="approved=true"):
         await fn(mcp, "create_secret_from_source")("api", "env", "NAMED_SOURCE")
+    with pytest.raises(PermissionError, match="approved=true"):
+        await fn(mcp, "get_secret_to_file")("api", "unused")
     with pytest.raises(PermissionError, match="approved=true"):
         await fn(mcp, "delete_secret")("api")
     monkeypatch.setenv("APOLO_MCP_ENABLE_HIGH_RISK", "false")

@@ -88,9 +88,11 @@ async def test_list_bound_create_context_and_ledger(tools):
 async def test_create_bounds_before_sdk(tools):
     with pytest.raises(ValueError, match="size_gb"):
         await fn(tools, "create_disk")(0, approved=True)
-    with pytest.raises(ValueError, match="365 days"):
-        await fn(tools, "create_disk")(1, timeout_unused_hours=9000, approved=True)
-    tools[1].disks.create.assert_not_awaited()
+    await fn(tools, "create_disk")(1, timeout_unused_hours=9000, approved=True)
+    assert tools[1].disks.create.await_count == 1
+    with pytest.raises(ValueError, match="10 years"):
+        await fn(tools, "create_disk")(1, timeout_unused_hours=90000, approved=True)
+    assert tools[1].disks.create.await_count == 1
 
 
 async def test_delete_exact_approval_and_ledger_cleanup(tools):

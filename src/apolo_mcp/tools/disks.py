@@ -46,7 +46,7 @@ MAX_LIST_RESULTS = 100
 MIN_DISK_GB = 1
 MAX_DISK_GB = 16_384
 MIN_UNUSED_HOURS = 1.0 / 60.0
-MAX_UNUSED_HOURS = 24.0 * 365.0
+MAX_UNUSED_HOURS = 24.0 * 365.0 * 10.0
 
 
 def _context(
@@ -152,7 +152,7 @@ def register(mcp: FastMCP) -> None:
             MIN_UNUSED_HOURS <= timeout_unused_hours <= MAX_UNUSED_HOURS
         ):
             raise ValueError(
-                "timeout_unused_hours must be between 1 minute and 365 days"
+                "timeout_unused_hours must be between 1 minute and 10 years"
             )
         resolved: ApoloContext | None = None
         try:

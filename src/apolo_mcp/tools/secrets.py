@@ -103,6 +103,23 @@ def _workspace_path(value: str) -> Path:
     return path
 
 
+def _new_workspace_file(value: str) -> Path:
+    configured = os.environ.get(ALLOWED_WORKSPACE_ENV)
+    if not configured:
+        raise PermissionError(f"{ALLOWED_WORKSPACE_ENV} must be configured")
+    configured_root = Path(configured).expanduser()
+    if stat.S_ISLNK(configured_root.lstat().st_mode):
+        raise ValueError("allowed workspace must not be a symlink")
+    root = configured_root.resolve(strict=True)
+    requested = Path(value).expanduser()
+    parent = requested.parent.resolve(strict=True)
+    if parent != root and root not in parent.parents:
+        raise PermissionError("destination_file must be beneath the allowed workspace")
+    if requested.exists() or requested.is_symlink():
+        raise FileExistsError("destination_file must not already exist")
+    return parent / requested.name
+
+
 def _source(source_type: Literal["env", "file"], source_name: str) -> bytes:
     if not source_name or any(ord(char) < 32 for char in source_name):
         raise ValueError("source_name must not be empty or contain control characters")
@@ -159,6 +176,59 @@ def register(mcp: FastMCP) -> None:
                 exc,
                 operation="list_secrets",
                 context=resolved.as_dict() if resolved else None,
+            ) from None
+
+    @mcp.tool(annotations=WRITE)
+    async def get_secret_to_file(
+        key: str,
+        destination_file: str,
+        approved: bool = False,
+        cluster: str | None = None,
+        org: str | None = None,
+        project: str | None = None,
+    ) -> dict[str, Any]:
+        """Write a secret to a new mode-0600 workspace file; never return its value."""
+        Policy.load().require_high_risk("get_secret_to_file")
+        if not approved:
+            raise PermissionError("get_secret_to_file requires approved=true")
+        exact_key = _key(key)
+        destination = _new_workspace_file(destination_file)
+        resolved: ApoloContext | None = None
+        try:
+            async with client() as sdk:
+                resolved = _context(sdk, cluster, org, project)
+                value = await sdk.secrets.get(
+                    exact_key,
+                    cluster_name=resolved.cluster,
+                    org_name=resolved.org,
+                    project_name=resolved.project,
+                )
+                if not value or len(value) > MAX_SECRET_BYTES:
+                    raise ValueError("secret has an invalid size")
+                descriptor = os.open(
+                    destination,
+                    os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                    0o600,
+                )
+                try:
+                    with os.fdopen(descriptor, "wb") as stream:
+                        stream.write(value)
+                except BaseException:
+                    destination.unlink(missing_ok=True)
+                    raise
+                return {
+                    "status": "written",
+                    "key": exact_key,
+                    "destination_file": str(destination),
+                    "bytes": len(value),
+                    "context": resolved.as_dict(),
+                }
+        except Exception as exc:
+            raise normalize_error(
+                exc,
+                operation="get_secret_to_file",
+                context=resolved.as_dict() if resolved else None,
+                resource=exact_key,
             ) from None
 
     @mcp.tool(annotations=WRITE)

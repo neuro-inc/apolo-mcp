@@ -13,8 +13,16 @@ description: Discover and explain Apolo cluster, organization, project, presets,
    scheduler/preemptibility, and credits/hour where reported; do not invent quota.
    If quota or price is unavailable, report it as unavailable instead of ranking on it.
 4. Resolve short storage, image, secret, and disk references with
-   `resolve_resource_uri`. Reject a fully qualified URI outside the selected context
-   unless the user explicitly changes the target context.
+   `resolve_resource_uri`. Do not pass a fully qualified URI outside the selected
+   context to an MCP operation unless the user explicitly changes the target context.
+   This is an MCP isolation boundary, not a claim that the platform cannot perform the
+   operation. When a user asks for a supported cross-context transfer, explain the
+   boundary and offer a CLI command for the user to review and run, for example
+   `apolo cp -r 'storage:/{source-project}/path' 'storage:/{target-project}/path'` for
+   projects in the selected cluster and organization. For other context combinations,
+   consult the generated CLI reference, use fully qualified URIs only when the command
+   documents them, and otherwise suggest an explicit local download/upload sequence.
+   Never run the suggested command through MCP or imply it was validated or executed.
 5. Treat `apolo` as the current product name. Recognize `neuro`, `neuro-inc`, and
    historical `platform` names as retrieval aliases, not different products.
 6. Use the resource hierarchy `cluster / organization / project / resource`. Common
