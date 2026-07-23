@@ -145,3 +145,28 @@ def test_gitbook_navigation_excludes_generator_sources() -> None:
         "capabilities/skills.md",
     ):
         assert target in summary
+
+
+def test_safety_is_grouped_by_skill_then_operation_type() -> None:
+    module = _generator()
+    tools = asyncio.run(module.collect_tools())
+    safety = (ROOT / "docs" / "getting-started" / "safety.md").read_text(
+        encoding="utf-8"
+    )
+    positions = [
+        safety.index(f"## [{display_name}]")
+        for _, display_name, _ in module.SAFETY_SKILLS
+    ]
+    assert positions == sorted(positions)
+    for index, (_, display_name, _) in enumerate(module.SAFETY_SKILLS):
+        start = safety.index(f"## [{display_name}]")
+        end = positions[index + 1] if index + 1 < len(positions) else len(safety)
+        section = safety[start:end]
+        assert section.index("### Read-only operations") < section.index(
+            "### Write operations"
+        )
+        assert section.index("### Write operations") < section.index(
+            "### Destructive operations"
+        )
+    assert all(safety.count(f"[`{tool.name}`]") == 1 for _, tool, _ in tools)
+    assert "Local planning; does not mutate Apolo resources." in safety

@@ -31,6 +31,18 @@ GENERATED_HEADER = (
     "Edit build-tools/docs-templates and run `make docs`. -->\n\n"
 )
 
+SAFETY_SKILLS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
+    ("apolo-platform-user-context", "Apolo Platform User Context", ("Context",)),
+    ("apolo-research-job", "Apolo Research Job", ("Jobs",)),
+    ("apolo-flow-workloads", "Apolo Flow Workloads", ("Flow",)),
+    ("apolo-applications", "Apolo Applications", ("Applications",)),
+    (
+        "apolo-resource-management",
+        "Apolo Resource Management",
+        ("Storage", "Disks", "Images", "Buckets", "Secrets", "Service accounts"),
+    ),
+)
+
 
 @dataclass(frozen=True)
 class Document:
@@ -92,16 +104,52 @@ async def collect_tools() -> list[tuple[str, Tool, str]]:
     return result
 
 
-def _tool_list(tools: list[tuple[str, Tool, str]], classification: str) -> str:
-    selected = [
-        f"- [`{tool.name}`](../capabilities/tools.md#{tool.name})"
-        f" — {_description(tool.description, tool.name)}"
-        for _, tool, kind in tools
-        if kind == classification
-    ]
-    if not selected:
-        raise ValueError(f"no {classification} tools were registered")
-    return "\n".join(selected)
+def _safety_tool_list(
+    tools: list[tuple[str, Tool, str]],
+    groups: tuple[str, ...],
+    classifications: frozenset[str],
+) -> str:
+    selected: list[str] = []
+    for group, tool, kind in tools:
+        if group not in groups or kind not in classifications:
+            continue
+        qualifier = (
+            " **Local planning; does not mutate Apolo resources.**"
+            if kind == "planning"
+            else ""
+        )
+        selected.append(
+            f"- [`{tool.name}`](../capabilities/tools.md#{tool.name}) —"
+            f"{qualifier} {_description(tool.description, tool.name)}"
+        )
+    return "\n".join(selected) if selected else "_None._"
+
+
+def render_safety(tools: list[tuple[str, Tool, str]]) -> str:
+    if tuple(name for name, _, _ in SAFETY_SKILLS) != SKILLS:
+        raise ValueError("safety skill mapping does not match the canonical skill list")
+    mapped_groups = [group for _, _, groups in SAFETY_SKILLS for group in groups]
+    registered_groups = [group for group, _ in TOOL_REGISTRARS]
+    if len(mapped_groups) != len(set(mapped_groups)):
+        raise ValueError("a tool group is assigned to more than one safety skill")
+    if set(mapped_groups) != set(registered_groups):
+        raise ValueError("safety skill mapping does not cover every tool group")
+
+    sections: list[str] = []
+    for name, display_name, groups in SAFETY_SKILLS:
+        sections.extend(
+            [
+                f"## [{display_name}](../capabilities/skills.md#{name})",
+                f"Tools used by the `{name}` skill.",
+                "### Read-only operations",
+                _safety_tool_list(tools, groups, frozenset({"read-only"})),
+                "### Write operations",
+                _safety_tool_list(tools, groups, frozenset({"planning", "write"})),
+                "### Destructive operations",
+                _safety_tool_list(tools, groups, frozenset({"destructive"})),
+            ]
+        )
+    return "\n\n".join(sections)
 
 
 def render_tools(tools: list[tuple[str, Tool, str]]) -> str:
@@ -225,10 +273,7 @@ async def generate(*, check: bool) -> int:
             {
                 "high_risk_env": HIGH_RISK_ENV,
                 "policy_file_env": POLICY_FILE_ENV,
-                "read_only_tools": _tool_list(tools, "read-only"),
-                "planning_tools": _tool_list(tools, "planning"),
-                "write_tools": _tool_list(tools, "write"),
-                "destructive_tools": _tool_list(tools, "destructive"),
+                "skill_sections": render_safety(tools),
             },
         ),
         Document(

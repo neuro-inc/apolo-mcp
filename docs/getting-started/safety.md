@@ -22,9 +22,18 @@ to a new protected local file or a named Apolo secret and is never included in t
 result. This is a high-risk credential-creation operation even though the credential
 value remains outside the model-visible interface.
 
-## Read-only operations
+The tools below are grouped by the skill that guides their use, then by their MCP
+operation type. Read-only operations inspect state. Platform-mutating Write and
+Destructive operations require explicit approval, the local user's `APOLO_MCP_ENABLE_HIGH_RISK`
+opt-in, and the user's existing Apolo permissions. Local App planning appears under
+Write but is marked separately: it creates review files without mutating Apolo
+resources and does not require the high-risk opt-in.
 
-These operations inspect platform state and do not modify local or remote resources.
+## [Apolo Platform User Context](../capabilities/skills.md#apolo-platform-user-context)
+
+Tools used by the `apolo-platform-user-context` skill.
+
+### Read-only operations
 
 - [`get_apolo_context`](../capabilities/tools.md#get_apolo_context) — Return selected context and safe local metadata; never tokens or cookies.
 - [`list_clusters`](../capabilities/tools.md#list_clusters) — List clusters visible to the authenticated user (bounded to 100).
@@ -32,11 +41,44 @@ These operations inspect platform state and do not modify local or remote resour
 - [`list_projects`](../capabilities/tools.md#list_projects) — List projects for explicit context without changing saved selection.
 - [`list_presets`](../capabilities/tools.md#list_presets) — List bounded compute preset capabilities for a cluster.
 - [`resolve_resource_uri`](../capabilities/tools.md#resolve_resource_uri) — Resolve a short resource reference under explicit, non-persisted context.
+
+### Write operations
+
+_None._
+
+### Destructive operations
+
+_None._
+
+## [Apolo Research Job](../capabilities/skills.md#apolo-research-job)
+
+Tools used by the `apolo-research-job` skill.
+
+### Read-only operations
+
 - [`list_jobs`](../capabilities/tools.md#list_jobs) — List jobs using context and bounded status/name/tag/owner/time filters.
 - [`get_job`](../capabilities/tools.md#get_job) — Get one job and its resolved context.
 - [`wait_for_job`](../capabilities/tools.md#wait_for_job) — Poll until terminal state, always bounded by timeout_seconds.
 - [`get_job_logs`](../capabilities/tools.md#get_job_logs) — Read a bounded log prefix with explicit timeout and truncation metadata.
 - [`get_job_telemetry`](../capabilities/tools.md#get_job_telemetry) — Collect a bounded telemetry summary and optionally bounded raw samples.
+
+### Write operations
+
+- [`run_job`](../capabilities/tools.md#run_job) — Start an approved job; direct secret values are forbidden.
+- [`bump_job_life_span`](../capabilities/tools.md#bump_job_life_span) — Extend a job lifespan; requires enabled high-risk server policy.
+- [`send_job_signal`](../capabilities/tools.md#send_job_signal) — Send the SDK's graceful job signal; requires high-risk policy.
+- [`save_job_image`](../capabilities/tools.md#save_job_image) — Save a job filesystem as an image; requires high-risk policy.
+
+### Destructive operations
+
+- [`kill_job`](../capabilities/tools.md#kill_job) — Kill a job (destructive); requires enabled high-risk server policy.
+
+## [Apolo Flow Workloads](../capabilities/skills.md#apolo-flow-workloads)
+
+Tools used by the `apolo-flow-workloads` skill.
+
+### Read-only operations
+
 - [`flow_live_list`](../capabilities/tools.md#flow_live_list) — List Flow live jobs within explicit context and local path scope.
 - [`flow_live_get`](../capabilities/tools.md#flow_live_get) — Resolve one logical Flow job, with a bounded multi-job result.
 - [`flow_live_logs`](../capabilities/tools.md#flow_live_logs) — Read bounded Flow live logs with MCP-side credential redaction.
@@ -45,6 +87,25 @@ These operations inspect platform state and do not modify local or remote resour
 - [`flow_bake_get`](../capabilities/tools.md#flow_bake_get) — Get structured bake, attempt, and bounded task state.
 - [`flow_bake_logs`](../capabilities/tools.md#flow_bake_logs) — Read bounded bake task logs with MCP-side credential redaction.
 - [`flow_bake_wait`](../capabilities/tools.md#flow_bake_wait) — Wait a bounded time for a bake attempt to terminate.
+
+### Write operations
+
+- [`flow_live_run`](../capabilities/tools.md#flow_live_run) — Start a configured Flow live job after explicit approval and policy.
+- [`flow_bake_start`](../capabilities/tools.md#flow_bake_start) — Start a bake only through FlowAPI BatchRunner orchestration.
+
+### Destructive operations
+
+- [`flow_live_kill`](../capabilities/tools.md#flow_live_kill) — Kill a Flow live job after explicit approval and policy.
+- [`flow_live_kill_all`](../capabilities/tools.md#flow_live_kill_all) — Kill all jobs in exactly one explicit Flow context.
+- [`flow_bake_cancel`](../capabilities/tools.md#flow_bake_cancel) — Cancel a bake attempt after explicit approval and policy.
+- [`flow_bake_restart`](../capabilities/tools.md#flow_bake_restart) — Restart a bake through BatchRunner after approval and policy.
+
+## [Apolo Applications](../capabilities/skills.md#apolo-applications)
+
+Tools used by the `apolo-applications` skill.
+
+### Read-only operations
+
 - [`list_app_templates`](../capabilities/tools.md#list_app_templates) — List templates in an explicitly resolved context, bounded to 100.
 - [`list_app_template_versions`](../capabilities/tools.md#list_app_template_versions) — List bounded versions of one Apps template.
 - [`get_app_template`](../capabilities/tools.md#get_app_template) — Get the exact template version and current input schema.
@@ -56,6 +117,27 @@ These operations inspect platform state and do not modify local or remote resour
 - [`get_app_output`](../capabilities/tools.md#get_app_output) — Return bounded, credential-redacted output for one App.
 - [`get_app_input`](../capabilities/tools.md#get_app_input) — Return bounded App input with likely credential values redacted.
 - [`list_app_revisions`](../capabilities/tools.md#list_app_revisions) — List bounded configuration revisions after verifying App context.
+
+### Write operations
+
+- [`plan_app_install`](../capabilities/tools.md#plan_app_install) — **Local planning; does not mutate Apolo resources.** Write exact install YAML plus atomic plan.json/PLAN.md for review.
+- [`plan_app_configure`](../capabilities/tools.md#plan_app_configure) — **Local planning; does not mutate Apolo resources.** Seed exact YAML with SDK get_input, patch it, and write a review plan.
+- [`plan_app_rollback`](../capabilities/tools.md#plan_app_rollback) — **Local planning; does not mutate Apolo resources.** Write a no-YAML rollback plan bound to current and target revisions.
+- [`plan_app_uninstall`](../capabilities/tools.md#plan_app_uninstall) — **Local planning; does not mutate Apolo resources.** Write a no-YAML uninstall plan bound to exact App/current revision.
+- [`install_app`](../capabilities/tools.md#install_app) — Apply one approved, unexpired, unchanged install plan exactly once.
+- [`configure_app`](../capabilities/tools.md#configure_app) — Apply one approved, unchanged configure plan after revision drift check.
+
+### Destructive operations
+
+- [`rollback_app`](../capabilities/tools.md#rollback_app) — Apply an approved rollback plan; server high-risk policy must allow it.
+- [`uninstall_app`](../capabilities/tools.md#uninstall_app) — Apply an approved uninstall plan; server high-risk policy must allow it.
+
+## [Apolo Resource Management](../capabilities/skills.md#apolo-resource-management)
+
+Tools used by the `apolo-resource-management` skill.
+
+### Read-only operations
+
 - [`list_storage`](../capabilities/tools.md#list_storage) — List a bounded storage directory; the response marks truncation.
 - [`stat_storage`](../capabilities/tools.md#stat_storage) — Return metadata for one exact storage path.
 - [`read_text`](../capabilities/tools.md#read_text) — Read a UTF-8 text prefix under a strict byte cap.
@@ -72,29 +154,8 @@ These operations inspect platform state and do not modify local or remote resour
 - [`list_service_accounts`](../capabilities/tools.md#list_service_accounts) — List accounts whose defaults match one exact resolved context.
 - [`get_service_account`](../capabilities/tools.md#get_service_account) — Get safe service-account metadata in one exact default context.
 
-## Local planning operations
+### Write operations
 
-These operations create review files in the configured workspace but do not mutate
-Apolo resources.
-
-- [`plan_app_install`](../capabilities/tools.md#plan_app_install) — Write exact install YAML plus atomic plan.json/PLAN.md for review.
-- [`plan_app_configure`](../capabilities/tools.md#plan_app_configure) — Seed exact YAML with SDK get_input, patch it, and write a review plan.
-- [`plan_app_rollback`](../capabilities/tools.md#plan_app_rollback) — Write a no-YAML rollback plan bound to current and target revisions.
-- [`plan_app_uninstall`](../capabilities/tools.md#plan_app_uninstall) — Write a no-YAML uninstall plan bound to exact App/current revision.
-
-## Write operations
-
-These operations can create or modify resources. They require explicit user approval,
-the local user's `APOLO_MCP_ENABLE_HIGH_RISK` opt-in, and the user's existing Apolo permissions.
-
-- [`run_job`](../capabilities/tools.md#run_job) — Start an approved job; direct secret values are forbidden.
-- [`bump_job_life_span`](../capabilities/tools.md#bump_job_life_span) — Extend a job lifespan; requires enabled high-risk server policy.
-- [`send_job_signal`](../capabilities/tools.md#send_job_signal) — Send the SDK's graceful job signal; requires high-risk policy.
-- [`save_job_image`](../capabilities/tools.md#save_job_image) — Save a job filesystem as an image; requires high-risk policy.
-- [`flow_live_run`](../capabilities/tools.md#flow_live_run) — Start a configured Flow live job after explicit approval and policy.
-- [`flow_bake_start`](../capabilities/tools.md#flow_bake_start) — Start a bake only through FlowAPI BatchRunner orchestration.
-- [`install_app`](../capabilities/tools.md#install_app) — Apply one approved, unexpired, unchanged install plan exactly once.
-- [`configure_app`](../capabilities/tools.md#configure_app) — Apply one approved, unchanged configure plan after revision drift check.
 - [`write_text`](../capabilities/tools.md#write_text) — Write a small UTF-8 text object; requires high-risk server policy.
 - [`make_directory`](../capabilities/tools.md#make_directory) — Create an exact directory; requires high-risk server policy.
 - [`create_disk`](../capabilities/tools.md#create_disk) — Create and ledger a bounded disk; requires high-risk server policy.
@@ -110,18 +171,8 @@ the local user's `APOLO_MCP_ENABLE_HIGH_RISK` opt-in, and the user's existing Ap
 - [`create_secret_from_source`](../capabilities/tools.md#create_secret_from_source) — Create a secret without accepting or returning its value.
 - [`create_service_account`](../capabilities/tools.md#create_service_account) — Create an account and sink its token without returning token material.
 
-## Destructive operations
+### Destructive operations
 
-These operations can remove resources or stop work. They require explicit approval,
-the local user's `APOLO_MCP_ENABLE_HIGH_RISK` opt-in, and the user's existing Apolo permissions.
-
-- [`kill_job`](../capabilities/tools.md#kill_job) — Kill a job (destructive); requires enabled high-risk server policy.
-- [`flow_live_kill`](../capabilities/tools.md#flow_live_kill) — Kill a Flow live job after explicit approval and policy.
-- [`flow_live_kill_all`](../capabilities/tools.md#flow_live_kill_all) — Kill all jobs in exactly one explicit Flow context.
-- [`flow_bake_cancel`](../capabilities/tools.md#flow_bake_cancel) — Cancel a bake attempt after explicit approval and policy.
-- [`flow_bake_restart`](../capabilities/tools.md#flow_bake_restart) — Restart a bake through BatchRunner after approval and policy.
-- [`rollback_app`](../capabilities/tools.md#rollback_app) — Apply an approved rollback plan; server high-risk policy must allow it.
-- [`uninstall_app`](../capabilities/tools.md#uninstall_app) — Apply an approved uninstall plan; server high-risk policy must allow it.
 - [`delete_storage_path`](../capabilities/tools.md#delete_storage_path) — Delete one exact path; recursive deletion removes its entire subtree.
 - [`delete_disk`](../capabilities/tools.md#delete_disk) — Delete one exact disk ID after approval, or exact ledger-owned cleanup.
 - [`remove_image`](../capabilities/tools.md#remove_image) — Remove an exact tag digest after approval and server policy checks.
