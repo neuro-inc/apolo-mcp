@@ -1,0 +1,16 @@
+# Table of contents
+
+* [Apolo MCP documentation](README.md)
+* [\_templates](_templates/README.md)
+  * [Safety and operation types](_templates/safety.md)
+  * [Agent skills](_templates/skills.md)
+  * [MCP tool reference](_templates/tools.md)
+* [Capabilities](capabilities/README.md)
+  * [Agent skills](capabilities/skills.md)
+  * [MCP tool reference](capabilities/tools.md)
+* [Getting started](getting-started/README.md)
+  * [Safety and operation types](getting-started/safety.md)
+* [guides](guides/README.md)
+  * [Applications](guides/applications.md)
+  * [Platform context](guides/platform-context.md)
+  * [Workloads and Flow](guides/workflows.md)
