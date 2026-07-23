@@ -130,3 +130,18 @@ def test_generated_documentation_has_no_trailing_whitespace() -> None:
     assert not offenders, "trailing whitespace in generated docs: " + ", ".join(
         offenders
     )
+
+
+def test_gitbook_navigation_excludes_generator_sources() -> None:
+    summary = (ROOT / "docs" / "SUMMARY.md").read_text(encoding="utf-8")
+    assert "_templates" not in summary
+    assert not (ROOT / "docs" / "_templates").exists()
+    assert (ROOT / "build-tools" / "docs-templates" / "safety.md").is_file()
+    assert summary.index("[Getting started]") < summary.index("[Capabilities]")
+    assert summary.index("[Capabilities]") < summary.index("[Guides]")
+    for target in (
+        "getting-started/safety.md",
+        "capabilities/tools.md",
+        "capabilities/skills.md",
+    ):
+        assert target in summary
