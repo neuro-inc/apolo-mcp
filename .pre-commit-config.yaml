@@ -1,4 +1,9 @@
 # Adapted from neuro-inc/app-types at 44d287f4216b87e0aacd3913aa1a611845875412.
+ci:
+  # pre-commit.ci does not install the project's uv environment. The GitHub Actions
+  # lint job runs this hook after `make setup` and remains the docs-drift gate.
+  skip: [generate-mcp-docs]
+
 exclude: ^uv\.lock$
 repos:
   - repo: local
