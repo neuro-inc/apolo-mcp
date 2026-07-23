@@ -11,10 +11,10 @@ from pathlib import Path
 
 
 SKILLS = (
-    "apolo-platform-context",
+    "apolo-platform-user-context",
     "apolo-research-job",
     "apolo-flow-workloads",
-    "apolo-app-rollout",
+    "apolo-applications",
     "apolo-resource-management",
 )
 

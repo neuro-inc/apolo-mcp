@@ -1,9 +1,9 @@
 ---
-name: apolo-platform-context
-description: Discover and explain Apolo cluster, organization, project, presets, resource hierarchy, terminology, aliases, and URI resolution. Use before Apolo operations, when a target context or resource reference is ambiguous, or when routing questions to authoritative CLI, SDK, Flow, Apps, or platform documentation.
+name: apolo-platform-user-context
+description: Discover and explain a user's Apolo cluster, organization, project, presets, resource hierarchy, terminology, aliases, and URI resolution. Use before Apolo operations, when the user's target context or resource reference is ambiguous, or when routing questions to authoritative CLI, SDK, Flow, Apps, or platform documentation.
 ---
 
-# Apolo platform context
+# Apolo platform user context
 
 1. Call `get_apolo_context` before an operational workflow. Display the resolved
    cluster, organization, and project. Never change the user's persisted context.

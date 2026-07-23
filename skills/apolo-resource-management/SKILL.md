@@ -5,7 +5,7 @@ description: Inspect and safely manage Apolo storage, disks, images, buckets/blo
 
 # Apolo resource management
 
-1. Resolve and display cluster/organization/project with `$apolo-platform-context`.
+1. Resolve and display cluster/organization/project with `$apolo-platform-user-context`.
    Fully qualify short resource references and reject cross-context targets.
 2. Prefer metadata and bounded text operations. Cap every list, wait, log, byte count,
    and duration; return a truthful truncation marker. Never move binary objects,

@@ -1,4 +1,4 @@
-"""Server-side high-risk operation policy loaded from environment or JSON."""
+"""Local user-controlled high-risk operation policy loaded from environment or JSON."""
 
 import json
 import os
@@ -13,6 +13,8 @@ HIGH_RISK_ENV = "APOLO_MCP_ENABLE_HIGH_RISK"
 
 @dataclass(frozen=True)
 class Policy:
+    # This is a deliberate opt-in by the user who launches the local stdio server.
+    # It is not an administrator control and cannot elevate the user's Apolo RBAC.
     enable_high_risk: bool = False
 
     @classmethod
@@ -37,6 +39,6 @@ class Policy:
     def require_high_risk(self, operation: str) -> None:
         if not self.enable_high_risk:
             raise PermissionError(
-                f"Operation {operation!r} is disabled by server policy; an "
-                "administrator must explicitly enable high-risk operations"
+                f"Operation {operation!r} is disabled by server policy; the user "
+                f"running the server must explicitly set {HIGH_RISK_ENV}=true"
             )

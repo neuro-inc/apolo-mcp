@@ -1,4 +1,0 @@
-interface:
-  display_name: "Apolo App Rollout"
-  short_description: "Discover, plan, and operate Apolo Apps"
-  default_prompt: "Use $apolo-app-rollout to compare available Apps and plan the best deployment for my request."

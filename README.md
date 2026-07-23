@@ -52,14 +52,18 @@ isolated non-production project.
 
 Wheel and source-distribution files are generated release artifacts and must not be
 committed. Tagged releases build them in CI and publish the exact outputs to PyPI via
-Trusted Publishing; local `dist/` contents are disposable.
+Trusted Publishing; local `dist/` contents are disposable. Maintainers should follow
+[RELEASE.md](RELEASE.md) for changelog, validation, signing, and publication.
 
 ## Safety configuration
 
-High-risk operations are disabled by default. Administrators may set
+High-risk operations are disabled by default. The user running the local MCP server may
+set
 `APOLO_MCP_ENABLE_HIGH_RISK=true` or point `APOLO_MCP_POLICY_FILE` to a JSON document
 such as `{"enable_high_risk": true}`. The environment override wins. This policy is
-an additional server control; it does not replace client approval or Apolo RBAC.
+an explicit local opt-in by that user; it does not grant additional Apolo permissions
+and does not replace client approval or Apolo RBAC. Only enable it for a session in
+which write or destructive operations are expected, and unset it afterwards.
 
 Apps install/configure/rollback/uninstall use short-lived, checksum-bound plans under
 `plans/apps/`. Set `APOLO_MCP_PLAN_ROOT` when plans must live at a specific review

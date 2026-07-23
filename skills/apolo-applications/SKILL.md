@@ -1,9 +1,9 @@
 ---
-name: apolo-app-rollout
-description: Discover and compare Apolo App templates, then plan, review, install, verify, reconfigure, roll back, or uninstall Apps with immutable checksum-bound files and state-drift protection. Use for any Apps request, including template selection, revisions, rollout health, endpoints, reconfiguration, rollback, or uninstall.
+name: apolo-applications
+description: Discover and compare Apolo App templates; inspect status, logs, events, and outputs; debug failures; and plan, install, update, roll back, or delete Apps with immutable checksum-bound files and state-drift protection. Use for any Apps discovery, operation, debugging, or lifecycle request.
 ---
 
-# Apolo app rollout
+# Apolo applications
 
 1. Resolve the exact context and call `list_app_templates` before selecting a template.
    Compare the available templates against the user's requested outcome using titles,

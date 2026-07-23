@@ -50,9 +50,9 @@ def test_shared_requires_explicit_root() -> None:
 
 def test_default_skill_set_contains_only_runtime_platform_workflows() -> None:
     assert SKILLS == (
-        "apolo-platform-context",
+        "apolo-platform-user-context",
         "apolo-research-job",
         "apolo-flow-workloads",
-        "apolo-app-rollout",
+        "apolo-applications",
         "apolo-resource-management",
     )
