@@ -64,8 +64,9 @@ src/apolo_mcp/
   annotation, safety behavior, policy, skill, supported capability, or CLI fallback
   must include the corresponding documentation update in the same change.
 - Edit maintained prose under `docs/` and generator templates under
-  `build-tools/docs-templates/`. Never edit generated `docs/capabilities/tools.md`,
-  `docs/capabilities/skills.md`, or `docs/getting-started/safety.md` directly.
+  `build-tools/docs-templates/`. Never edit generated files under
+  `docs/capabilities/tools/`, `docs/capabilities/skills.md`, or
+  `docs/getting-started/safety.md` directly.
 - Run `make docs` after relevant code or skill changes, commit the generated Markdown,
   then run `make docs-check` and pre-commit. Generation must not modify GitBook-owned
   navigation such as `docs/SUMMARY.md`.

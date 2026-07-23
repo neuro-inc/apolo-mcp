@@ -35,12 +35,12 @@ Tools used by the `apolo-platform-user-context` skill.
 
 ### Read-only operations
 
-- [`get_apolo_context`](../capabilities/tools.md#get_apolo_context) — Return selected context and safe local metadata; never tokens or cookies.
-- [`list_clusters`](../capabilities/tools.md#list_clusters) — List clusters visible to the authenticated user (bounded to 100).
-- [`list_organizations`](../capabilities/tools.md#list_organizations) — List organizations for an explicit or selected cluster.
-- [`list_projects`](../capabilities/tools.md#list_projects) — List projects for explicit context without changing saved selection.
-- [`list_presets`](../capabilities/tools.md#list_presets) — List bounded compute preset capabilities for a cluster.
-- [`resolve_resource_uri`](../capabilities/tools.md#resolve_resource_uri) — Resolve a short resource reference under explicit, non-persisted context.
+- [`get_apolo_context`](../capabilities/tools/context.md#get_apolo_context) — Return selected context and safe local metadata; never tokens or cookies.
+- [`list_clusters`](../capabilities/tools/context.md#list_clusters) — List clusters visible to the authenticated user (bounded to 100).
+- [`list_organizations`](../capabilities/tools/context.md#list_organizations) — List organizations for an explicit or selected cluster.
+- [`list_projects`](../capabilities/tools/context.md#list_projects) — List projects for explicit context without changing saved selection.
+- [`list_presets`](../capabilities/tools/context.md#list_presets) — List bounded compute preset capabilities for a cluster.
+- [`resolve_resource_uri`](../capabilities/tools/context.md#resolve_resource_uri) — Resolve a short resource reference under explicit, non-persisted context.
 
 ### Write operations
 
@@ -56,22 +56,22 @@ Tools used by the `apolo-research-job` skill.
 
 ### Read-only operations
 
-- [`list_jobs`](../capabilities/tools.md#list_jobs) — List jobs using context and bounded status/name/tag/owner/time filters.
-- [`get_job`](../capabilities/tools.md#get_job) — Get one job and its resolved context.
-- [`wait_for_job`](../capabilities/tools.md#wait_for_job) — Poll until terminal state, always bounded by timeout_seconds.
-- [`get_job_logs`](../capabilities/tools.md#get_job_logs) — Read a bounded log prefix with explicit timeout and truncation metadata.
-- [`get_job_telemetry`](../capabilities/tools.md#get_job_telemetry) — Collect a bounded telemetry summary and optionally bounded raw samples.
+- [`list_jobs`](../capabilities/tools/jobs.md#list_jobs) — List jobs using context and bounded status/name/tag/owner/time filters.
+- [`get_job`](../capabilities/tools/jobs.md#get_job) — Get one job and its resolved context.
+- [`wait_for_job`](../capabilities/tools/jobs.md#wait_for_job) — Poll until terminal state, always bounded by timeout_seconds.
+- [`get_job_logs`](../capabilities/tools/jobs.md#get_job_logs) — Read a bounded log prefix with explicit timeout and truncation metadata.
+- [`get_job_telemetry`](../capabilities/tools/jobs.md#get_job_telemetry) — Collect a bounded telemetry summary and optionally bounded raw samples.
 
 ### Write operations
 
-- [`run_job`](../capabilities/tools.md#run_job) — Start an approved job; direct secret values are forbidden.
-- [`bump_job_life_span`](../capabilities/tools.md#bump_job_life_span) — Extend a job lifespan; requires enabled high-risk server policy.
-- [`send_job_signal`](../capabilities/tools.md#send_job_signal) — Send the SDK's graceful job signal; requires high-risk policy.
-- [`save_job_image`](../capabilities/tools.md#save_job_image) — Save a job filesystem as an image; requires high-risk policy.
+- [`run_job`](../capabilities/tools/jobs.md#run_job) — Start an approved job; direct secret values are forbidden.
+- [`bump_job_life_span`](../capabilities/tools/jobs.md#bump_job_life_span) — Extend a job lifespan; requires enabled high-risk server policy.
+- [`send_job_signal`](../capabilities/tools/jobs.md#send_job_signal) — Send the SDK's graceful job signal; requires high-risk policy.
+- [`save_job_image`](../capabilities/tools/jobs.md#save_job_image) — Save a job filesystem as an image; requires high-risk policy.
 
 ### Destructive operations
 
-- [`kill_job`](../capabilities/tools.md#kill_job) — Kill a job (destructive); requires enabled high-risk server policy.
+- [`kill_job`](../capabilities/tools/jobs.md#kill_job) — Kill a job (destructive); requires enabled high-risk server policy.
 
 ## [Apolo Flow Workloads](../capabilities/skills.md#apolo-flow-workloads)
 
@@ -79,26 +79,26 @@ Tools used by the `apolo-flow-workloads` skill.
 
 ### Read-only operations
 
-- [`flow_live_list`](../capabilities/tools.md#flow_live_list) — List Flow live jobs within explicit context and local path scope.
-- [`flow_live_get`](../capabilities/tools.md#flow_live_get) — Resolve one logical Flow job, with a bounded multi-job result.
-- [`flow_live_logs`](../capabilities/tools.md#flow_live_logs) — Read bounded Flow live logs with MCP-side credential redaction.
-- [`flow_live_wait`](../capabilities/tools.md#flow_live_wait) — Wait a bounded time for a Flow live job to terminate.
-- [`flow_bake_list`](../capabilities/tools.md#flow_bake_list) — List bakes and bounded task state in one explicit context.
-- [`flow_bake_get`](../capabilities/tools.md#flow_bake_get) — Get structured bake, attempt, and bounded task state.
-- [`flow_bake_logs`](../capabilities/tools.md#flow_bake_logs) — Read bounded bake task logs with MCP-side credential redaction.
-- [`flow_bake_wait`](../capabilities/tools.md#flow_bake_wait) — Wait a bounded time for a bake attempt to terminate.
+- [`flow_live_list`](../capabilities/tools/flow.md#flow_live_list) — List Flow live jobs within explicit context and local path scope.
+- [`flow_live_get`](../capabilities/tools/flow.md#flow_live_get) — Resolve one logical Flow job, with a bounded multi-job result.
+- [`flow_live_logs`](../capabilities/tools/flow.md#flow_live_logs) — Read bounded Flow live logs with MCP-side credential redaction.
+- [`flow_live_wait`](../capabilities/tools/flow.md#flow_live_wait) — Wait a bounded time for a Flow live job to terminate.
+- [`flow_bake_list`](../capabilities/tools/flow.md#flow_bake_list) — List bakes and bounded task state in one explicit context.
+- [`flow_bake_get`](../capabilities/tools/flow.md#flow_bake_get) — Get structured bake, attempt, and bounded task state.
+- [`flow_bake_logs`](../capabilities/tools/flow.md#flow_bake_logs) — Read bounded bake task logs with MCP-side credential redaction.
+- [`flow_bake_wait`](../capabilities/tools/flow.md#flow_bake_wait) — Wait a bounded time for a bake attempt to terminate.
 
 ### Write operations
 
-- [`flow_live_run`](../capabilities/tools.md#flow_live_run) — Start a configured Flow live job after explicit approval and policy.
-- [`flow_bake_start`](../capabilities/tools.md#flow_bake_start) — Start a bake only through FlowAPI BatchRunner orchestration.
+- [`flow_live_run`](../capabilities/tools/flow.md#flow_live_run) — Start a configured Flow live job after explicit approval and policy.
+- [`flow_bake_start`](../capabilities/tools/flow.md#flow_bake_start) — Start a bake only through FlowAPI BatchRunner orchestration.
 
 ### Destructive operations
 
-- [`flow_live_kill`](../capabilities/tools.md#flow_live_kill) — Kill a Flow live job after explicit approval and policy.
-- [`flow_live_kill_all`](../capabilities/tools.md#flow_live_kill_all) — Kill all jobs in exactly one explicit Flow context.
-- [`flow_bake_cancel`](../capabilities/tools.md#flow_bake_cancel) — Cancel a bake attempt after explicit approval and policy.
-- [`flow_bake_restart`](../capabilities/tools.md#flow_bake_restart) — Restart a bake through BatchRunner after approval and policy.
+- [`flow_live_kill`](../capabilities/tools/flow.md#flow_live_kill) — Kill a Flow live job after explicit approval and policy.
+- [`flow_live_kill_all`](../capabilities/tools/flow.md#flow_live_kill_all) — Kill all jobs in exactly one explicit Flow context.
+- [`flow_bake_cancel`](../capabilities/tools/flow.md#flow_bake_cancel) — Cancel a bake attempt after explicit approval and policy.
+- [`flow_bake_restart`](../capabilities/tools/flow.md#flow_bake_restart) — Restart a bake through BatchRunner after approval and policy.
 
 ## [Apolo Applications](../capabilities/skills.md#apolo-applications)
 
@@ -106,31 +106,31 @@ Tools used by the `apolo-applications` skill.
 
 ### Read-only operations
 
-- [`list_app_templates`](../capabilities/tools.md#list_app_templates) — List templates in an explicitly resolved context, bounded to 100.
-- [`list_app_template_versions`](../capabilities/tools.md#list_app_template_versions) — List bounded versions of one Apps template.
-- [`get_app_template`](../capabilities/tools.md#get_app_template) — Get the exact template version and current input schema.
-- [`list_apps`](../capabilities/tools.md#list_apps) — List Apps with state filtering and a strict result bound.
-- [`get_app`](../capabilities/tools.md#get_app) — Get one App and verify it belongs to the resolved context.
-- [`wait_for_app`](../capabilities/tools.md#wait_for_app) — Wait a bounded time for an App to reach a terminal health state.
-- [`get_app_logs`](../capabilities/tools.md#get_app_logs) — Read bounded UTF-8 logs with timeout and explicit truncation metadata.
-- [`get_app_events`](../capabilities/tools.md#get_app_events) — Return bounded, credential-redacted App status events.
-- [`get_app_output`](../capabilities/tools.md#get_app_output) — Return bounded, credential-redacted output for one App.
-- [`get_app_input`](../capabilities/tools.md#get_app_input) — Return bounded App input with likely credential values redacted.
-- [`list_app_revisions`](../capabilities/tools.md#list_app_revisions) — List bounded configuration revisions after verifying App context.
+- [`list_app_templates`](../capabilities/tools/applications.md#list_app_templates) — List templates in an explicitly resolved context, bounded to 100.
+- [`list_app_template_versions`](../capabilities/tools/applications.md#list_app_template_versions) — List bounded versions of one Apps template.
+- [`get_app_template`](../capabilities/tools/applications.md#get_app_template) — Get the exact template version and current input schema.
+- [`list_apps`](../capabilities/tools/applications.md#list_apps) — List Apps with state filtering and a strict result bound.
+- [`get_app`](../capabilities/tools/applications.md#get_app) — Get one App and verify it belongs to the resolved context.
+- [`wait_for_app`](../capabilities/tools/applications.md#wait_for_app) — Wait a bounded time for an App to reach a terminal health state.
+- [`get_app_logs`](../capabilities/tools/applications.md#get_app_logs) — Read bounded UTF-8 logs with timeout and explicit truncation metadata.
+- [`get_app_events`](../capabilities/tools/applications.md#get_app_events) — Return bounded, credential-redacted App status events.
+- [`get_app_output`](../capabilities/tools/applications.md#get_app_output) — Return bounded, credential-redacted output for one App.
+- [`get_app_input`](../capabilities/tools/applications.md#get_app_input) — Return bounded App input with likely credential values redacted.
+- [`list_app_revisions`](../capabilities/tools/applications.md#list_app_revisions) — List bounded configuration revisions after verifying App context.
 
 ### Write operations
 
-- [`plan_app_install`](../capabilities/tools.md#plan_app_install) — **Local planning; does not mutate Apolo resources.** Write exact install YAML plus atomic plan.json/PLAN.md for review.
-- [`plan_app_configure`](../capabilities/tools.md#plan_app_configure) — **Local planning; does not mutate Apolo resources.** Seed exact YAML with SDK get_input, patch it, and write a review plan.
-- [`plan_app_rollback`](../capabilities/tools.md#plan_app_rollback) — **Local planning; does not mutate Apolo resources.** Write a no-YAML rollback plan bound to current and target revisions.
-- [`plan_app_uninstall`](../capabilities/tools.md#plan_app_uninstall) — **Local planning; does not mutate Apolo resources.** Write a no-YAML uninstall plan bound to exact App/current revision.
-- [`install_app`](../capabilities/tools.md#install_app) — Apply one approved, unexpired, unchanged install plan exactly once.
-- [`configure_app`](../capabilities/tools.md#configure_app) — Apply one approved, unchanged configure plan after revision drift check.
+- [`plan_app_install`](../capabilities/tools/applications.md#plan_app_install) — **Local planning; does not mutate Apolo resources.** Write exact install YAML plus atomic plan.json/PLAN.md for review.
+- [`plan_app_configure`](../capabilities/tools/applications.md#plan_app_configure) — **Local planning; does not mutate Apolo resources.** Seed exact YAML with SDK get_input, patch it, and write a review plan.
+- [`plan_app_rollback`](../capabilities/tools/applications.md#plan_app_rollback) — **Local planning; does not mutate Apolo resources.** Write a no-YAML rollback plan bound to current and target revisions.
+- [`plan_app_uninstall`](../capabilities/tools/applications.md#plan_app_uninstall) — **Local planning; does not mutate Apolo resources.** Write a no-YAML uninstall plan bound to exact App/current revision.
+- [`install_app`](../capabilities/tools/applications.md#install_app) — Apply one approved, unexpired, unchanged install plan exactly once.
+- [`configure_app`](../capabilities/tools/applications.md#configure_app) — Apply one approved, unchanged configure plan after revision drift check.
 
 ### Destructive operations
 
-- [`rollback_app`](../capabilities/tools.md#rollback_app) — Apply an approved rollback plan; server high-risk policy must allow it.
-- [`uninstall_app`](../capabilities/tools.md#uninstall_app) — Apply an approved uninstall plan; server high-risk policy must allow it.
+- [`rollback_app`](../capabilities/tools/applications.md#rollback_app) — Apply an approved rollback plan; server high-risk policy must allow it.
+- [`uninstall_app`](../capabilities/tools/applications.md#uninstall_app) — Apply an approved uninstall plan; server high-risk policy must allow it.
 
 ## [Apolo Resource Management](../capabilities/skills.md#apolo-resource-management)
 
@@ -138,45 +138,45 @@ Tools used by the `apolo-resource-management` skill.
 
 ### Read-only operations
 
-- [`list_storage`](../capabilities/tools.md#list_storage) — List a bounded storage directory; the response marks truncation.
-- [`stat_storage`](../capabilities/tools.md#stat_storage) — Return metadata for one exact storage path.
-- [`read_text`](../capabilities/tools.md#read_text) — Read a UTF-8 text prefix under a strict byte cap.
-- [`list_disks`](../capabilities/tools.md#list_disks) — List persistent disks under a strict result bound.
-- [`list_image_repositories`](../capabilities/tools.md#list_image_repositories) — List repositories in one exact context under a strict output bound.
-- [`list_image_tags`](../capabilities/tools.md#list_image_tags) — List tags for one exact repository under a strict output bound.
-- [`inspect_image`](../capabilities/tools.md#inspect_image) — Inspect exact tag metadata: digest and aggregate layer size only.
-- [`list_buckets`](../capabilities/tools.md#list_buckets) — List bucket metadata under a strict result bound.
-- [`get_bucket`](../capabilities/tools.md#get_bucket) — Get safe metadata for one exact bucket ID or name.
-- [`get_bucket_disk_usage`](../capabilities/tools.md#get_bucket_disk_usage) — Scan bounded usage; complete=false means the object cap was reached.
-- [`stat_bucket_blob`](../capabilities/tools.md#stat_bucket_blob) — Return metadata only for one exact blob key.
-- [`list_bucket_blobs`](../capabilities/tools.md#list_bucket_blobs) — List blob metadata under an SDK-enforced and result-enforced bound.
-- [`list_secrets`](../capabilities/tools.md#list_secrets) — List names, owners, and context only; never retrieve secret values.
-- [`list_service_accounts`](../capabilities/tools.md#list_service_accounts) — List accounts whose defaults match one exact resolved context.
-- [`get_service_account`](../capabilities/tools.md#get_service_account) — Get safe service-account metadata in one exact default context.
+- [`list_storage`](../capabilities/tools/storage.md#list_storage) — List a bounded storage directory; the response marks truncation.
+- [`stat_storage`](../capabilities/tools/storage.md#stat_storage) — Return metadata for one exact storage path.
+- [`read_text`](../capabilities/tools/storage.md#read_text) — Read a UTF-8 text prefix under a strict byte cap.
+- [`list_disks`](../capabilities/tools/disks.md#list_disks) — List persistent disks under a strict result bound.
+- [`list_image_repositories`](../capabilities/tools/images.md#list_image_repositories) — List repositories in one exact context under a strict output bound.
+- [`list_image_tags`](../capabilities/tools/images.md#list_image_tags) — List tags for one exact repository under a strict output bound.
+- [`inspect_image`](../capabilities/tools/images.md#inspect_image) — Inspect exact tag metadata: digest and aggregate layer size only.
+- [`list_buckets`](../capabilities/tools/buckets.md#list_buckets) — List bucket metadata under a strict result bound.
+- [`get_bucket`](../capabilities/tools/buckets.md#get_bucket) — Get safe metadata for one exact bucket ID or name.
+- [`get_bucket_disk_usage`](../capabilities/tools/buckets.md#get_bucket_disk_usage) — Scan bounded usage; complete=false means the object cap was reached.
+- [`stat_bucket_blob`](../capabilities/tools/buckets.md#stat_bucket_blob) — Return metadata only for one exact blob key.
+- [`list_bucket_blobs`](../capabilities/tools/buckets.md#list_bucket_blobs) — List blob metadata under an SDK-enforced and result-enforced bound.
+- [`list_secrets`](../capabilities/tools/secrets.md#list_secrets) — List names, owners, and context only; never retrieve secret values.
+- [`list_service_accounts`](../capabilities/tools/service-accounts.md#list_service_accounts) — List accounts whose defaults match one exact resolved context.
+- [`get_service_account`](../capabilities/tools/service-accounts.md#get_service_account) — Get safe service-account metadata in one exact default context.
 
 ### Write operations
 
-- [`write_text`](../capabilities/tools.md#write_text) — Write a small UTF-8 text object; requires high-risk server policy.
-- [`make_directory`](../capabilities/tools.md#make_directory) — Create an exact directory; requires high-risk server policy.
-- [`create_disk`](../capabilities/tools.md#create_disk) — Create and ledger a bounded disk; requires high-risk server policy.
-- [`push_image`](../capabilities/tools.md#push_image) — Push a local Docker image to one exact Apolo repository and tag.
-- [`pull_image`](../capabilities/tools.md#pull_image) — Pull one exact Apolo image into the MCP host's local Docker engine.
-- [`create_bucket`](../capabilities/tools.md#create_bucket) — Create and ledger a bucket after policy and client approval.
-- [`import_external_bucket`](../capabilities/tools.md#import_external_bucket) — Import using bounded JSON credentials from a protected internal source.
-- [`set_bucket_public_access`](../capabilities/tools.md#set_bucket_public_access) — Set public state for one exact immutable bucket ID.
-- [`create_bucket_signed_url`](../capabilities/tools.md#create_bucket_signed_url) — Create a short-lived blob URL; no persistent credentials are returned.
-- [`upload_bucket_file`](../capabilities/tools.md#upload_bucket_file) — Upload one bounded workspace file without serializing object bytes.
-- [`download_bucket_file`](../capabilities/tools.md#download_bucket_file) — Download one bounded blob to a new file below the workspace root.
-- [`get_secret_to_file`](../capabilities/tools.md#get_secret_to_file) — Write a secret to a new mode-0600 workspace file; never return its value.
-- [`create_secret_from_source`](../capabilities/tools.md#create_secret_from_source) — Create a secret without accepting or returning its value.
-- [`create_service_account`](../capabilities/tools.md#create_service_account) — Create an account and sink its token without returning token material.
+- [`write_text`](../capabilities/tools/storage.md#write_text) — Write a small UTF-8 text object; requires high-risk server policy.
+- [`make_directory`](../capabilities/tools/storage.md#make_directory) — Create an exact directory; requires high-risk server policy.
+- [`create_disk`](../capabilities/tools/disks.md#create_disk) — Create and ledger a bounded disk; requires high-risk server policy.
+- [`push_image`](../capabilities/tools/images.md#push_image) — Push a local Docker image to one exact Apolo repository and tag.
+- [`pull_image`](../capabilities/tools/images.md#pull_image) — Pull one exact Apolo image into the MCP host's local Docker engine.
+- [`create_bucket`](../capabilities/tools/buckets.md#create_bucket) — Create and ledger a bucket after policy and client approval.
+- [`import_external_bucket`](../capabilities/tools/buckets.md#import_external_bucket) — Import using bounded JSON credentials from a protected internal source.
+- [`set_bucket_public_access`](../capabilities/tools/buckets.md#set_bucket_public_access) — Set public state for one exact immutable bucket ID.
+- [`create_bucket_signed_url`](../capabilities/tools/buckets.md#create_bucket_signed_url) — Create a short-lived blob URL; no persistent credentials are returned.
+- [`upload_bucket_file`](../capabilities/tools/buckets.md#upload_bucket_file) — Upload one bounded workspace file without serializing object bytes.
+- [`download_bucket_file`](../capabilities/tools/buckets.md#download_bucket_file) — Download one bounded blob to a new file below the workspace root.
+- [`get_secret_to_file`](../capabilities/tools/secrets.md#get_secret_to_file) — Write a secret to a new mode-0600 workspace file; never return its value.
+- [`create_secret_from_source`](../capabilities/tools/secrets.md#create_secret_from_source) — Create a secret without accepting or returning its value.
+- [`create_service_account`](../capabilities/tools/service-accounts.md#create_service_account) — Create an account and sink its token without returning token material.
 
 ### Destructive operations
 
-- [`delete_storage_path`](../capabilities/tools.md#delete_storage_path) — Delete one exact path; recursive deletion removes its entire subtree.
-- [`delete_disk`](../capabilities/tools.md#delete_disk) — Delete one exact disk ID after approval, or exact ledger-owned cleanup.
-- [`remove_image`](../capabilities/tools.md#remove_image) — Remove an exact tag digest after approval and server policy checks.
-- [`delete_bucket_blob`](../capabilities/tools.md#delete_bucket_blob) — Delete one exact blob key; recursive/prefix deletion is not exposed.
-- [`delete_bucket`](../capabilities/tools.md#delete_bucket) — Delete one exact empty bucket ID, optionally as ledger-owned cleanup.
-- [`delete_secret`](../capabilities/tools.md#delete_secret) — Delete one exact secret key after policy and client approval.
-- [`delete_service_account`](../capabilities/tools.md#delete_service_account) — Delete one exact immutable account ID after context verification.
+- [`delete_storage_path`](../capabilities/tools/storage.md#delete_storage_path) — Delete one exact path; recursive deletion removes its entire subtree.
+- [`delete_disk`](../capabilities/tools/disks.md#delete_disk) — Delete one exact disk ID after approval, or exact ledger-owned cleanup.
+- [`remove_image`](../capabilities/tools/images.md#remove_image) — Remove an exact tag digest after approval and server policy checks.
+- [`delete_bucket_blob`](../capabilities/tools/buckets.md#delete_bucket_blob) — Delete one exact blob key; recursive/prefix deletion is not exposed.
+- [`delete_bucket`](../capabilities/tools/buckets.md#delete_bucket) — Delete one exact empty bucket ID, optionally as ledger-owned cleanup.
+- [`delete_secret`](../capabilities/tools/secrets.md#delete_secret) — Delete one exact secret key after policy and client approval.
+- [`delete_service_account`](../capabilities/tools/service-accounts.md#delete_service_account) — Delete one exact immutable account ID after context verification.

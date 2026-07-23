@@ -58,9 +58,22 @@ def test_tool_collection_uses_metadata_without_sdk_client(
 def test_generated_reference_covers_every_tool_and_skill() -> None:
     module = _generator()
     tools = asyncio.run(module.collect_tools())
-    reference = (ROOT / "docs" / "capabilities" / "tools.md").read_text()
     skills = (ROOT / "docs" / "capabilities" / "skills.md").read_text()
-    assert all(reference.count(f"### `{tool.name}`") == 1 for _, tool, _ in tools)
+    references = {
+        path.stem: path.read_text(encoding="utf-8")
+        for path in (ROOT / "docs" / "capabilities" / "tools").glob("*.md")
+        if path.name != "README.md"
+    }
+    expected_groups = {module._group_slug(group) for group, _ in module.TOOL_REGISTRARS}
+    assert references.keys() == expected_groups
+    for group, tool, _ in tools:
+        page = references[module._group_slug(group)]
+        assert page.count(f"## `{tool.name}`") == 1
+        assert all(
+            f"## `{tool.name}`" not in other_page
+            for slug, other_page in references.items()
+            if slug != module._group_slug(group)
+        )
     assert all(skills.count(f"**Skill name:** `{name}`") == 1 for name in module.SKILLS)
 
 
@@ -126,8 +139,8 @@ def test_overview_explains_credential_creation_boundary() -> None:
 def test_generated_documentation_has_no_trailing_whitespace() -> None:
     generated = (
         ROOT / "docs" / "getting-started" / "safety.md",
-        ROOT / "docs" / "capabilities" / "tools.md",
         ROOT / "docs" / "capabilities" / "skills.md",
+        *sorted((ROOT / "docs" / "capabilities" / "tools").glob("*.md")),
     )
     offenders = [
         f"{path.relative_to(ROOT)}:{number}"
@@ -151,7 +164,9 @@ def test_gitbook_navigation_excludes_generator_sources() -> None:
     assert summary.index("[Capabilities]") < summary.index("[Guides]")
     for target in (
         "getting-started/safety.md",
-        "capabilities/tools.md",
+        "capabilities/tools/README.md",
+        "capabilities/tools/context.md",
+        "capabilities/tools/service-accounts.md",
         "capabilities/skills.md",
     ):
         assert target in summary

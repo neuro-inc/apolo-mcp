@@ -34,4 +34,4 @@ exact Application ID recorded in the workflow's ownership ledger.
 
 See the [Applications skill](../capabilities/skills.md), the
 [safety model](../getting-started/safety.md), and the generated
-[tool reference](../capabilities/tools.md).
+[tool reference](../capabilities/tools/README.md).

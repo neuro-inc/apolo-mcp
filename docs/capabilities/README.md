@@ -6,7 +6,7 @@ interactive or high-bandwidth. `Prohibited` means deliberately unavailable to th
 model. `Out of scope` means an administrative or local-client concern outside the
 least-privilege workload product.
 
-Start with the [tool reference](tools.md) for exact inputs and results, or the
+Start with the [tool reference](tools/README.md) for exact inputs and results, or the
 [skills catalog](skills.md) for agent workflows that combine tools safely. The
 [platform-context](../guides/platform-context.md),
 [workload](../guides/workflows.md), and

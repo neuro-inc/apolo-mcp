@@ -104,6 +104,14 @@ async def collect_tools() -> list[tuple[str, Tool, str]]:
     return result
 
 
+def _group_slug(group: str) -> str:
+    return group.lower().replace(" ", "-")
+
+
+def _tool_href(group: str, tool_name: str) -> str:
+    return f"../capabilities/tools/{_group_slug(group)}.md#{tool_name}"
+
+
 def _safety_tool_list(
     tools: list[tuple[str, Tool, str]],
     groups: tuple[str, ...],
@@ -119,7 +127,7 @@ def _safety_tool_list(
             else ""
         )
         selected.append(
-            f"- [`{tool.name}`](../capabilities/tools.md#{tool.name}) —"
+            f"- [`{tool.name}`]({_tool_href(group, tool.name)}) —"
             f"{qualifier} {_description(tool.description, tool.name)}"
         )
     return "\n".join(selected) if selected else "_None._"
@@ -152,31 +160,38 @@ def render_safety(tools: list[tuple[str, Tool, str]]) -> str:
     return "\n\n".join(sections)
 
 
-def render_tools(tools: list[tuple[str, Tool, str]]) -> str:
-    grouped: dict[str, list[tuple[Tool, str]]] = defaultdict(list)
-    for group, tool, classification in tools:
-        grouped[group].append((tool, classification))
+def render_tool_group(tools: list[tuple[str, Tool, str]], group: str) -> str:
     sections: list[str] = []
-    for group, _ in TOOL_REGISTRARS:
-        sections.append(f"## {group}")
-        for tool, classification in grouped[group]:
-            annotations = tool.annotations
-            assert annotations is not None
-            sections.extend(
-                [
-                    f"### `{tool.name}`",
-                    _description(tool.description, tool.name),
-                    f"**Operation type:** {classification}",
-                    "**Annotations:** "
-                    f"read-only `{str(annotations.readOnlyHint).lower()}`, "
-                    f"destructive `{str(annotations.destructiveHint).lower()}`, "
-                    f"idempotent `{str(annotations.idempotentHint).lower()}`, "
-                    f"open-world `{str(annotations.openWorldHint).lower()}`",
-                    f"**Input schema:**\n\n```json\n{_json(tool.inputSchema)}\n```",
-                    f"**Output schema:**\n\n```json\n{_json(tool.outputSchema)}\n```",
-                ]
-            )
+    for tool_group, tool, classification in tools:
+        if tool_group != group:
+            continue
+        annotations = tool.annotations
+        assert annotations is not None
+        sections.extend(
+            [
+                f"## `{tool.name}`",
+                _description(tool.description, tool.name),
+                f"**Operation type:** {classification}",
+                "**Annotations:** "
+                f"read-only `{str(annotations.readOnlyHint).lower()}`, "
+                f"destructive `{str(annotations.destructiveHint).lower()}`, "
+                f"idempotent `{str(annotations.idempotentHint).lower()}`, "
+                f"open-world `{str(annotations.openWorldHint).lower()}`",
+                f"**Input schema:**\n\n```json\n{_json(tool.inputSchema)}\n```",
+                f"**Output schema:**\n\n```json\n{_json(tool.outputSchema)}\n```",
+            ]
+        )
     return "\n\n".join(sections)
+
+
+def render_tool_index(tools: list[tuple[str, Tool, str]]) -> str:
+    counts: dict[str, int] = defaultdict(int)
+    for group, _, _ in tools:
+        counts[group] += 1
+    return "\n".join(
+        f"- [{group}]({_group_slug(group)}.md) — {counts[group]} tools"
+        for group, _ in TOOL_REGISTRARS
+    )
 
 
 def _frontmatter(path: Path) -> dict[str, Any]:
@@ -266,7 +281,7 @@ def _update(document: Document, *, check: bool) -> bool:
 
 async def generate(*, check: bool) -> int:
     tools = await collect_tools()
-    documents = (
+    documents = [
         Document(
             ROOT / "build-tools" / "docs-templates" / "safety.md",
             ROOT / "docs" / "getting-started" / "safety.md",
@@ -277,15 +292,23 @@ async def generate(*, check: bool) -> int:
             },
         ),
         Document(
-            ROOT / "build-tools" / "docs-templates" / "tools.md",
-            ROOT / "docs" / "capabilities" / "tools.md",
-            {"tool_reference": render_tools(tools)},
+            ROOT / "build-tools" / "docs-templates" / "tools-index.md",
+            ROOT / "docs" / "capabilities" / "tools" / "README.md",
+            {"tool_groups": render_tool_index(tools)},
         ),
         Document(
             ROOT / "build-tools" / "docs-templates" / "skills.md",
             ROOT / "docs" / "capabilities" / "skills.md",
             {"skill_reference": render_skills()},
         ),
+    ]
+    documents.extend(
+        Document(
+            ROOT / "build-tools" / "docs-templates" / "tool-group.md",
+            ROOT / "docs" / "capabilities" / "tools" / f"{_group_slug(group)}.md",
+            {"group": group, "tool_reference": render_tool_group(tools, group)},
+        )
+        for group, _ in TOOL_REGISTRARS
     )
     current = [_update(item, check=check) for item in documents]
     return 0 if all(current) else 1

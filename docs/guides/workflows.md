@@ -36,4 +36,4 @@ and local cache or project maintenance remain local CLI activities. MCP does not
 those streams as ordinary tool results.
 
 See the [research-job and Flow skills](../capabilities/skills.md) and the exact
-[tool reference](../capabilities/tools.md).
+[tool reference](../capabilities/tools/README.md).
