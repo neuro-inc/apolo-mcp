@@ -57,6 +57,22 @@ src/apolo_mcp/
 - `uv.lock` is committed for reproducible installs.
 - Build backend: **hatchling**.
 
+## Documentation Contract
+
+- Treat MCP code, registered tool metadata, policy constants, and canonical skill
+  metadata as documentation inputs. Any change to a tool name, description, schema,
+  annotation, safety behavior, policy, skill, supported capability, or CLI fallback
+  must include the corresponding documentation update in the same change.
+- Edit maintained prose under `docs/` and generator templates under
+  `build-tools/docs-templates/`. Never edit generated `docs/capabilities/tools.md`,
+  `docs/capabilities/skills.md`, or `docs/getting-started/safety.md` directly.
+- Run `make docs` after relevant code or skill changes, commit the generated Markdown,
+  then run `make docs-check` and pre-commit. Generation must not modify GitBook-owned
+  navigation such as `docs/SUMMARY.md`.
+- Keep `docs/capabilities/README.md` current and use complete executable CLI commands,
+  including the `apolo` or `apolo-flow` entry point. Do not use internal shorthand such
+  as `job/root`.
+
 ## Development Commands
 
 ```bash
@@ -65,6 +81,8 @@ make format      # pre-commit run --all-files
 make lint        # format + mypy
 make test        # pytest unit tests
 make build       # uv build (sdist + wheel into dist/)
+make docs        # regenerate code-derived documentation
+make docs-check  # verify committed generated documentation is current
 make publish     # uv publish (set UV_PUBLISH_TOKEN)
 ```
 

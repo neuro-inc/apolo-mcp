@@ -101,6 +101,16 @@ def test_documentation_has_no_roadmap_material() -> None:
     assert "future plan" not in text
 
 
+def test_capability_matrix_uses_complete_public_cli_commands() -> None:
+    matrix = (ROOT / "docs" / "capabilities" / "README.md").read_text(encoding="utf-8")
+    assert "`apolo config show`" in matrix
+    assert "`apolo job run`, `apolo run`" in matrix
+    assert "`apolo-flow ps`" in matrix
+    assert "job/root" not in matrix
+    assert "storage/root" not in matrix
+    assert "image/root" not in matrix
+
+
 def test_overview_explains_credential_creation_boundary() -> None:
     overview = (ROOT / "docs" / "README.md").read_text(encoding="utf-8")
     safety = (ROOT / "docs" / "getting-started" / "safety.md").read_text(
