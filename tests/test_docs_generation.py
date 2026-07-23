@@ -77,6 +77,16 @@ def test_generated_reference_covers_every_tool_and_skill() -> None:
     assert all(skills.count(f"**Skill name:** `{name}`") == 1 for name in module.SKILLS)
 
 
+def test_tool_index_describes_groups_without_counts() -> None:
+    module = _generator()
+    index = (ROOT / "docs" / "capabilities" / "tools" / "README.md").read_text(
+        encoding="utf-8"
+    )
+    for group, _ in module.TOOL_REGISTRARS:
+        assert module.TOOL_GROUP_DESCRIPTIONS[group] in index
+    assert not re.search(r"\b\d+ tools\b", index)
+
+
 def test_check_mode_reports_stale_document(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
     module = _generator()
     template = tmp_path / "template.md"

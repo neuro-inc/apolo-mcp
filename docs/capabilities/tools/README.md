@@ -7,13 +7,13 @@ registry. Input and output schemas therefore describe the actual MCP tool contra
 
 Each page corresponds exactly to one group in `TOOL_REGISTRARS`.
 
-- [Context](context.md) — 6 tools
-- [Jobs](jobs.md) — 10 tools
-- [Flow](flow.md) — 14 tools
-- [Applications](applications.md) — 19 tools
-- [Storage](storage.md) — 6 tools
-- [Disks](disks.md) — 3 tools
-- [Images](images.md) — 6 tools
-- [Buckets](buckets.md) — 13 tools
-- [Secrets](secrets.md) — 4 tools
-- [Service accounts](service-accounts.md) — 4 tools
+- [Context](context.md) — Platform context, discovery, presets, and resource resolution.
+- [Jobs](jobs.md) — Job lifecycle, logs, telemetry, signals, and image snapshots.
+- [Flow](flow.md) — Live Flow jobs and batch bake lifecycle operations.
+- [Applications](applications.md) — App discovery, inspection, planning, and lifecycle operations.
+- [Storage](storage.md) — Remote storage listing, metadata, text files, and directories.
+- [Disks](disks.md) — Persistent disk discovery, creation, and deletion.
+- [Images](images.md) — Container image discovery, inspection, transfer, and removal.
+- [Buckets](buckets.md) — Bucket and blob metadata, transfer, access, and lifecycle operations.
+- [Secrets](secrets.md) — Protected secret discovery, file retrieval, creation, and deletion.
+- [Service accounts](service-accounts.md) — Service-account metadata, protected creation, and deletion.
