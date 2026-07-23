@@ -17,6 +17,11 @@ put tokens, secret values, cookies, or service-account credentials in prompts or
 tool arguments. Tools that accept or retrieve sensitive material use protected local
 sources and sinks instead.
 
+Apolo MCP can create service accounts. The generated one-time token is sent directly
+to a new protected local file or a named Apolo secret and is never included in the tool
+result. This is a high-risk credential-creation operation even though the credential
+value remains outside the model-visible interface.
+
 ## Read-only operations
 
 These operations inspect platform state and do not modify local or remote resources.

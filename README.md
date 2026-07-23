@@ -57,6 +57,10 @@ committed. Tagged releases build them in CI and publish the exact outputs to PyP
 Trusted Publishing; local `dist/` contents are disposable. Maintainers should follow
 [RELEASE.md](RELEASE.md) for changelog, validation, signing, and publication.
 
+Release versions use `YY.MM.NN`: the two-digit year, the month without a leading zero,
+and a zero-based release sequence within that month. For example, `v26.7.0` is the
+first July 2026 release, and its Python package version is `26.7.0`.
+
 ## Safety configuration
 
 High-risk operations are disabled by default and require an explicit opt-in by the user

@@ -65,6 +65,7 @@ jobs:
       - name: Verify tag and changelog
         shell: bash
         run: |
+          [[ "${GITHUB_REF_NAME}" =~ ^v[0-9]{2}\.([1-9]|1[0-2])\.[0-9]+$ ]]
           test "${GITHUB_REF_NAME}" = "v$(uv run python -c 'from apolo_mcp import __version__; print(__version__)')"
           grep -F "## ${GITHUB_REF_NAME#v}" CHANGELOG.md
           test -z "$(find CHANGELOG.D -type f ! -name .gitignore -print -quit)"

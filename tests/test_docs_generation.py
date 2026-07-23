@@ -101,6 +101,18 @@ def test_documentation_has_no_roadmap_material() -> None:
     assert "future plan" not in text
 
 
+def test_overview_explains_credential_creation_boundary() -> None:
+    overview = (ROOT / "docs" / "README.md").read_text(encoding="utf-8")
+    safety = (ROOT / "docs" / "getting-started" / "safety.md").read_text(
+        encoding="utf-8"
+    )
+    for text in (overview, safety):
+        assert "create service accounts" in text
+        assert "one-time token" in text
+        assert "protected" in text
+        assert "model" in text
+
+
 def test_generated_documentation_has_no_trailing_whitespace() -> None:
     generated = (
         ROOT / "docs" / "getting-started" / "safety.md",

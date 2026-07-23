@@ -41,7 +41,7 @@ docs-check: ### Verify code-derived documentation is current
 	uv run python build-tools/generate-docs.py --check
 
 .PHONY: changelog
-changelog: ### Build the changelog for VERSION (for example, VERSION=1.2.3)
+changelog: ### Build the changelog for calendar VERSION (for example, VERSION=26.7.0)
 	test -n "$(VERSION)"
 	uv run towncrier build --yes --version "$(VERSION)"
 
