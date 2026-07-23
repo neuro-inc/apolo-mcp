@@ -1,6 +1,13 @@
 # Adapted from neuro-inc/app-types at 44d287f4216b87e0aacd3913aa1a611845875412.
 exclude: ^uv\.lock$
 repos:
+  - repo: local
+    hooks:
+      - id: generate-mcp-docs
+        name: Generate MCP docs
+        language: system
+        entry: make docs
+        pass_filenames: false
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:

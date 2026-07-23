@@ -34,8 +34,10 @@ claude mcp list
 ```
 
 The equivalent module entry point is `python -m apolo_mcp`. Local stdio is the only
-supported transport in this release. A future remote provider must propagate and
-validate each user's identity; a shared platform credential is explicitly unsupported.
+supported transport. Shared-credential remote service operation is unsupported.
+
+See the [Apolo MCP documentation](docs/README.md) for prerequisites, safety controls,
+the capability matrix, generated tools and skills catalogs, and task-oriented guides.
 
 ## Development
 
@@ -57,23 +59,10 @@ Trusted Publishing; local `dist/` contents are disposable. Maintainers should fo
 
 ## Safety configuration
 
-High-risk operations are disabled by default. The user running the local MCP server may
-set
-`APOLO_MCP_ENABLE_HIGH_RISK=true` or point `APOLO_MCP_POLICY_FILE` to a JSON document
-such as `{"enable_high_risk": true}`. The environment override wins. This policy is
-an explicit local opt-in by that user; it does not grant additional Apolo permissions
-and does not replace client approval or Apolo RBAC. Only enable it for a session in
-which write or destructive operations are expected, and unset it afterwards.
-
-Apps install/configure/rollback/uninstall use short-lived, checksum-bound plans under
-`plans/apps/`. Set `APOLO_MCP_PLAN_ROOT` when plans must live at a specific review
-location. Created-resource ownership records use `APOLO_MCP_LEDGER_PATH`; cleanup must
-match an exact ledger type, ID, and context and never relies on a resource name.
-
-Interactive job attach and port forwarding, and high-volume binary transfers, remain
-local CLI workflows rather than ordinary MCP tool results. See the
-[capability matrix](docs/capability-matrix.md) for the complete contract and
-[remote HTTP architecture](docs/remote-http-architecture.md) for explicitly deferred
-service work.
+High-risk operations are disabled by default and require an explicit opt-in by the user
+running the local server. Enabling them does not grant Apolo permissions or replace
+client approval and Apolo RBAC. Read the generated [safety model](docs/getting-started/safety.md)
+before enabling writes, and consult the [capability matrix](docs/capabilities/) for the
+complete current contract.
 
 Licensed under Apache-2.0. See [SECURITY.md](SECURITY.md) for private reporting.

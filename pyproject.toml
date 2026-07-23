@@ -37,7 +37,7 @@ apolo-mcp = "apolo_mcp.server:main"
 
 [project.urls]
 Homepage = "https://github.com/neuro-inc/apolo-mcp"
-Documentation = "https://github.com/neuro-inc/apolo-mcp#readme"
+Documentation = "https://github.com/neuro-inc/apolo-mcp/tree/master/docs"
 Repository = "https://github.com/neuro-inc/apolo-mcp"
 Issues = "https://github.com/neuro-inc/apolo-mcp/issues"
 
@@ -60,6 +60,9 @@ source = "vcs"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/apolo_mcp"]
+
+[tool.hatch.build.targets.sdist]
+exclude = ["/build-tools", "/docs"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

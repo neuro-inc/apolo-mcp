@@ -1,10 +1,16 @@
-# Apolo CLI/SDK capability parity
+# Capabilities
 
-This matrix is the release contract for the local stdio server. `Native` means a
+This matrix is the current contract for the local stdio server. `Native` means a
 typed MCP tool. `Skill/CLI` means a bounded local workflow because the operation is
 interactive or high-bandwidth. `Prohibited` means deliberately unavailable to the
 model. `Out of scope` means an administrative or local-client concern outside the
 least-privilege workload product.
+
+Start with the [tool reference](tools.md) for exact inputs and results, or the
+[skills catalog](skills.md) for agent workflows that combine tools safely. The
+[platform-context](../guides/platform-context.md),
+[workload](../guides/workflows.md), and
+[Applications](../guides/applications.md) guides show common tasks end to end.
 
 Every native list, log, telemetry, and wait operation has a finite bound. Every native
 write is subject to server policy and client approval; destructive operations are also
@@ -12,7 +18,7 @@ annotated destructive. Generated credentials go only to approved protected sinks
 
 ## Context, configuration, and access control
 
-| Public capability | Classification | MCP/fallback | Rationale and future plan |
+| Public capability | Classification | MCP/fallback | Current behavior |
 |---|---|---|---|
 | `config show` | Native | `get_apolo_context`, `list_presets` | Returns sanitized selected context/config metadata and client/server-version availability; never credentials. |
 | `config get-clusters` | Native | `list_clusters`, `list_organizations`, `list_projects` | Discovery required before writes. |
@@ -22,15 +28,15 @@ annotated destructive. Generated credentials go only to approved protected sinks
 | `config logout`, root `logout` | Out of scope | local CLI | Local session administration could disrupt the agent host. |
 | `config show-token` | Prohibited | none | Direct credential disclosure. |
 | `config switch-cluster`, `switch-org`, `switch-project` | Prohibited | explicit context fields | Tools never persistently switch user context. |
-| `acl add-role`, `grant`, `list-roles`, `ls`, `remove-role`, `revoke` | Out of scope | none | Identity/RBAC administration is an explicit first-release non-goal. |
-| all `admin` commands (cluster/org/project/user/preset/quota create/get/update/remove/set) | Out of scope | none | Autonomous cluster, identity, role, preset, and quota administration is prohibited. A separately reviewed admin product would be required. |
+| `acl add-role`, `grant`, `list-roles`, `ls`, `remove-role`, `revoke` | Out of scope | none | Identity/RBAC administration is not part of the least-privilege workload surface. |
+| all `admin` commands (cluster/org/project/user/preset/quota create/get/update/remove/set) | Out of scope | none | Autonomous cluster, identity, role, preset, and quota administration is unavailable. |
 | completion generate/patch | Out of scope | client setup docs | Shell integration, not a platform workload operation. |
 | `help` | Skill/CLI | generated CLI/SDK/Flow docs | Exact syntax is routed to authoritative generated references. |
 | `share` | Out of scope | none | ACL mutation is not part of the least-privilege workload surface. |
 
 ## Jobs
 
-| Public capability | Classification | MCP/fallback | Rationale and future plan |
+| Public capability | Classification | MCP/fallback | Current behavior |
 |---|---|---|---|
 | job/root `run`; `generate-run-command` | Native / Skill | `run_job`; planning skill for CLI rendering | Native typed start covers image/preset/entrypoint/command/workdir/env/volumes/secrets/disks/HTTP/lifecycle/scheduling/context. Command rendering is local CLI convenience. |
 | job/root `ls`, `ps` | Native | `list_jobs` | Bounded filters and resolved context. |
@@ -41,7 +47,7 @@ annotated destructive. Generated credentials go only to approved protected sinks
 | signal API | Native | `send_job_signal` | Approval-gated bounded SDK operation. |
 | job/root `save` | Native | `save_job_image` | Exact target image, approval, policy, bounded progress summary. |
 | job/root `kill` | Native | `kill_job` | Destructive annotation, approval/policy, exact job ID. |
-| job/root `exec` | Skill/CLI initially | bounded local CLI | SDK stream needs explicit output/time termination. Add native only after reliable bounded exit/output semantics are tested. |
+| job/root `exec` | Skill/CLI | bounded local CLI | The SDK stream lacks the bounded exit and output semantics required for a native tool. |
 | job/root `attach` | Manual CLI | local `apolo job attach` | Interactive bidirectional bytes stay in the user's terminal and outside MCP/model results. This package does not wrap or automate the command. |
 | job/root `port-forward` | Manual CLI | local `apolo job port-forward` | The local stream stays outside MCP/model results. The user owns target/port selection and termination. |
 | job `browse` | Skill/CLI | local CLI | Host browser/UI operation. |
@@ -50,7 +56,7 @@ annotated destructive. Generated credentials go only to approved protected sinks
 
 ## Applications
 
-| Public capability | Classification | MCP/fallback | Rationale and future plan |
+| Public capability | Classification | MCP/fallback | Current behavior |
 |---|---|---|---|
 | app-template `list`/`ls` | Native | `list_app_templates` | Bounded template discovery. |
 | app-template `list-versions`/`ls-versions` | Native | `list_app_template_versions` | Bounded exact-version discovery. |
@@ -71,15 +77,15 @@ annotated destructive. Generated credentials go only to approved protected sinks
 
 ## Storage and disks
 
-| Public capability | Classification | MCP/fallback | Rationale and future plan |
+| Public capability | Classification | MCP/fallback | Current behavior |
 |---|---|---|---|
 | storage/root `ls` | Native | `list_storage` | Bounded entries under canonical `storage:` URI. |
 | storage `df` | Native | `stat_storage`/usage metadata | Structured size/usage. |
 | storage `mkdir`, root `mkdir` | Native | `make_directory` | Idempotent write, explicit resolved context. |
 | small UTF-8 reads/writes | Native | `read_text`, `write_text` | Strict byte bound; binary rejected. |
 | storage/root `rm` | Native | `delete_storage_path` | Exact path; recursive mode destructive, policy/approval/ledger rules. |
-| storage/root `cp`; storage `glob`, `tree` | Manual CLI | local `apolo storage` commands | High-volume/recursive traversal stays outside MCP/model context. This package does not wrap those commands; a future typed metadata glob may be added after bounded SDK support exists. |
-| storage/root `mv` | Future-scoped | none | A safe move needs exact source/destination preflight and failure/rollback semantics across local and remote boundaries; use a separately reviewed manual CLI operation in v1. |
+| storage/root `cp`; storage `glob`, `tree` | Manual CLI | local `apolo storage` commands | High-volume/recursive traversal stays outside MCP/model context. This package does not wrap those commands. |
+| storage/root `mv` | Manual CLI | local `apolo storage mv` | Moving across local and remote boundaries stays a user-reviewed CLI operation. |
 | disk `ls` | Native | `list_disks` | Bounded explicit context. |
 | disk `get` | Native | `get_disk` | Exact ID/name and context. |
 | disk `create` | Native | `create_disk` | Size/context bounds, unused timeout up to 10 years, approval/policy, ledger. |
@@ -87,7 +93,7 @@ annotated destructive. Generated credentials go only to approved protected sinks
 
 ## Images
 
-| Public capability | Classification | MCP/fallback | Rationale and future plan |
+| Public capability | Classification | MCP/fallback | Current behavior |
 |---|---|---|---|
 | image/root `ls`, root `images`; image `tags` | Native | `list_image_repositories`, `list_image_tags` | Bounded metadata only. |
 | image `push`, image `pull` | Native | `push_image`, `pull_image` | Uses the Docker engine on the MCP host; explicit context plus approval/policy and a 30-minute deadline, and pushed images are ledgered. Transfer size is not limited. |
@@ -97,20 +103,20 @@ annotated destructive. Generated credentials go only to approved protected sinks
 
 ## Buckets / blob storage
 
-| Public capability | Classification | MCP/fallback | Rationale and future plan |
+| Public capability | Classification | MCP/fallback | Current behavior |
 |---|---|---|---|
 | blob `lsbucket`, `statbucket`, `mkbucket`, `importbucket`, `du`, `set-bucket-publicity` | Native | bucket list/get/create/import/usage/publicity tools | Metadata-oriented; writes use policy/approval and resolved context. |
 | blob `ls`, `glob`, blob stat SDK | Native | `list_bucket_blobs`, `stat_bucket_blob` | Bounded object metadata. |
 | blob `sign-url` | Native secure-sink only | `create_bucket_signed_url` | Bounded expiry; the temporary access grant is written only to a new protected `0600` workspace file and never returned. |
 | blob `cp` | Native single-file / Manual CLI for recursive | `upload_bucket_file`, `download_bucket_file`; local `apolo blob cp` for recursive work | Native single-file transfers enforce workspace, byte, duration, exact-key, and no-overwrite bounds. Recursive CLI transfer stays outside MCP/model results and is not automated by this package. |
 | blob `rm`, `rmbucket` | Native | exact blob/bucket delete tools | Destructive, exact target, approval/policy/ledger checks. |
-| blob `lscredentials`, `statcredentials` | Prohibited in v1 | none | The supported SDK surface can expose persistent bucket credentials. Add metadata-only tools only after a contract proves values cannot serialize. |
-| blob `mkcredentials` | Prohibited in v1 | none | Persistent credential generation is omitted; temporary signed URLs use a protected short-lived sink instead. |
-| blob `rmcredentials` | Prohibited in v1 | none | Credential-record mutation remains unavailable until metadata-only identity and exact-delete semantics are independently reviewed. |
+| blob `lscredentials`, `statcredentials` | Prohibited | none | The supported SDK surface can expose persistent bucket credentials. |
+| blob `mkcredentials` | Prohibited | none | Persistent credential generation is omitted; temporary signed URLs use a protected short-lived sink instead. |
+| blob `rmcredentials` | Prohibited | none | Credential-record mutation is unavailable. |
 
 ## Secrets and service accounts
 
-| Public capability | Classification | MCP/fallback | Rationale and future plan |
+| Public capability | Classification | MCP/fallback | Current behavior |
 |---|---|---|---|
 | secret `ls` | Native | `list_secrets` | Names/owners/context only. |
 | secret `get` | Native | `get_secret_to_file` | Writes only to a new mode-0600 file beneath the allowed workspace; never returns the value to the model. |
@@ -119,11 +125,11 @@ annotated destructive. Generated credentials go only to approved protected sinks
 | service-account `ls`, `get` | Native | list/get service account | Metadata only. |
 | service-account `create` | Native secure-sink only | `create_service_account` | One-time token atomically stored in named Apolo secret or `0600` file; high-risk policy and approval; result contains metadata/destination only. |
 | service-account `rm` | Native | `delete_service_account` | High-risk destructive policy/approval. |
-| vcluster service-account list/create/delete/regenerate/activate | Out of scope | none | Virtual-cluster administration and credential activation are not workload-level service accounts. Revisit only under a separately approved admin contract. |
+| vcluster service-account list/create/delete/regenerate/activate | Out of scope | none | Virtual-cluster administration and credential activation are not workload-level service accounts. |
 
 ## Apolo Flow
 
-| Public capability | Classification | MCP/fallback | Rationale and future plan |
+| Public capability | Classification | MCP/fallback | Current behavior |
 |---|---|---|---|
 | flow `ps`, `status`, `logs` | Native | `flow_live_list`, `flow_live_get`, `flow_live_logs` | Bounded typed facade results through `apolo-flow>=26.7.1` explicit-context lifecycle. |
 | flow `run` | Native | `flow_live_run` | Project root confinement, explicit context, Flow-compatible suffix/parameter resolution, policy, and approval. |
@@ -137,9 +143,7 @@ annotated destructive. Generated credentials go only to approved protected sinks
 
 ## Deliberately absent generic capabilities
 
-No arbitrary shell tool, arbitrary HTTP request tool, generic Kubernetes tool,
-credential retrieval tool, interactive attach/port-forward stream, or unbounded binary
-transfer is planned. A future remote Streamable HTTP transport may reuse these business
-operations only after per-user OAuth/bearer verification, RBAC preservation, isolation,
-auditing/redaction, rate limits, deployment packaging, and immutable Flow-source design
-are approved.
+Apolo MCP does not expose an arbitrary shell tool, arbitrary HTTP request tool, generic
+Kubernetes tool, model-visible credential retrieval, interactive attach or port-forward
+stream, or unbounded binary transfer. It supports local stdio only and does not provide
+a shared-credential remote service.

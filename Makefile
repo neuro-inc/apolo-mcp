@@ -32,6 +32,14 @@ test: ### Run unit tests
 build: ### Build sdist and wheel
 	uv build
 
+.PHONY: docs
+docs: ### Regenerate code-derived documentation
+	uv run python build-tools/generate-docs.py
+
+.PHONY: docs-check
+docs-check: ### Verify code-derived documentation is current
+	uv run python build-tools/generate-docs.py --check
+
 .PHONY: changelog
 changelog: ### Build the changelog for VERSION (for example, VERSION=1.2.3)
 	test -n "$(VERSION)"

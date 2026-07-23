@@ -1,17 +1,6 @@
 from mcp.server.fastmcp import FastMCP
 
-from .tools import (
-    apps,
-    buckets,
-    context,
-    disks,
-    flow,
-    images,
-    jobs,
-    secrets,
-    service_accounts,
-    storage,
-)
+from .tool_registry import register_tools
 
 
 mcp = FastMCP(
@@ -27,16 +16,7 @@ mcp = FastMCP(
     ),
 )
 
-context.register(mcp)
-jobs.register(mcp)
-flow.register(mcp)
-apps.register(mcp)
-storage.register(mcp)
-disks.register(mcp)
-images.register(mcp)
-buckets.register(mcp)
-secrets.register(mcp)
-service_accounts.register(mcp)
+register_tools(mcp)
 
 
 def main() -> None:
