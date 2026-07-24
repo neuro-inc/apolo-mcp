@@ -96,7 +96,13 @@ def _remote(
         if not tag.strip() or "/" in tag or "@" in tag or ":" in tag:
             raise ValueError("tag must be one exact image tag")
         uri += f":{tag}"
-    remote = sdk.parse.remote_image(uri, cluster_name=context.cluster)
+    remote = sdk.parse.remote_image(
+        uri,
+        cluster_name=context.cluster,
+        tag_option=(
+            apolo_sdk.TagOption.DENY if tag is None else apolo_sdk.TagOption.ALLOW
+        ),
+    )
     actual = (remote.cluster_name, remote.org_name, remote.project_name)
     expected = (context.cluster, context.org, context.project)
     if actual != expected:

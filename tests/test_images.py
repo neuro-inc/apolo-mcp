@@ -2,7 +2,7 @@
 
 from contextlib import asynccontextmanager
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import apolo_sdk
 import pytest
@@ -45,12 +45,15 @@ def tools(monkeypatch):
             "p": SimpleNamespace(cluster_name="alpha", org_name="team", name="default")
         },
     )
-    parser = SimpleNamespace(
-        local_image=lambda value: apolo_sdk.LocalImage(value),
-        remote_image=lambda value, **kwargs: image(
+    remote_image = Mock(
+        side_effect=lambda value, **kwargs: image(
             value.rsplit("/", 1)[-1].split(":", 1)[0],
             value.rsplit(":", 1)[1] if ":" in value.rsplit("/", 1)[-1] else None,
-        ),
+        )
+    )
+    parser = SimpleNamespace(
+        local_image=lambda value: apolo_sdk.LocalImage(value),
+        remote_image=remote_image,
     )
     images = SimpleNamespace(
         list=AsyncMock(return_value=[image(), image("other", project="elsewhere")]),
@@ -80,9 +83,15 @@ async def test_lists_are_bounded_filtered_and_inspection_has_no_layers(tools):
     assert len(repos["items"]) == 1 and repos["truncated"] is False
     tags = await fn(tools, "list_image_tags")("model", 1)
     assert tags["truncated"] is True
+    assert tools[1].parse.remote_image.call_args.kwargs["tag_option"] is (
+        apolo_sdk.TagOption.DENY
+    )
     short_tags = await fn(tools, "list_image_tags")("image:model", 1)
     assert short_tags["repository"]["repository"] == "model"
     inspected = await fn(tools, "inspect_image")("model", "v1")
+    assert tools[1].parse.remote_image.call_args.kwargs["tag_option"] is (
+        apolo_sdk.TagOption.ALLOW
+    )
     assert inspected["digest"] == "sha256:" + "a" * 64
     assert inspected["size_bytes"] == 123 and "layers" not in inspected
 
