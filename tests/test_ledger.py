@@ -25,13 +25,14 @@ def append_job(ledger: Ledger, resource_id: str, **overrides):
         "org": "team",
         "project": "default",
         "operation": "run_job",
+        "action": "created",
         "created_at": datetime(2026, 1, 1, tzinfo=timezone.utc),
     }
     values.update(overrides)
     return ledger.append(**values)
 
 
-def test_exact_ownership_and_cleanup_never_infer_from_name(tmp_path):
+def test_exact_ownership_never_infers_from_name(tmp_path):
     ledger = Ledger(tmp_path / "private" / "ledger.jsonl")
     owned = append_job(ledger, "job-exact")
 
@@ -46,7 +47,7 @@ def test_exact_ownership_and_cleanup_never_infer_from_name(tmp_path):
         == owned
     )
     assert (
-        ledger.authorize_cleanup(
+        ledger.authorize_owned_resource(
             resource_type="job",
             resource_id="job-exact",
             cluster="alpha",
@@ -55,8 +56,8 @@ def test_exact_ownership_and_cleanup_never_infer_from_name(tmp_path):
         )
         == owned
     )
-    with pytest.raises(PermissionError, match="no exact ledger ownership"):
-        ledger.authorize_cleanup(
+    with pytest.raises(PermissionError, match="no active creation lifecycle"):
+        ledger.authorize_owned_resource(
             resource_type="job",
             resource_id="job-exact-copy",
             cluster="alpha",
@@ -78,6 +79,47 @@ def test_lookup_rejects_type_or_context_mismatch(tmp_path, field):
     }
     query[field] = "different"
     assert ledger.lookup(**query) is None
+
+
+def test_append_only_lifecycle_requires_creation_after_latest_delete(tmp_path):
+    ledger = Ledger(tmp_path / "private" / "ledger.jsonl")
+    exact = {
+        "resource_type": "job",
+        "resource_id": "job-1",
+        "cluster": "alpha",
+        "org": "team",
+        "project": "default",
+    }
+    ledger.append(operation="run_job", action="created", **exact)
+    ledger.append(operation="bump_job_life_span", action="updated", **exact)
+    assert ledger.authorize_owned_resource(**exact).action == "updated"
+
+    ledger.append(operation="delete_job", action="deleted", **exact)
+    with pytest.raises(PermissionError, match="no active creation lifecycle"):
+        ledger.authorize_owned_resource(**exact)
+
+    ledger.append(operation="run_job", action="created", **exact)
+    assert [entry.action for entry in ledger.history(**exact)] == [
+        "created",
+        "updated",
+        "deleted",
+        "created",
+    ]
+    assert ledger.authorize_owned_resource(**exact).action == "created"
+
+
+def test_update_record_alone_never_establishes_managed_ownership(tmp_path):
+    ledger = Ledger(tmp_path / "private" / "ledger.jsonl")
+    exact = {
+        "resource_type": "app",
+        "resource_id": "app-existing",
+        "cluster": "alpha",
+        "org": "team",
+        "project": "default",
+    }
+    ledger.append(operation="configure_app", action="updated", **exact)
+    with pytest.raises(PermissionError, match="no active creation lifecycle"):
+        ledger.authorize_owned_resource(**exact)
 
 
 def test_concurrent_append_is_valid_jsonl_with_private_permissions(tmp_path):
@@ -118,7 +160,7 @@ async def test_run_job_records_exact_created_id_and_resolved_context(
 ):
     path = tmp_path / "private" / "ledger.jsonl"
     monkeypatch.setenv("APOLO_MCP_LEDGER_PATH", str(path))
-    monkeypatch.setenv("APOLO_MCP_ENABLE_HIGH_RISK", "true")
+    monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "full")
     history = SimpleNamespace(
         created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
         started_at=None,
@@ -178,7 +220,7 @@ async def test_run_job_records_exact_created_id_and_resolved_context(
     register(mcp)
     try:
         result = await mcp._tool_manager._tools["run_job"].fn(
-            "ubuntu:24.04", "cpu-small", approved=True
+            "ubuntu:24.04", "cpu-small"
         )
     finally:
         reset_client_provider(token)
@@ -187,7 +229,7 @@ async def test_run_job_records_exact_created_id_and_resolved_context(
     assert entry.resource_id == "sdk-generated-id"
     assert (entry.cluster, entry.org, entry.project) == ("alpha", "team", "default")
     assert entry.operation == "run_job"
-    assert entry.state == "created"
+    assert entry.action == "created"
     assert result["job"]["name"] == "friendly-name"
 
 
@@ -199,7 +241,7 @@ async def test_run_job_preflight_rejects_symlink_before_sdk_creation(
     linked_parent = tmp_path / "linked"
     linked_parent.symlink_to(real_parent, target_is_directory=True)
     monkeypatch.setenv("APOLO_MCP_LEDGER_PATH", str(linked_parent / "ledger.jsonl"))
-    monkeypatch.setenv("APOLO_MCP_ENABLE_HIGH_RISK", "true")
+    monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "full")
 
     class Jobs:
         called = False
@@ -235,9 +277,7 @@ async def test_run_job_preflight_rejects_symlink_before_sdk_creation(
     register(mcp)
     try:
         with pytest.raises(Exception, match="ledger parent"):
-            await mcp._tool_manager._tools["run_job"].fn(
-                "ubuntu:24.04", "cpu-small", approved=True
-            )
+            await mcp._tool_manager._tools["run_job"].fn("ubuntu:24.04", "cpu-small")
     finally:
         reset_client_provider(token)
     assert jobs.called is False

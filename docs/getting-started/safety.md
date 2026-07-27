@@ -3,31 +3,76 @@
 # Safety and operation types
 
 Apolo MCP uses the identity established by `apolo login` and cannot elevate that
-user's Apolo permissions. Tool annotations help MCP clients request appropriate
-approval; they are not authorization controls.
+user's Apolo permissions. Tool annotations help MCP clients present suitable risk
+prompts; they are hints, not authorization controls.
 
-The user who launches the local stdio server controls `APOLO_MCP_ENABLE_HIGH_RISK`. Setting it
-to `true` enables high-risk tools at the MCP policy layer, but does not approve an
-operation or bypass Apolo RBAC. `APOLO_MCP_POLICY_FILE` can point to a local JSON policy
-file containing an `enable_high_risk` boolean. The environment variable takes
-precedence.
+The user who launches the local stdio server controls `APOLO_MCP_POLICY_MODE`. It accepts
+exactly three values:
+
+- `read-only` is the default. Platform mutations are denied; reads and local Apps
+  planning remain available.
+- `managed` allows creation of new resources. Updates and deletions are allowed only
+  for the exact resource type, immutable identifier, cluster, organization, and
+  project with an active creation lifecycle in the MCP journal.
+- `full` allows mutations of any exact-context resource, subject to the authenticated
+  user's Apolo RBAC.
+
+For example, `APOLO_MCP_POLICY_MODE=managed apolo-mcp` starts the server in managed
+mode. `APOLO_MCP_POLICY_FILE` may instead point to JSON containing
+`{"mode": "managed"}`; the environment variable takes precedence. There is no tool
+argument that can elevate or bypass this server policy.
+
+For Codex, configure forwarding without selecting a permanent policy value:
+
+```toml
+[mcp_servers.apolo]
+command = "apolo-mcp"
+env_vars = ["APOLO_MCP_POLICY_MODE"]
+```
+
+Then use `APOLO_MCP_POLICY_MODE=managed codex` or
+`APOLO_MCP_POLICY_MODE=full codex` for that launch only. An ordinary `codex` launch
+leaves the variable unset and therefore starts Apolo MCP in `read-only` mode. Restart
+Codex after changing MCP configuration so a new server process receives the setting.
+
+For Claude Code, register the same per-launch behavior with a dynamic environment
+expansion:
+
+```console
+claude mcp add apolo \
+  --scope user \
+  -e 'APOLO_MCP_POLICY_MODE=${APOLO_MCP_POLICY_MODE:-read-only}' \
+  -- apolo-mcp
+```
+
+Claude Code expands the expression when starting the MCP subprocess. Use an ordinary
+`claude` launch for `read-only`, or prefix the launch with
+`APOLO_MCP_POLICY_MODE=managed` or `APOLO_MCP_POLICY_MODE=full`. The `local`, `project`,
+and `user` scopes control where the MCP registration applies; they do not select the
+policy. Restart Claude Code after changing MCP configuration.
+
+Successful mutations are written to an append-only lifecycle journal as `created`,
+`updated`, or `deleted` actions. By default it is stored at
+`~/.local/state/apolo-mcp/ledger.jsonl`; `APOLO_MCP_LEDGER_PATH` overrides the path. The journal
+contains only resource identity, exact Apolo context, operation, action, and timestamp,
+never credentials. A `deleted` action closes that ownership lifecycle; only a later
+MCP-recorded `created` action establishes a new managed lifecycle for the same identity.
 
 Always verify the explicit cluster, organization, and project before a write. Never
-put tokens, secret values, cookies, or service-account credentials in prompts or
-tool arguments. Tools that accept or retrieve sensitive material use protected local
+put tokens, secret values, cookies, or service-account credentials in prompts or tool
+arguments. Tools that accept or retrieve sensitive material use protected local
 sources and sinks instead.
 
 Apolo MCP can create service accounts. The generated one-time token is sent directly
-to a new protected local file or a named Apolo secret and is never included in the tool
-result. This is a high-risk credential-creation operation even though the credential
-value remains outside the model-visible interface.
+to a new protected local file or a named Apolo secret and is never included in the
+model-visible tool result. Creation still requires `managed` or `full` policy and the
+user's Apolo permissions.
 
 The tools below are grouped by the skill that guides their use, then by their MCP
-operation type. Read-only operations inspect state. Platform-mutating Write and
-Destructive operations require explicit approval, the local user's `APOLO_MCP_ENABLE_HIGH_RISK`
-opt-in, and the user's existing Apolo permissions. Local App planning appears under
-Write but is marked separately: it creates review files without mutating Apolo
-resources and does not require the high-risk opt-in.
+operation type. Read-only operations inspect state. Write and Destructive operations
+are governed by the selected policy mode and Apolo RBAC; an MCP client may additionally
+show a confirmation based on annotations. Local Apps planning appears under Write but
+only creates review files and remains available in `read-only` mode.
 
 ## [Apolo Platform User Context](../capabilities/skills.md#apolo-platform-user-context)
 
@@ -64,14 +109,14 @@ Tools used by the `apolo-research-job` skill.
 
 ### Write operations
 
-- [`run_job`](../capabilities/tools/jobs.md#run_job) — Start an approved job; direct secret values are forbidden.
-- [`bump_job_life_span`](../capabilities/tools/jobs.md#bump_job_life_span) — Extend a job lifespan; requires enabled high-risk server policy.
-- [`send_job_signal`](../capabilities/tools/jobs.md#send_job_signal) — Send the SDK's graceful job signal; requires high-risk policy.
-- [`save_job_image`](../capabilities/tools/jobs.md#save_job_image) — Save a job filesystem as an image; requires high-risk policy.
+- [`run_job`](../capabilities/tools/jobs.md#run_job) — Start a policy-authorized job; direct secret values are forbidden.
+- [`bump_job_life_span`](../capabilities/tools/jobs.md#bump_job_life_span) — Extend a job lifespan under full or owned managed policy.
+- [`send_job_signal`](../capabilities/tools/jobs.md#send_job_signal) — Send the SDK's graceful signal under full or owned managed policy.
+- [`save_job_image`](../capabilities/tools/jobs.md#save_job_image) — Save an owned job filesystem to a policy-authorized image target.
 
 ### Destructive operations
 
-- [`kill_job`](../capabilities/tools/jobs.md#kill_job) — Kill a job (destructive); requires enabled high-risk server policy.
+- [`kill_job`](../capabilities/tools/jobs.md#kill_job) — Kill a job under full or owned managed policy.
 
 ## [Apolo Flow Workloads](../capabilities/skills.md#apolo-flow-workloads)
 
@@ -90,15 +135,15 @@ Tools used by the `apolo-flow-workloads` skill.
 
 ### Write operations
 
-- [`flow_live_run`](../capabilities/tools/flow.md#flow_live_run) — Start a configured Flow live job after explicit approval and policy.
+- [`flow_live_run`](../capabilities/tools/flow.md#flow_live_run) — Start a configured Flow live job under the server mutation policy.
 - [`flow_bake_start`](../capabilities/tools/flow.md#flow_bake_start) — Start a bake only through FlowAPI BatchRunner orchestration.
 
 ### Destructive operations
 
-- [`flow_live_kill`](../capabilities/tools/flow.md#flow_live_kill) — Kill a Flow live job after explicit approval and policy.
+- [`flow_live_kill`](../capabilities/tools/flow.md#flow_live_kill) — Kill a Flow live job under the server mutation policy.
 - [`flow_live_kill_all`](../capabilities/tools/flow.md#flow_live_kill_all) — Kill all jobs in exactly one explicit Flow context.
-- [`flow_bake_cancel`](../capabilities/tools/flow.md#flow_bake_cancel) — Cancel a bake attempt after explicit approval and policy.
-- [`flow_bake_restart`](../capabilities/tools/flow.md#flow_bake_restart) — Restart a bake through BatchRunner after approval and policy.
+- [`flow_bake_cancel`](../capabilities/tools/flow.md#flow_bake_cancel) — Cancel a bake attempt under the server mutation policy.
+- [`flow_bake_restart`](../capabilities/tools/flow.md#flow_bake_restart) — Restart a bake through BatchRunner under the server mutation policy.
 
 ## [Apolo Applications](../capabilities/skills.md#apolo-applications)
 
@@ -124,13 +169,13 @@ Tools used by the `apolo-applications` skill.
 - [`plan_app_configure`](../capabilities/tools/applications.md#plan_app_configure) — **Local planning; does not mutate Apolo resources.** Seed exact YAML with SDK get_input, patch it, and write a review plan.
 - [`plan_app_rollback`](../capabilities/tools/applications.md#plan_app_rollback) — **Local planning; does not mutate Apolo resources.** Write a no-YAML rollback plan bound to current and target revisions.
 - [`plan_app_uninstall`](../capabilities/tools/applications.md#plan_app_uninstall) — **Local planning; does not mutate Apolo resources.** Write a no-YAML uninstall plan bound to exact App/current revision.
-- [`install_app`](../capabilities/tools/applications.md#install_app) — Apply one approved, unexpired, unchanged install plan exactly once.
-- [`configure_app`](../capabilities/tools/applications.md#configure_app) — Apply one approved, unchanged configure plan after revision drift check.
+- [`install_app`](../capabilities/tools/applications.md#install_app) — Apply one unexpired, unchanged install plan exactly once.
+- [`configure_app`](../capabilities/tools/applications.md#configure_app) — Apply one unchanged configure plan after revision drift check.
 
 ### Destructive operations
 
-- [`rollback_app`](../capabilities/tools/applications.md#rollback_app) — Apply an approved rollback plan; server high-risk policy must allow it.
-- [`uninstall_app`](../capabilities/tools/applications.md#uninstall_app) — Apply an approved uninstall plan; server high-risk policy must allow it.
+- [`rollback_app`](../capabilities/tools/applications.md#rollback_app) — Apply one unchanged rollback plan under the server mutation policy.
+- [`uninstall_app`](../capabilities/tools/applications.md#uninstall_app) — Apply one unchanged uninstall plan under the server mutation policy.
 
 ## [Apolo Resource Management](../capabilities/skills.md#apolo-resource-management)
 
@@ -156,12 +201,12 @@ Tools used by the `apolo-resource-management` skill.
 
 ### Write operations
 
-- [`write_text`](../capabilities/tools/storage.md#write_text) — Write a small UTF-8 text object; requires high-risk server policy.
-- [`make_directory`](../capabilities/tools/storage.md#make_directory) — Create an exact directory; requires high-risk server policy.
-- [`create_disk`](../capabilities/tools/disks.md#create_disk) — Create and ledger a bounded disk; requires high-risk server policy.
+- [`write_text`](../capabilities/tools/storage.md#write_text) — Create or update a small UTF-8 object under server policy.
+- [`make_directory`](../capabilities/tools/storage.md#make_directory) — Create an exact directory under server policy.
+- [`create_disk`](../capabilities/tools/disks.md#create_disk) — Create and journal a bounded disk when server policy permits writes.
 - [`push_image`](../capabilities/tools/images.md#push_image) — Push a local Docker image to one exact Apolo repository and tag.
 - [`pull_image`](../capabilities/tools/images.md#pull_image) — Pull one exact Apolo image into the MCP host's local Docker engine.
-- [`create_bucket`](../capabilities/tools/buckets.md#create_bucket) — Create and ledger a bucket after policy and client approval.
+- [`create_bucket`](../capabilities/tools/buckets.md#create_bucket) — Create and journal a bucket when server policy permits writes.
 - [`import_external_bucket`](../capabilities/tools/buckets.md#import_external_bucket) — Import using bounded JSON credentials from a protected internal source.
 - [`set_bucket_public_access`](../capabilities/tools/buckets.md#set_bucket_public_access) — Set public state for one exact immutable bucket ID.
 - [`create_bucket_signed_url`](../capabilities/tools/buckets.md#create_bucket_signed_url) — Create a short-lived blob URL; no persistent credentials are returned.
@@ -174,9 +219,9 @@ Tools used by the `apolo-resource-management` skill.
 ### Destructive operations
 
 - [`delete_storage_path`](../capabilities/tools/storage.md#delete_storage_path) — Delete one exact path; recursive deletion removes its entire subtree.
-- [`delete_disk`](../capabilities/tools/disks.md#delete_disk) — Delete one exact disk ID after approval, or exact ledger-owned cleanup.
-- [`remove_image`](../capabilities/tools/images.md#remove_image) — Remove an exact tag digest after approval and server policy checks.
+- [`delete_disk`](../capabilities/tools/disks.md#delete_disk) — Delete one exact disk ID under full or ledger-owned managed policy.
+- [`remove_image`](../capabilities/tools/images.md#remove_image) — Remove an exact tag digest under full or owned managed policy.
 - [`delete_bucket_blob`](../capabilities/tools/buckets.md#delete_bucket_blob) — Delete one exact blob key; recursive/prefix deletion is not exposed.
-- [`delete_bucket`](../capabilities/tools/buckets.md#delete_bucket) — Delete one exact empty bucket ID, optionally as ledger-owned cleanup.
-- [`delete_secret`](../capabilities/tools/secrets.md#delete_secret) — Delete one exact secret key after policy and client approval.
+- [`delete_bucket`](../capabilities/tools/buckets.md#delete_bucket) — Delete one exact empty bucket under full or owned managed policy.
+- [`delete_secret`](../capabilities/tools/secrets.md#delete_secret) — Delete one exact secret under full or owned managed policy.
 - [`delete_service_account`](../capabilities/tools/service-accounts.md#delete_service_account) — Delete one exact immutable account ID after context verification.

@@ -230,7 +230,7 @@ Read a UTF-8 text prefix under a strict byte cap.
 
 ## `write_text`
 
-Write a small UTF-8 text object; requires high-risk server policy.
+Create or update a small UTF-8 object under server policy.
 
 **Operation type:** write
 
@@ -241,11 +241,6 @@ Write a small UTF-8 text object; requires high-risk server policy.
 ```json
 {
   "properties": {
-    "approved": {
-      "default": false,
-      "title": "Approved",
-      "type": "boolean"
-    },
     "cluster": {
       "anyOf": [
         {
@@ -312,7 +307,7 @@ Write a small UTF-8 text object; requires high-risk server policy.
 
 ## `make_directory`
 
-Create an exact directory; requires high-risk server policy.
+Create an exact directory under server policy.
 
 **Operation type:** write
 
@@ -323,11 +318,6 @@ Create an exact directory; requires high-risk server policy.
 ```json
 {
   "properties": {
-    "approved": {
-      "default": false,
-      "title": "Approved",
-      "type": "boolean"
-    },
     "cluster": {
       "anyOf": [
         {
@@ -410,11 +400,6 @@ Delete one exact path; recursive deletion removes its entire subtree.
 ```json
 {
   "properties": {
-    "approved": {
-      "default": false,
-      "title": "Approved",
-      "type": "boolean"
-    },
     "cluster": {
       "anyOf": [
         {

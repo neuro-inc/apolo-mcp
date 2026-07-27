@@ -63,8 +63,9 @@ def config():
 
 
 @pytest.fixture()
-def tools(monkeypatch):
-    monkeypatch.setenv("APOLO_MCP_ENABLE_HIGH_RISK", "true")
+def tools(monkeypatch, tmp_path):
+    monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "full")
+    monkeypatch.setenv("APOLO_MCP_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
     sdk = SimpleNamespace(config=config(), storage=Storage())
     token = set_client_provider(Provider(sdk))
     mcp = FastMCP("storage-test")
@@ -95,29 +96,24 @@ async def test_bounded_list_read_and_serialization(tools):
 
 async def test_write_caps_policy_and_cross_context(tools, monkeypatch):
     with pytest.raises(ValueError, match="must not exceed"):
-        await fn(tools, "write_text")("x", "x" * (MAX_TEXT_BYTES + 1), approved=True)
+        await fn(tools, "write_text")("x", "x" * (MAX_TEXT_BYTES + 1))
     with pytest.raises(ApoloToolError, match="exact resolved context"):
         await fn(tools, "stat_storage")("storage://beta/team/default/file")
-    monkeypatch.setenv("APOLO_MCP_ENABLE_HIGH_RISK", "false")
+    monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "read-only")
     with pytest.raises(PermissionError, match="server policy"):
-        await fn(tools, "write_text")("x", "safe", approved=True)
-
-
-async def test_storage_writes_require_per_call_approval(tools):
-    with pytest.raises(PermissionError, match="approved=true"):
         await fn(tools, "write_text")("x", "safe")
-    with pytest.raises(PermissionError, match="approved=true"):
-        await fn(tools, "make_directory")("dir")
-    await fn(tools, "write_text")("x", "safe", True)
-    await fn(tools, "make_directory")("dir", True, True, True)
 
 
-async def test_delete_requires_approval_and_rejects_root(tools):
-    with pytest.raises(PermissionError, match="approved=true"):
-        await fn(tools, "delete_storage_path")("safe")
+async def test_storage_writes_have_no_model_supplied_approval(tools):
+    await fn(tools, "write_text")("x", "safe")
+    await fn(tools, "make_directory")("dir", parents=True, exist_ok=True)
+    assert "approved" not in tools[0]["write_text"].parameters["properties"]
+
+
+async def test_delete_rejects_root_and_passes_recursive_flag(tools):
     with pytest.raises(ApoloToolError, match="root cannot"):
-        await fn(tools, "delete_storage_path")("", approved=True)
-    await fn(tools, "delete_storage_path")("safe", True, True)
+        await fn(tools, "delete_storage_path")("")
+    await fn(tools, "delete_storage_path")("safe", recursive=True)
     assert tools[1].storage.rm.await_args.kwargs == {"recursive": True}
 
 

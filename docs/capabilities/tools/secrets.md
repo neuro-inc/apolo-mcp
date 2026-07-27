@@ -87,11 +87,6 @@ Write a secret to a new mode-0600 workspace file; never return its value.
 ```json
 {
   "properties": {
-    "approved": {
-      "default": false,
-      "title": "Approved",
-      "type": "boolean"
-    },
     "cluster": {
       "anyOf": [
         {
@@ -169,11 +164,6 @@ Create a secret without accepting or returning its value.
 ```json
 {
   "properties": {
-    "approved": {
-      "default": false,
-      "title": "Approved",
-      "type": "boolean"
-    },
     "cluster": {
       "anyOf": [
         {
@@ -250,7 +240,7 @@ Create a secret without accepting or returning its value.
 
 ## `delete_secret`
 
-Delete one exact secret key after policy and client approval.
+Delete one exact secret under full or owned managed policy.
 
 **Operation type:** destructive
 
@@ -261,11 +251,6 @@ Delete one exact secret key after policy and client approval.
 ```json
 {
   "properties": {
-    "approved": {
-      "default": false,
-      "title": "Approved",
-      "type": "boolean"
-    },
     "cluster": {
       "anyOf": [
         {

@@ -11,6 +11,7 @@ from mcp.server.fastmcp import FastMCP
 
 from apolo_mcp._client import reset_client_provider, set_client_provider
 from apolo_mcp.errors import ApoloToolError
+from apolo_mcp.ledger import Ledger
 from apolo_mcp.tools.jobs import (
     DiskVolumeInput,
     SecretFileInput,
@@ -96,8 +97,9 @@ def make_job(status=apolo_sdk.JobStatus.RUNNING):
 
 
 @pytest.fixture()
-def tools(monkeypatch):
-    monkeypatch.setenv("APOLO_MCP_ENABLE_HIGH_RISK", "true")
+def tools(monkeypatch, tmp_path):
+    monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "full")
+    monkeypatch.setenv("APOLO_MCP_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
     config = SimpleNamespace(
         cluster_name="alpha",
         org_name="team",
@@ -129,7 +131,10 @@ def tools(monkeypatch):
         str_to_uri=lambda value: value,
     )
     jobs = FakeJobs(make_job())
-    sdk = SimpleNamespace(config=config, parse=parse, jobs=jobs)
+    images = SimpleNamespace(
+        digest=AsyncMock(side_effect=apolo_sdk.ResourceNotFound("missing"))
+    )
+    sdk = SimpleNamespace(config=config, parse=parse, jobs=jobs, images=images)
     token = set_client_provider(FakeProvider(sdk))
     mcp = FastMCP("jobs-test")
     register(mcp)
@@ -170,7 +175,6 @@ async def test_run_job_serializes_every_safe_field_and_override(tools):
         "beta",
         "other",
         "research",
-        True,
     )
     kwargs = tools[1].jobs.start.await_args.kwargs
     assert kwargs["cluster_name"] == "beta"
@@ -216,23 +220,19 @@ async def test_run_job_rejects_secret_values_and_bounds_before_sdk(tools):
 
 
 async def test_run_job_resolves_platform_image_and_rejects_cross_context_uri(tools):
-    await fn(tools, "run_job")("image:model", "gpu-small", approved=True)
+    await fn(tools, "run_job")("image:model", "gpu-small")
     assert tools[1].jobs.start.await_args.kwargs["image"] == (
         "remote:image://alpha/team/default/model"
     )
     tools[1].jobs.start.reset_mock()
     with pytest.raises(ApoloToolError, match="does not belong"):
-        await fn(tools, "run_job")(
-            "image://beta/other/research/model", "gpu-small", approved=True
-        )
+        await fn(tools, "run_job")("image://beta/other/research/model", "gpu-small")
     tools[1].jobs.start.assert_not_awaited()
 
 
 async def test_run_job_validates_scheduler_expectation_from_preset(tools):
     with pytest.raises(ApoloToolError, match="cannot override"):
-        await fn(tools, "run_job")(
-            "ubuntu:24.04", "gpu-small", scheduler_enabled=False, approved=True
-        )
+        await fn(tools, "run_job")("ubuntu:24.04", "gpu-small", scheduler_enabled=False)
     tools[1].jobs.start.assert_not_awaited()
 
 
@@ -247,7 +247,6 @@ async def test_run_job_rejects_cross_context_volume_uri(tools):
                     container_path="/data",
                 )
             ],
-            approved=True,
         )
     tools[1].jobs.start.assert_not_awaited()
 
@@ -326,14 +325,8 @@ async def test_get_rejects_job_outside_explicit_context(tools):
 )
 async def test_id_based_operations_reject_cross_context_job(tools, tool_name, args):
     tools[1].jobs.status.return_value.cluster_name = "beta"
-    kwargs = (
-        {"approved": True}
-        if tool_name
-        in {"bump_job_life_span", "send_job_signal", "save_job_image", "kill_job"}
-        else {}
-    )
     with pytest.raises(ApoloToolError, match="does not belong"):
-        await fn(tools, tool_name)(*args, **kwargs)
+        await fn(tools, tool_name)(*args)
 
 
 async def test_logs_are_bounded_truncated_and_redacted(tools):
@@ -369,26 +362,58 @@ async def test_telemetry_summary_raw_and_cap(tools):
 async def test_each_write_calls_sdk_and_returns_context(
     tools, tool_name, args, mock_name
 ):
-    result = await fn(tools, tool_name)(*args, approved=True)
+    result = await fn(tools, tool_name)(*args)
     getattr(tools[1].jobs, mock_name).assert_awaited_once()
     assert result["id"] == "job-1"
     assert result["context"]["cluster"] == "alpha"
 
 
+async def test_managed_save_rejects_preexisting_unowned_image_target(
+    tools, monkeypatch
+):
+    monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "managed")
+    exact_context = {"cluster": "alpha", "org": "team", "project": "default"}
+    Ledger().append(
+        resource_type="job",
+        resource_id="job-1",
+        operation="run_job",
+        action="created",
+        **exact_context,
+    )
+    tools[1].images.digest.side_effect = None
+    tools[1].images.digest.return_value = "sha256:existing"
+
+    with pytest.raises(ApoloToolError, match="no active creation lifecycle"):
+        await fn(tools, "save_job_image")("job-1", "repo:saved")
+    tools[1].jobs.save.assert_not_awaited()
+
+    Ledger().append(
+        resource_type="image",
+        resource_id="remote:repo:saved",
+        operation="save_job_image",
+        action="created",
+        **exact_context,
+    )
+    await fn(tools, "save_job_image")("job-1", "repo:saved")
+    tools[1].jobs.save.assert_awaited_once()
+
+
 async def test_policy_blocks_writes_before_sdk(tools, monkeypatch):
-    monkeypatch.setenv("APOLO_MCP_ENABLE_HIGH_RISK", "false")
-    with pytest.raises(PermissionError, match="disabled by server policy"):
+    monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "read-only")
+    with pytest.raises(ApoloToolError, match="read-only server policy"):
         await fn(tools, "kill_job")("job-1")
     tools[1].jobs.kill.assert_not_awaited()
 
 
-async def test_client_approval_blocks_writes_before_sdk(tools):
-    with pytest.raises(PermissionError, match="approved=true"):
-        await fn(tools, "run_job")("image", "preset")
-    with pytest.raises(PermissionError, match="approved=true"):
-        await fn(tools, "kill_job")("job-1")
-    tools[1].jobs.start.assert_not_awaited()
-    tools[1].jobs.kill.assert_not_awaited()
+async def test_write_schemas_have_no_model_supplied_approval(tools):
+    for name in (
+        "run_job",
+        "bump_job_life_span",
+        "send_job_signal",
+        "save_job_image",
+        "kill_job",
+    ):
+        assert "approved" not in tools[0][name].parameters["properties"]
 
 
 async def test_sdk_errors_are_normalized_with_context(tools):

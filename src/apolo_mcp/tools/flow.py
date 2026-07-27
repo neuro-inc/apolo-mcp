@@ -5,7 +5,7 @@ from __future__ import annotations
 import dataclasses
 import enum
 import os
-from collections.abc import AsyncIterator, Callable, Mapping, Sequence
+from collections.abc import AsyncIterator, Mapping, Sequence
 from contextlib import asynccontextmanager
 from contextvars import ContextVar, Token
 from datetime import datetime
@@ -18,8 +18,13 @@ from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 
 from ..errors import ApoloToolError, normalize_error
-from ..ledger import ensure_ledger_writable, record_created_resource, redact_credentials
-from ..policy import Policy
+from ..ledger import (
+    ensure_ledger_writable,
+    record_created_resource,
+    record_resource_action,
+    redact_credentials,
+)
+from ..policy import MutationEffect, Policy, PolicyMode, authorize_mutation
 
 
 READ_ONLY = ToolAnnotations(
@@ -160,10 +165,40 @@ def _scope(
     return FlowScope(cluster, org, project, root, workspace, config, project_config)
 
 
-def _approve(operation: str, approved: bool) -> None:
-    if not approved:
-        raise PermissionError(f"Operation {operation!r} requires approved=true")
-    Policy.load().require_high_risk(operation)
+def _authorize_flow_resource(
+    operation: str,
+    effect: MutationEffect,
+    resource_type: str,
+    resource_id: str,
+    scope: FlowScope,
+) -> None:
+    authorize_mutation(
+        operation=operation,
+        effect=effect,
+        resource_type=resource_type,
+        resource_id=resource_id,
+        cluster=scope.cluster,
+        org=scope.org,
+        project=scope.project,
+    )
+
+
+def _record_flow_action(
+    operation: str,
+    action: str,
+    resource_type: str,
+    resource_id: str,
+    scope: FlowScope,
+) -> None:
+    record_resource_action(
+        resource_type=resource_type,
+        resource_id=resource_id,
+        cluster=scope.cluster,
+        org=scope.org,
+        project=scope.project,
+        operation=operation,
+        action=action,
+    )
 
 
 @asynccontextmanager
@@ -311,10 +346,9 @@ def register(mcp: FastMCP) -> None:
         params: dict[str, str] | None = None,
         args: list[str] | None = None,
         timeout_seconds: float = 300,
-        approved: bool = False,
     ) -> dict[str, Any]:
-        """Start a configured Flow live job after explicit approval and policy."""
-        _approve("flow_live_run", approved)
+        """Start a configured Flow live job under the server mutation policy."""
+        authorize_mutation(operation="flow_live_run", effect=MutationEffect.CREATE)
         _bound(timeout_seconds, "timeout_seconds", MAX_WRITE_SECONDS)
         scope = _make_scope(
             (
@@ -442,10 +476,8 @@ def register(mcp: FastMCP) -> None:
         suffix: str | None = None,
         timeout_seconds: float = 300,
         limit: int = 20,
-        approved: bool = False,
     ) -> dict[str, Any]:
-        """Kill a Flow live job after explicit approval and policy."""
-        _approve("flow_live_kill", approved)
+        """Kill a Flow live job under the server mutation policy."""
         _bound(timeout_seconds, "timeout_seconds", MAX_WRITE_SECONDS)
         _bound(limit, "limit", MAX_LIST)
         scope = _make_scope(
@@ -460,8 +492,25 @@ def register(mcp: FastMCP) -> None:
             )
         )
         async with _api(scope, "flow_live_kill") as api:
+            current = await api.live_get(job_id, suffix)
+            jobs, current_truncated = _items(current, "jobs", MAX_LIST)
+            if current_truncated:
+                raise ValueError("Flow live job resolution exceeded the safety bound")
+            if not jobs:
+                raise ValueError(f"Flow live job not found: {job_id}")
+            for item in jobs:
+                raw_id = getattr(item, "raw_id", None)
+                if not raw_id:
+                    raise ValueError("FlowAPI live_get returned a job without a raw ID")
+                _authorize_flow_resource(
+                    "flow_live_kill", MutationEffect.UPDATE, "job", raw_id, scope
+                )
             result = await api.live_kill(job_id, suffix=suffix, timeout=timeout_seconds)
             items, truncated = _items(result, "jobs", limit)
+            for item in jobs:
+                _record_flow_action(
+                    "flow_live_kill", "updated", "job", item.raw_id, scope
+                )
             return _response(scope, items=items, limit=limit, truncated=truncated)
 
     @mcp.tool(annotations=DESTRUCTIVE)
@@ -475,10 +524,8 @@ def register(mcp: FastMCP) -> None:
         project_path: str | None = None,
         timeout_seconds: float = 300,
         limit: int = 20,
-        approved: bool = False,
     ) -> dict[str, Any]:
         """Kill all jobs in exactly one explicit Flow context."""
-        _approve("flow_live_kill_all", approved)
         _bound(timeout_seconds, "timeout_seconds", MAX_WRITE_SECONDS)
         _bound(limit, "limit", MAX_LIST)
         scope = _make_scope(
@@ -493,8 +540,33 @@ def register(mcp: FastMCP) -> None:
             )
         )
         async with _api(scope, "flow_live_kill_all") as api:
+            current = await api.live_list(limit=MAX_LIST)
+            jobs, current_truncated = _items(current, "jobs", MAX_LIST)
+            policy = Policy.load()
+            if current_truncated and policy.mode is PolicyMode.MANAGED:
+                raise PermissionError(
+                    "Managed policy cannot authorize flow_live_kill_all because "
+                    "the target list is truncated"
+                )
+            if policy.mode is PolicyMode.READ_ONLY:
+                authorize_mutation(
+                    operation="flow_live_kill_all", effect=MutationEffect.UPDATE
+                )
+            for item in jobs:
+                raw_id = getattr(item, "raw_id", None)
+                if not raw_id:
+                    raise ValueError(
+                        "FlowAPI live_list returned a job without a raw ID"
+                    )
+                _authorize_flow_resource(
+                    "flow_live_kill_all", MutationEffect.UPDATE, "job", raw_id, scope
+                )
             result = await api.live_kill_all(limit=limit, timeout=timeout_seconds)
             items, truncated = _items(result, "jobs", limit)
+            for item in jobs:
+                _record_flow_action(
+                    "flow_live_kill_all", "updated", "job", item.raw_id, scope
+                )
             return _response(scope, items=items, limit=limit, truncated=truncated)
 
     @mcp.tool(annotations=WRITE)
@@ -513,10 +585,9 @@ def register(mcp: FastMCP) -> None:
         local_executor: bool = False,
         task_limit: int = 100,
         timeout_seconds: float = 300,
-        approved: bool = False,
     ) -> dict[str, Any]:
         """Start a bake only through FlowAPI BatchRunner orchestration."""
-        _approve("flow_bake_start", approved)
+        authorize_mutation(operation="flow_bake_start", effect=MutationEffect.CREATE)
         _bound(task_limit, "task_limit", MAX_TASKS)
         _bound(timeout_seconds, "timeout_seconds", MAX_WRITE_SECONDS)
         scope = _make_scope(
@@ -702,15 +773,6 @@ def register(mcp: FastMCP) -> None:
             )
             return _response(scope, bake=result)
 
-    async def bake_mutation(
-        operation: str,
-        call: Callable[[Any], Any],
-        scope: FlowScope,
-    ) -> dict[str, Any]:
-        async with _api(scope, operation) as api:
-            result = await call(api)
-            return _response(scope, bake=result)
-
     @mcp.tool(annotations=DESTRUCTIVE)
     async def flow_bake_cancel(
         bake_id_or_name: str,
@@ -724,10 +786,8 @@ def register(mcp: FastMCP) -> None:
         attempt_no: int = -1,
         task_limit: int = 100,
         timeout_seconds: float = 300,
-        approved: bool = False,
     ) -> dict[str, Any]:
-        """Cancel a bake attempt after explicit approval and policy."""
-        _approve("flow_bake_cancel", approved)
+        """Cancel a bake attempt under the server mutation policy."""
         _bound(task_limit, "task_limit", MAX_TASKS)
         _bound(timeout_seconds, "timeout_seconds", MAX_WRITE_SECONDS)
         scope = _make_scope(
@@ -741,16 +801,24 @@ def register(mcp: FastMCP) -> None:
                 project_path,
             )
         )
-        return await bake_mutation(
-            "flow_bake_cancel",
-            lambda api: api.bake_cancel(
+        async with _api(scope, "flow_bake_cancel") as api:
+            current = await api.bake_get(
+                bake_id_or_name, attempt_no=attempt_no, task_limit=task_limit
+            )
+            bake_id = getattr(current, "id", None)
+            if not bake_id:
+                raise ValueError("FlowAPI bake_get returned no bake ID")
+            _authorize_flow_resource(
+                "flow_bake_cancel", MutationEffect.UPDATE, "bake", bake_id, scope
+            )
+            result = await api.bake_cancel(
                 bake_id_or_name,
                 attempt_no=attempt_no,
                 task_limit=task_limit,
                 timeout=timeout_seconds,
-            ),
-            scope,
-        )
+            )
+            _record_flow_action("flow_bake_cancel", "updated", "bake", bake_id, scope)
+            return _response(scope, bake=result)
 
     @mcp.tool(annotations=DESTRUCTIVE)
     async def flow_bake_restart(
@@ -767,10 +835,8 @@ def register(mcp: FastMCP) -> None:
         local_executor: bool = False,
         task_limit: int = 100,
         timeout_seconds: float = 300,
-        approved: bool = False,
     ) -> dict[str, Any]:
-        """Restart a bake through BatchRunner after approval and policy."""
-        _approve("flow_bake_restart", approved)
+        """Restart a bake through BatchRunner under the server mutation policy."""
         _bound(task_limit, "task_limit", MAX_TASKS)
         _bound(timeout_seconds, "timeout_seconds", MAX_WRITE_SECONDS)
         scope = _make_scope(
@@ -784,15 +850,23 @@ def register(mcp: FastMCP) -> None:
                 project_path,
             )
         )
-        return await bake_mutation(
-            "flow_bake_restart",
-            lambda api: api.bake_restart(
+        async with _api(scope, "flow_bake_restart") as api:
+            current = await api.bake_get(
+                bake_id_or_name, attempt_no=attempt_no, task_limit=task_limit
+            )
+            bake_id = getattr(current, "id", None)
+            if not bake_id:
+                raise ValueError("FlowAPI bake_get returned no bake ID")
+            _authorize_flow_resource(
+                "flow_bake_restart", MutationEffect.UPDATE, "bake", bake_id, scope
+            )
+            result = await api.bake_restart(
                 bake_id_or_name,
                 attempt_no=attempt_no,
                 from_failed=from_failed,
                 local_executor=local_executor,
                 task_limit=task_limit,
                 timeout=timeout_seconds,
-            ),
-            scope,
-        )
+            )
+            _record_flow_action("flow_bake_restart", "updated", "bake", bake_id, scope)
+            return _response(scope, bake=result)

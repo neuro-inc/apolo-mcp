@@ -13,8 +13,8 @@ from mcp.types import ToolAnnotations
 from .._client import client
 from ..context import ApoloContext, resolve_context
 from ..errors import normalize_error
-from ..ledger import ensure_ledger_writable, record_created_resource
-from ..policy import Policy
+from ..ledger import ensure_ledger_writable, record_resource_action
+from ..policy import MutationEffect, authorize_mutation
 
 
 READ_ONLY = ToolAnnotations(
@@ -139,6 +139,19 @@ def _source(source_type: Literal["env", "file"], source_name: str) -> bytes:
     return value
 
 
+async def _secret_exists(sdk: Any, key: str, context: ApoloContext) -> bool:
+    async with sdk.secrets.list(
+        cluster_name=context.cluster,
+        org_name=context.org,
+        project_name=context.project,
+    ) as iterator:
+        async for item in iterator:
+            if item.key == key:
+                _assert_context(item, context)
+                return True
+    return False
+
+
 def register(mcp: FastMCP) -> None:
     @mcp.tool(annotations=READ_ONLY)
     async def list_secrets(
@@ -182,21 +195,26 @@ def register(mcp: FastMCP) -> None:
     async def get_secret_to_file(
         key: str,
         destination_file: str,
-        approved: bool = False,
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
         """Write a secret to a new mode-0600 workspace file; never return its value."""
-        Policy.load().require_high_risk("get_secret_to_file")
-        if not approved:
-            raise PermissionError("get_secret_to_file requires approved=true")
         exact_key = _key(key)
         destination = _new_workspace_file(destination_file)
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
                 resolved = _context(sdk, cluster, org, project)
+                authorize_mutation(
+                    operation="get_secret_to_file",
+                    effect=MutationEffect.UPDATE,
+                    resource_type="secret",
+                    resource_id=exact_key,
+                    cluster=resolved.cluster,
+                    org=resolved.org,
+                    project=resolved.project,
+                )
                 value = await sdk.secrets.get(
                     exact_key,
                     cluster_name=resolved.cluster,
@@ -216,6 +234,15 @@ def register(mcp: FastMCP) -> None:
                 except BaseException:
                     destination.unlink(missing_ok=True)
                     raise
+                record_resource_action(
+                    resource_type="secret",
+                    resource_id=exact_key,
+                    cluster=resolved.cluster,
+                    org=resolved.org,
+                    project=resolved.project,
+                    operation="get_secret_to_file",
+                    action="updated",
+                )
                 return {
                     "status": "written",
                     "key": exact_key,
@@ -236,15 +263,14 @@ def register(mcp: FastMCP) -> None:
         key: str,
         source_type: Literal["env", "file", "secret"],
         source_name: str,
-        approved: bool = False,
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
         """Create a secret without accepting or returning its value."""
-        Policy.load().require_high_risk("create_secret_from_source")
-        if not approved:
-            raise PermissionError("create_secret_from_source requires approved=true")
+        authorize_mutation(
+            operation="create_secret_from_source", effect=MutationEffect.CREATE
+        )
         exact_key = _key(key)
         resolved: ApoloContext | None = None
         try:
@@ -253,7 +279,19 @@ def register(mcp: FastMCP) -> None:
                 value = _source(source_type, source_name)
             async with client() as sdk:
                 resolved = _context(sdk, cluster, org, project)
-                ensure_ledger_writable()
+                exists = await _secret_exists(sdk, exact_key, resolved)
+                effect = MutationEffect.UPDATE if exists else MutationEffect.CREATE
+                authorize_mutation(
+                    operation="create_secret_from_source",
+                    effect=effect,
+                    resource_type="secret",
+                    resource_id=exact_key,
+                    cluster=resolved.cluster,
+                    org=resolved.org,
+                    project=resolved.project,
+                )
+                if not exists:
+                    ensure_ledger_writable()
                 if source_type == "secret":
                     source_key = _key(source_name)
                     if source_key == exact_key:
@@ -267,7 +305,7 @@ def register(mcp: FastMCP) -> None:
                         project_name=resolved.project,
                     )
                     if not value or len(value) > MAX_SECRET_BYTES:
-                        raise ValueError("approved secret source has an invalid size")
+                        raise ValueError("secret source has an invalid size")
                 assert value is not None
                 try:
                     await sdk.secrets.add(
@@ -281,13 +319,14 @@ def register(mcp: FastMCP) -> None:
                     raise RuntimeError(
                         f"{type(exc).__name__} while storing secret value"
                     ) from None
-                record_created_resource(
+                record_resource_action(
                     resource_type="secret",
                     resource_id=exact_key,
                     cluster=resolved.cluster,
                     org=resolved.org,
                     project=resolved.project,
                     operation="create_secret_from_source",
+                    action="updated" if exists else "created",
                 )
                 return {
                     "status": "created",
@@ -306,25 +345,39 @@ def register(mcp: FastMCP) -> None:
     @mcp.tool(annotations=DESTRUCTIVE)
     async def delete_secret(
         key: str,
-        approved: bool = False,
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
-        """Delete one exact secret key after policy and client approval."""
-        Policy.load().require_high_risk("delete_secret")
-        if not approved:
-            raise PermissionError("delete_secret requires approved=true")
+        """Delete one exact secret under full or owned managed policy."""
         exact_key = _key(key)
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
                 resolved = _context(sdk, cluster, org, project)
+                authorize_mutation(
+                    operation="delete_secret",
+                    effect=MutationEffect.DELETE,
+                    resource_type="secret",
+                    resource_id=exact_key,
+                    cluster=resolved.cluster,
+                    org=resolved.org,
+                    project=resolved.project,
+                )
                 await sdk.secrets.rm(
                     exact_key,
                     cluster_name=resolved.cluster,
                     org_name=resolved.org,
                     project_name=resolved.project,
+                )
+                record_resource_action(
+                    resource_type="secret",
+                    resource_id=exact_key,
+                    cluster=resolved.cluster,
+                    org=resolved.org,
+                    project=resolved.project,
+                    operation="delete_secret",
+                    action="deleted",
                 )
                 return {
                     "status": "deleted",

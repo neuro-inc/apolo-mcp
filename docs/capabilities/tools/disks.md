@@ -76,7 +76,7 @@ List persistent disks under a strict result bound.
 
 ## `create_disk`
 
-Create and ledger a bounded disk; requires high-risk server policy.
+Create and journal a bounded disk when server policy permits writes.
 
 **Operation type:** write
 
@@ -87,11 +87,6 @@ Create and ledger a bounded disk; requires high-risk server policy.
 ```json
 {
   "properties": {
-    "approved": {
-      "default": false,
-      "title": "Approved",
-      "type": "boolean"
-    },
     "cluster": {
       "anyOf": [
         {
@@ -177,7 +172,7 @@ Create and ledger a bounded disk; requires high-risk server policy.
 
 ## `delete_disk`
 
-Delete one exact disk ID after approval, or exact ledger-owned cleanup.
+Delete one exact disk ID under full or ledger-owned managed policy.
 
 **Operation type:** destructive
 
@@ -188,16 +183,6 @@ Delete one exact disk ID after approval, or exact ledger-owned cleanup.
 ```json
 {
   "properties": {
-    "approved": {
-      "default": false,
-      "title": "Approved",
-      "type": "boolean"
-    },
-    "automatic_cleanup": {
-      "default": false,
-      "title": "Automatic Cleanup",
-      "type": "boolean"
-    },
     "cluster": {
       "anyOf": [
         {

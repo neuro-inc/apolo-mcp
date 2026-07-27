@@ -21,8 +21,8 @@ values are not returned.
    does not mutate the platform.
 2. Review the generated input and plan files, including exact context, template
    version, current revision, resources, endpoints, effects, expiry, and SHA-256.
-3. Apply the exact unchanged, unexpired plan only after client approval. A write also
-   requires the server's user-controlled high-risk policy to be enabled.
+3. Apply the exact unchanged, unexpired plan. The server must run in `managed` mode
+   for MCP-created Applications or `full` mode for any exact-context Application.
 4. The server rechecks the checksum, parsed input, context, target, and current state.
    An edit, expired plan, reused plan, or revision drift requires a new plan.
 5. Wait with a finite bound, then verify state, logs, events, outputs, and endpoints.
@@ -30,7 +30,7 @@ values are not returned.
 Configuration starts from the current Application input before applying requested
 changes. Rollback and uninstall plans bind to the exact Application and revision and
 are treated as destructive operations. Automatic cleanup is permitted only for an
-exact Application ID recorded in the workflow's ownership ledger.
+exact Application ID with an active creation lifecycle in the append-only journal.
 
 See the [Applications skill](../capabilities/skills.md), the
 [safety model](../getting-started/safety.md), and the generated

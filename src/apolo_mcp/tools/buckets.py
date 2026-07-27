@@ -17,8 +17,12 @@ from yarl import URL
 from .._client import client
 from ..context import ApoloContext, resolve_context
 from ..errors import normalize_error
-from ..ledger import authorize_cleanup, ensure_ledger_writable, record_created_resource
-from ..policy import Policy
+from ..ledger import (
+    ensure_ledger_writable,
+    record_created_resource,
+    record_resource_action,
+)
+from ..policy import MutationEffect, authorize_mutation
 from .secrets import MAX_SECRET_BYTES, _key as _secret_key, _source
 from .service_accounts import _atomic_sink, _reserve_file
 
@@ -124,6 +128,40 @@ def _assert_context(item: Any, context: ApoloContext) -> None:
     expected = (context.cluster, context.org, context.project)
     if actual != expected:
         raise ValueError("bucket does not belong to the exact resolved context")
+
+
+def _authorize_bucket(
+    operation: str,
+    effect: MutationEffect,
+    item: Any,
+    context: ApoloContext,
+) -> None:
+    authorize_mutation(
+        operation=operation,
+        effect=effect,
+        resource_type="bucket",
+        resource_id=item.id,
+        cluster=context.cluster,
+        org=context.org,
+        project=context.project,
+    )
+
+
+def _record_bucket_action(
+    operation: str,
+    action: str,
+    item: Any,
+    context: ApoloContext,
+) -> None:
+    record_resource_action(
+        resource_type="bucket",
+        resource_id=item.id,
+        cluster=context.cluster,
+        org=context.org,
+        project=context.project,
+        operation=operation,
+        action=action,
+    )
 
 
 async def _get_exact(sdk: Any, value: str, context: ApoloContext) -> Any:
@@ -279,15 +317,12 @@ def register(mcp: FastMCP) -> None:
     @mcp.tool(annotations=WRITE)
     async def create_bucket(
         name: str | None = None,
-        approved: bool = False,
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
-        """Create and ledger a bucket after policy and client approval."""
-        Policy.load().require_high_risk("create_bucket")
-        if not approved:
-            raise PermissionError("create_bucket requires approved=true")
+        """Create and journal a bucket when server policy permits writes."""
+        authorize_mutation(operation="create_bucket", effect=MutationEffect.CREATE)
         if name is not None:
             _exact(name, "name")
         resolved: ApoloContext | None = None
@@ -325,15 +360,14 @@ def register(mcp: FastMCP) -> None:
         credential_source_type: Literal["env", "file", "secret"],
         credential_source_name: str,
         name: str | None = None,
-        approved: bool = False,
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
         """Import using bounded JSON credentials from a protected internal source."""
-        Policy.load().require_high_risk("import_external_bucket")
-        if not approved:
-            raise PermissionError("import_external_bucket requires approved=true")
+        authorize_mutation(
+            operation="import_external_bucket", effect=MutationEffect.CREATE
+        )
         external_name = _exact(provider_bucket_name, "provider_bucket_name")
         if name is not None:
             _exact(name, "name")
@@ -526,15 +560,11 @@ def register(mcp: FastMCP) -> None:
     async def set_bucket_public_access(
         bucket_id: str,
         public: bool,
-        approved: bool = False,
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
         """Set public state for one exact immutable bucket ID."""
-        Policy.load().require_high_risk("set_bucket_public_access")
-        if not approved:
-            raise PermissionError("set_bucket_public_access requires approved=true")
         value = _exact(bucket_id, "bucket_id")
         resolved: ApoloContext | None = None
         try:
@@ -543,6 +573,9 @@ def register(mcp: FastMCP) -> None:
                 current = await _get_exact(sdk, value, resolved)
                 if current.id != value:
                     raise ValueError("bucket_id must be the exact immutable bucket ID")
+                _authorize_bucket(
+                    "set_bucket_public_access", MutationEffect.UPDATE, current, resolved
+                )
                 item = await sdk.buckets.set_public_access(
                     value,
                     public,
@@ -551,6 +584,9 @@ def register(mcp: FastMCP) -> None:
                     project_name=resolved.project,
                 )
                 _assert_context(item, resolved)
+                _record_bucket_action(
+                    "set_bucket_public_access", "updated", item, resolved
+                )
                 return {"bucket": _bucket(item), "context": resolved.as_dict()}
         except Exception as exc:
             raise normalize_error(
@@ -566,15 +602,11 @@ def register(mcp: FastMCP) -> None:
         key: str,
         destination_file: str,
         expires_in_seconds: int = 900,
-        approved: bool = False,
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
         """Create a short-lived blob URL; no persistent credentials are returned."""
-        Policy.load().require_high_risk("create_bucket_signed_url")
-        if not approved:
-            raise PermissionError("create_bucket_signed_url requires approved=true")
         value = _exact(bucket_id, "bucket_id")
         exact_key = _key(key)
         if not 1 <= expires_in_seconds <= MAX_SIGNED_URL_SECONDS:
@@ -592,6 +624,9 @@ def register(mcp: FastMCP) -> None:
                 item = await _get_exact(sdk, value, resolved)
                 if item.id != value:
                     raise ValueError("bucket_id must be the exact immutable bucket ID")
+                _authorize_bucket(
+                    "create_bucket_signed_url", MutationEffect.UPDATE, item, resolved
+                )
                 await sdk.buckets.head_blob(
                     item.id,
                     exact_key,
@@ -604,6 +639,9 @@ def register(mcp: FastMCP) -> None:
                     expires_in_seconds=expires_in_seconds,
                 )
                 _atomic_sink(reserved_path, str(url).encode())
+                _record_bucket_action(
+                    "create_bucket_signed_url", "updated", item, resolved
+                )
                 sunk = True
                 return {
                     "expires_in_seconds": expires_in_seconds,
@@ -636,22 +674,18 @@ def register(mcp: FastMCP) -> None:
         key: str,
         max_bytes: int = 1024**3,
         timeout_seconds: float = 300.0,
-        approved: bool = False,
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
         """Upload one bounded workspace file without serializing object bytes."""
-        Policy.load().require_high_risk("upload_bucket_file")
-        if not approved:
-            raise PermissionError("upload_bucket_file requires approved=true")
         value = _exact(bucket_id, "bucket_id")
         exact_key = _key(key)
         _transfer_bounds(max_bytes, timeout_seconds)
         source = _upload_path(local_path)
         size = source.stat().st_size
         if size > max_bytes:
-            raise ValueError("local file exceeds the approved max_bytes")
+            raise ValueError("local file exceeds max_bytes")
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
@@ -659,11 +693,24 @@ def register(mcp: FastMCP) -> None:
                 item = await _get_exact(sdk, value, resolved)
                 if item.id != value:
                     raise ValueError("bucket_id must be the exact immutable bucket ID")
+                _authorize_bucket(
+                    "upload_bucket_file", MutationEffect.UPDATE, item, resolved
+                )
                 await asyncio.wait_for(
                     sdk.buckets.upload_file(
                         URL(source.as_uri()), _blob_uri(item, exact_key), update=False
                     ),
                     timeout=timeout_seconds,
+                )
+                _record_bucket_action("upload_bucket_file", "updated", item, resolved)
+                record_resource_action(
+                    resource_type="bucket_blob",
+                    resource_id=f"{item.id}/{exact_key}",
+                    cluster=resolved.cluster,
+                    org=resolved.org,
+                    project=resolved.project,
+                    operation="upload_bucket_file",
+                    action="created",
                 )
                 return {
                     "status": "uploaded",
@@ -689,15 +736,11 @@ def register(mcp: FastMCP) -> None:
         local_path: str,
         max_bytes: int = 1024**3,
         timeout_seconds: float = 300.0,
-        approved: bool = False,
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
         """Download one bounded blob to a new file below the workspace root."""
-        Policy.load().require_high_risk("download_bucket_file")
-        if not approved:
-            raise PermissionError("download_bucket_file requires approved=true")
         value = _exact(bucket_id, "bucket_id")
         exact_key = _key(key)
         _transfer_bounds(max_bytes, timeout_seconds)
@@ -710,6 +753,9 @@ def register(mcp: FastMCP) -> None:
                 item = await _get_exact(sdk, value, resolved)
                 if item.id != value:
                     raise ValueError("bucket_id must be the exact immutable bucket ID")
+                _authorize_bucket(
+                    "download_bucket_file", MutationEffect.UPDATE, item, resolved
+                )
                 entry = await sdk.buckets.head_blob(
                     item.id,
                     exact_key,
@@ -718,7 +764,7 @@ def register(mcp: FastMCP) -> None:
                     project_name=resolved.project,
                 )
                 if entry.size > max_bytes:
-                    raise ValueError("remote blob exceeds the approved max_bytes")
+                    raise ValueError("remote blob exceeds max_bytes")
                 await asyncio.wait_for(
                     sdk.buckets.download_file(
                         _blob_uri(item, exact_key),
@@ -734,6 +780,7 @@ def register(mcp: FastMCP) -> None:
                         "downloaded file size does not match blob metadata"
                     )
                 completed = True
+                _record_bucket_action("download_bucket_file", "updated", item, resolved)
                 return {
                     "status": "downloaded",
                     "local_path": str(destination),
@@ -758,15 +805,11 @@ def register(mcp: FastMCP) -> None:
     async def delete_bucket_blob(
         bucket_id: str,
         key: str,
-        approved: bool = False,
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
         """Delete one exact blob key; recursive/prefix deletion is not exposed."""
-        Policy.load().require_high_risk("delete_bucket_blob")
-        if not approved:
-            raise PermissionError("delete_bucket_blob requires approved=true")
         value = _exact(bucket_id, "bucket_id")
         exact_key = _key(key)
         resolved: ApoloContext | None = None
@@ -776,6 +819,9 @@ def register(mcp: FastMCP) -> None:
                 item = await _get_exact(sdk, value, resolved)
                 if item.id != value:
                     raise ValueError("bucket_id must be the exact immutable bucket ID")
+                _authorize_bucket(
+                    "delete_bucket_blob", MutationEffect.UPDATE, item, resolved
+                )
                 await sdk.buckets.head_blob(
                     item.id,
                     exact_key,
@@ -789,6 +835,16 @@ def register(mcp: FastMCP) -> None:
                     cluster_name=resolved.cluster,
                     org_name=resolved.org,
                     project_name=resolved.project,
+                )
+                _record_bucket_action("delete_bucket_blob", "updated", item, resolved)
+                record_resource_action(
+                    resource_type="bucket_blob",
+                    resource_id=f"{item.id}/{exact_key}",
+                    cluster=resolved.cluster,
+                    org=resolved.org,
+                    project=resolved.project,
+                    operation="delete_bucket_blob",
+                    action="deleted",
                 )
                 return {
                     "status": "deleted",
@@ -807,16 +863,11 @@ def register(mcp: FastMCP) -> None:
     @mcp.tool(annotations=DESTRUCTIVE)
     async def delete_bucket(
         bucket_id: str,
-        approved: bool = False,
-        automatic_cleanup: bool = False,
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
-        """Delete one exact empty bucket ID, optionally as ledger-owned cleanup."""
-        Policy.load().require_high_risk("delete_bucket")
-        if not automatic_cleanup and not approved:
-            raise PermissionError("delete_bucket requires approved=true")
+        """Delete one exact empty bucket under full or owned managed policy."""
         value = _exact(bucket_id, "bucket_id")
         resolved: ApoloContext | None = None
         try:
@@ -825,24 +876,19 @@ def register(mcp: FastMCP) -> None:
                 item = await _get_exact(sdk, value, resolved)
                 if item.id != value:
                     raise ValueError("bucket_id must be the exact immutable bucket ID")
-                if automatic_cleanup:
-                    authorize_cleanup(
-                        resource_type="bucket",
-                        resource_id=item.id,
-                        cluster=resolved.cluster,
-                        org=resolved.org,
-                        project=resolved.project,
-                    )
+                _authorize_bucket(
+                    "delete_bucket", MutationEffect.DELETE, item, resolved
+                )
                 await sdk.buckets.rm(
                     item.id,
                     cluster_name=resolved.cluster,
                     org_name=resolved.org,
                     project_name=resolved.project,
                 )
+                _record_bucket_action("delete_bucket", "deleted", item, resolved)
                 return {
                     "status": "deleted",
                     "id": item.id,
-                    "automatic_cleanup": automatic_cleanup,
                     "context": resolved.as_dict(),
                 }
         except Exception as exc:

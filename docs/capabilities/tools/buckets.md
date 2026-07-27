@@ -148,7 +148,7 @@ Get safe metadata for one exact bucket ID or name.
 
 ## `create_bucket`
 
-Create and ledger a bucket after policy and client approval.
+Create and journal a bucket when server policy permits writes.
 
 **Operation type:** write
 
@@ -159,11 +159,6 @@ Create and ledger a bucket after policy and client approval.
 ```json
 {
   "properties": {
-    "approved": {
-      "default": false,
-      "title": "Approved",
-      "type": "boolean"
-    },
     "cluster": {
       "anyOf": [
         {
@@ -241,11 +236,6 @@ Import using bounded JSON credentials from a protected internal source.
 ```json
 {
   "properties": {
-    "approved": {
-      "default": false,
-      "title": "Approved",
-      "type": "boolean"
-    },
     "cluster": {
       "anyOf": [
         {
@@ -603,11 +593,6 @@ Set public state for one exact immutable bucket ID.
 ```json
 {
   "properties": {
-    "approved": {
-      "default": false,
-      "title": "Approved",
-      "type": "boolean"
-    },
     "bucket_id": {
       "title": "Bucket Id",
       "type": "string"
@@ -685,11 +670,6 @@ Create a short-lived blob URL; no persistent credentials are returned.
 ```json
 {
   "properties": {
-    "approved": {
-      "default": false,
-      "title": "Approved",
-      "type": "boolean"
-    },
     "bucket_id": {
       "title": "Bucket Id",
       "type": "string"
@@ -777,11 +757,6 @@ Upload one bounded workspace file without serializing object bytes.
 ```json
 {
   "properties": {
-    "approved": {
-      "default": false,
-      "title": "Approved",
-      "type": "boolean"
-    },
     "bucket_id": {
       "title": "Bucket Id",
       "type": "string"
@@ -874,11 +849,6 @@ Download one bounded blob to a new file below the workspace root.
 ```json
 {
   "properties": {
-    "approved": {
-      "default": false,
-      "title": "Approved",
-      "type": "boolean"
-    },
     "bucket_id": {
       "title": "Bucket Id",
       "type": "string"
@@ -971,11 +941,6 @@ Delete one exact blob key; recursive/prefix deletion is not exposed.
 ```json
 {
   "properties": {
-    "approved": {
-      "default": false,
-      "title": "Approved",
-      "type": "boolean"
-    },
     "bucket_id": {
       "title": "Bucket Id",
       "type": "string"
@@ -1042,7 +1007,7 @@ Delete one exact blob key; recursive/prefix deletion is not exposed.
 
 ## `delete_bucket`
 
-Delete one exact empty bucket ID, optionally as ledger-owned cleanup.
+Delete one exact empty bucket under full or owned managed policy.
 
 **Operation type:** destructive
 
@@ -1053,16 +1018,6 @@ Delete one exact empty bucket ID, optionally as ledger-owned cleanup.
 ```json
 {
   "properties": {
-    "approved": {
-      "default": false,
-      "title": "Approved",
-      "type": "boolean"
-    },
-    "automatic_cleanup": {
-      "default": false,
-      "title": "Automatic Cleanup",
-      "type": "boolean"
-    },
     "bucket_id": {
       "title": "Bucket Id",
       "type": "string"

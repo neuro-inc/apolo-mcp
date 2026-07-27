@@ -14,8 +14,8 @@ from yarl import URL
 from .._client import client
 from ..context import ApoloContext, resolve_context
 from ..errors import normalize_error
-from ..ledger import ensure_ledger_writable, record_created_resource
-from ..policy import Policy
+from ..ledger import ensure_ledger_writable, record_resource_action
+from ..policy import MutationEffect, authorize_mutation
 
 
 READ_ONLY = ToolAnnotations(
@@ -128,34 +128,49 @@ def register(mcp: FastMCP) -> None:
         repository: str,
         tag: str,
         timeout_seconds: float = 1800,
-        approved: bool = False,
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
         """Push a local Docker image to one exact Apolo repository and tag."""
-        Policy.load().require_high_risk("push_image")
-        if not approved:
-            raise PermissionError("push_image requires approved=true")
+        authorize_mutation(operation="push_image", effect=MutationEffect.CREATE)
         if not 1 <= timeout_seconds <= MAX_TRANSFER_SECONDS:
             raise ValueError("timeout_seconds must be between 1 and 1800")
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
                 resolved = _context(sdk, cluster, org, project)
-                ensure_ledger_writable()
                 local = sdk.parse.local_image(local_image)
                 remote = _remote(sdk, repository, resolved, tag)
+                try:
+                    await sdk.images.digest(remote)
+                except apolo_sdk.ResourceNotFound:
+                    exists = False
+                else:
+                    exists = True
+                effect = MutationEffect.UPDATE if exists else MutationEffect.CREATE
+                authorize_mutation(
+                    operation="push_image",
+                    effect=effect,
+                    resource_type="image",
+                    resource_id=str(remote),
+                    cluster=resolved.cluster,
+                    org=resolved.org,
+                    project=resolved.project,
+                )
+                if not exists:
+                    ensure_ledger_writable()
                 pushed = await asyncio.wait_for(
                     sdk.images.push(local, remote), timeout_seconds
                 )
-                record_created_resource(
+                record_resource_action(
                     resource_type="image",
                     resource_id=str(pushed),
                     cluster=resolved.cluster,
                     org=resolved.org,
                     project=resolved.project,
                     operation="push_image",
+                    action="updated" if exists else "created",
                 )
                 return {
                     "status": "pushed",
@@ -176,25 +191,32 @@ def register(mcp: FastMCP) -> None:
         tag: str,
         local_image: str | None = None,
         timeout_seconds: float = 1800,
-        approved: bool = False,
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
         """Pull one exact Apolo image into the MCP host's local Docker engine."""
-        Policy.load().require_high_risk("pull_image")
-        if not approved:
-            raise PermissionError("pull_image requires approved=true")
+        authorize_mutation(operation="pull_image", effect=MutationEffect.CREATE)
         if not 1 <= timeout_seconds <= MAX_TRANSFER_SECONDS:
             raise ValueError("timeout_seconds must be between 1 and 1800")
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
                 resolved = _context(sdk, cluster, org, project)
+                ensure_ledger_writable()
                 remote = _remote(sdk, repository, resolved, tag)
                 local = sdk.parse.local_image(local_image) if local_image else None
                 pulled = await asyncio.wait_for(
                     sdk.images.pull(remote, local), timeout_seconds
+                )
+                record_resource_action(
+                    resource_type="local_image",
+                    resource_id=str(pulled),
+                    cluster=resolved.cluster,
+                    org=resolved.org,
+                    project=resolved.project,
+                    operation="pull_image",
+                    action="created",
                 )
                 return {
                     "status": "pulled",
@@ -312,15 +334,11 @@ def register(mcp: FastMCP) -> None:
         repository: str,
         tag: str,
         digest: str,
-        approved: bool = False,
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
-        """Remove an exact tag digest after approval and server policy checks."""
-        Policy.load().require_high_risk("remove_image")
-        if not approved:
-            raise PermissionError("remove_image requires approved=true")
+        """Remove an exact tag digest under full or owned managed policy."""
         if not _DIGEST.fullmatch(digest):
             raise ValueError("digest must be an exact lowercase sha256 digest")
         resolved: ApoloContext | None = None
@@ -328,13 +346,31 @@ def register(mcp: FastMCP) -> None:
             async with client() as sdk:
                 resolved = _context(sdk, cluster, org, project)
                 remote = _remote(sdk, repository, resolved, tag)
+                authorize_mutation(
+                    operation="remove_image",
+                    effect=MutationEffect.DELETE,
+                    resource_type="image",
+                    resource_id=str(remote),
+                    cluster=resolved.cluster,
+                    org=resolved.org,
+                    project=resolved.project,
+                )
                 actual_digest = await sdk.images.digest(remote)
                 if actual_digest != digest:
                     raise ValueError(
-                        "approved digest no longer matches the exact image tag; "
-                        "inspect and approve the current digest"
+                        "provided digest no longer matches the exact image tag; "
+                        "inspect the current digest before removal"
                     )
                 await sdk.images.rm(remote, digest)
+                record_resource_action(
+                    resource_type="image",
+                    resource_id=str(remote),
+                    cluster=resolved.cluster,
+                    org=resolved.org,
+                    project=resolved.project,
+                    operation="remove_image",
+                    action="deleted",
+                )
                 return {
                     "status": "deleted",
                     "image": _image(remote),

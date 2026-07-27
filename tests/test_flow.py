@@ -135,7 +135,7 @@ class Provider:
 
 @pytest.fixture()
 def tools(tmp_path, monkeypatch):
-    monkeypatch.setenv("APOLO_MCP_ENABLE_HIGH_RISK", "true")
+    monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "full")
     monkeypatch.setenv("APOLO_MCP_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
     workspace = tmp_path / "workspace"
     config_dir = workspace / ".apolo"
@@ -244,7 +244,7 @@ async def test_scope_escape_and_hard_caps_are_rejected_before_provider(tools):
     assert fake.calls == []
 
 
-async def test_every_write_requires_approval_and_policy(tools, monkeypatch):
+async def test_every_write_uses_policy_without_approval_parameter(tools, monkeypatch):
     _, fake, _, scope, _ = tools
     writes = [
         ("flow_live_run", ("worker",)),
@@ -254,23 +254,30 @@ async def test_every_write_requires_approval_and_policy(tools, monkeypatch):
         ("flow_bake_cancel", ("bake-1",)),
         ("flow_bake_restart", ("bake-1",)),
     ]
-    for name, args in writes:
-        with pytest.raises(PermissionError, match="approved=true"):
-            await fn(tools, name)(*args, **scope)
-    monkeypatch.setenv("APOLO_MCP_ENABLE_HIGH_RISK", "false")
+    for name, _ in writes:
+        assert "approved" not in tools[0][name].parameters["properties"]
+    monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "read-only")
     with pytest.raises(PermissionError, match="server policy"):
-        await fn(tools, "flow_live_run")("worker", **scope, approved=True)
-    assert fake.calls == []
+        await fn(tools, "flow_live_run")("worker", **scope)
+    mutation_calls = {
+        "live_run",
+        "live_kill",
+        "live_kill_all",
+        "bake_start",
+        "bake_cancel",
+        "bake_restart",
+    }
+    assert not ({call[0] for call in fake.calls} & mutation_calls)
 
 
 async def test_writes_call_facade_and_immediately_ledger_new_ids(tools):
     _, fake, _, scope, tmp_path = tools
-    await fn(tools, "flow_live_run")("worker", **scope, approved=True)
-    await fn(tools, "flow_live_kill")("worker", **scope, approved=True)
-    await fn(tools, "flow_live_kill_all")(**scope, approved=True)
-    await fn(tools, "flow_bake_start")("train", **scope, approved=True)
-    await fn(tools, "flow_bake_cancel")("bake-1", **scope, approved=True)
-    await fn(tools, "flow_bake_restart")("bake-1", **scope, approved=True)
+    await fn(tools, "flow_live_run")("worker", **scope)
+    await fn(tools, "flow_live_kill")("worker", **scope)
+    await fn(tools, "flow_live_kill_all")(**scope)
+    await fn(tools, "flow_bake_start")("train", **scope)
+    await fn(tools, "flow_bake_cancel")("bake-1", **scope)
+    await fn(tools, "flow_bake_restart")("bake-1", **scope)
     assert {call[0] for call in fake.calls} >= {
         "live_run",
         "live_kill",

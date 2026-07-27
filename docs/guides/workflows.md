@@ -13,7 +13,7 @@ terminal workflows in the user's local CLI.
 4. Monitor with bounded wait, logs, and telemetry calls. Preserve terminal state,
    truncation markers, and exit information.
 5. Verify the expected output and delete only an exact resource created by the current
-   workflow and recorded in its ownership ledger.
+   workflow and recorded with an active lifecycle in its append-only journal.
 
 Credentials belong in named secret references, never commands, ordinary environment
 values, evidence, or logs. Move large or binary data through mounted storage or a

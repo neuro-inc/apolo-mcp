@@ -15,8 +15,12 @@ from pydantic import BaseModel, Field
 from .._client import client
 from ..context import ApoloContext, resolve_context
 from ..errors import normalize_error
-from ..ledger import ensure_ledger_writable, record_created_resource
-from ..policy import Policy
+from ..ledger import (
+    ensure_ledger_writable,
+    record_created_resource,
+    record_resource_action,
+)
+from ..policy import MutationEffect, authorize_mutation
 
 
 READ_ONLY = ToolAnnotations(
@@ -190,10 +194,6 @@ def _parse_time(value: str | None, name: str) -> datetime | None:
     return parsed
 
 
-def _policy(operation: str) -> None:
-    Policy.load().require_high_risk(operation)
-
-
 def register(mcp: FastMCP) -> None:
     @mcp.tool(annotations=WRITE)
     async def run_job(
@@ -222,9 +222,9 @@ def register(mcp: FastMCP) -> None:
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
-        approved: bool = False,
     ) -> dict[str, Any]:
-        """Start an approved job; direct secret values are forbidden."""
+        """Start a policy-authorized job; direct secret values are forbidden."""
+        authorize_mutation(operation="run_job", effect=MutationEffect.CREATE)
         if not image.strip() or not preset.strip():
             raise ValueError("image and preset must not be empty")
         if http_port is not None and not 1 <= http_port <= 65535:
@@ -239,9 +239,6 @@ def register(mcp: FastMCP) -> None:
             _secret_ref(value)
         for secret_file in secret_files or []:
             _secret_ref(secret_file.secret)
-        _policy("run_job")
-        if not approved:
-            raise PermissionError("run_job requires approved=true")
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
@@ -610,18 +607,69 @@ def register(mcp: FastMCP) -> None:
         cluster: str | None,
         org: str | None,
         project: str | None,
-        approved: bool,
+        target_resource: Any = None,
     ) -> dict[str, Any]:
-        _policy(operation)
-        if not approved:
-            raise PermissionError(f"{operation} requires approved=true")
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
                 resolved = _context(sdk, cluster, org, project)
                 status = await sdk.jobs.status(job_id)
                 _ensure_job_context(status, resolved)
+                authorize_mutation(
+                    operation=operation,
+                    effect=MutationEffect.UPDATE,
+                    resource_type="job",
+                    resource_id=status.id,
+                    cluster=resolved.cluster,
+                    org=resolved.org,
+                    project=resolved.project,
+                )
+                extra = target_resource(sdk, resolved) if target_resource else None
+                extra_exists = False
+                if extra is not None:
+                    resource_type, resource_id, sdk_resource = extra
+                    if resource_type != "image":
+                        raise ValueError("unsupported additional mutation resource")
+                    try:
+                        await sdk.images.digest(sdk_resource)
+                    except apolo_sdk.ResourceNotFound:
+                        pass
+                    else:
+                        extra_exists = True
+                    authorize_mutation(
+                        operation=operation,
+                        effect=(
+                            MutationEffect.UPDATE
+                            if extra_exists
+                            else MutationEffect.CREATE
+                        ),
+                        resource_type=resource_type,
+                        resource_id=resource_id,
+                        cluster=resolved.cluster,
+                        org=resolved.org,
+                        project=resolved.project,
+                    )
                 await action(sdk, resolved)
+                record_resource_action(
+                    resource_type="job",
+                    resource_id=status.id,
+                    cluster=resolved.cluster,
+                    org=resolved.org,
+                    project=resolved.project,
+                    operation=operation,
+                    action="updated",
+                )
+                if extra is not None:
+                    resource_type, resource_id, _ = extra
+                    record_resource_action(
+                        resource_type=resource_type,
+                        resource_id=resource_id,
+                        cluster=resolved.cluster,
+                        org=resolved.org,
+                        project=resolved.project,
+                        operation=operation,
+                        action="updated" if extra_exists else "created",
+                    )
                 return {
                     "id": job_id,
                     "status": operation,
@@ -642,9 +690,8 @@ def register(mcp: FastMCP) -> None:
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
-        approved: bool = False,
     ) -> dict[str, Any]:
-        """Extend a job lifespan; requires enabled high-risk server policy."""
+        """Extend a job lifespan under full or owned managed policy."""
         _positive(additional_seconds, "additional_seconds", 365 * 86_400)
         return await mutate(
             "bump_job_life_span",
@@ -653,7 +700,6 @@ def register(mcp: FastMCP) -> None:
             cluster,
             org,
             project,
-            approved,
         )
 
     @mcp.tool(annotations=WRITE)
@@ -662,9 +708,8 @@ def register(mcp: FastMCP) -> None:
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
-        approved: bool = False,
     ) -> dict[str, Any]:
-        """Send the SDK's graceful job signal; requires high-risk policy."""
+        """Send the SDK's graceful signal under full or owned managed policy."""
         return await mutate(
             "send_job_signal",
             job_id,
@@ -672,7 +717,6 @@ def register(mcp: FastMCP) -> None:
             cluster,
             org,
             project,
-            approved,
         )
 
     @mcp.tool(annotations=WRITE)
@@ -682,9 +726,8 @@ def register(mcp: FastMCP) -> None:
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
-        approved: bool = False,
     ) -> dict[str, Any]:
-        """Save a job filesystem as an image; requires high-risk policy."""
+        """Save an owned job filesystem to a policy-authorized image target."""
         if not image.strip():
             raise ValueError("image must not be empty")
         return await mutate(
@@ -692,13 +735,25 @@ def register(mcp: FastMCP) -> None:
             job_id,
             lambda sdk, ctx: sdk.jobs.save(
                 job_id,
-                sdk.parse.remote_image(image),
+                sdk.parse.remote_image(
+                    _image_ref(image, ctx), cluster_name=ctx.cluster
+                ),
                 cluster_name=ctx.cluster,
             ),
             cluster,
             org,
             project,
-            approved,
+            lambda sdk, ctx: (
+                "image",
+                str(
+                    sdk.parse.remote_image(
+                        _image_ref(image, ctx), cluster_name=ctx.cluster
+                    )
+                ),
+                sdk.parse.remote_image(
+                    _image_ref(image, ctx), cluster_name=ctx.cluster
+                ),
+            ),
         )
 
     @mcp.tool(annotations=DESTRUCTIVE)
@@ -707,9 +762,8 @@ def register(mcp: FastMCP) -> None:
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
-        approved: bool = False,
     ) -> dict[str, Any]:
-        """Kill a job (destructive); requires enabled high-risk server policy."""
+        """Kill a job under full or owned managed policy."""
         return await mutate(
             "kill_job",
             job_id,
@@ -717,7 +771,6 @@ def register(mcp: FastMCP) -> None:
             cluster,
             org,
             project,
-            approved,
         )
 
 

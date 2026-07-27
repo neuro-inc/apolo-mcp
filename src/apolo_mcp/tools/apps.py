@@ -28,8 +28,12 @@ from ..app_plans import (
 )
 from ..context import ApoloContext, resolve_context
 from ..errors import normalize_error, sanitize_message
-from ..ledger import ensure_ledger_writable, record_created_resource
-from ..policy import Policy
+from ..ledger import (
+    ensure_ledger_writable,
+    record_created_resource,
+    record_resource_action,
+)
+from ..policy import MutationEffect, Policy, PolicyMode, authorize_mutation
 
 
 READ_ONLY = ToolAnnotations(
@@ -47,14 +51,14 @@ PLAN = ToolAnnotations(
     openWorldHint=False,
 )
 WRITE = ToolAnnotations(
-    title="Apply an approved Apps plan",
+    title="Apply an Apps plan",
     readOnlyHint=False,
     destructiveHint=False,
     idempotentHint=False,
     openWorldHint=True,
 )
 DESTRUCTIVE = ToolAnnotations(
-    title="Apply an approved destructive Apps plan",
+    title="Apply a destructive Apps plan",
     readOnlyHint=False,
     destructiveHint=True,
     idempotentHint=False,
@@ -411,6 +415,12 @@ def _plan_result(plan: Mapping[str, Any]) -> dict[str, Any]:
         "destructive_effects": plan.get("destructive_effects", []),
         "expires_at": plan["expires_at"],
     }
+
+
+def _deny_read_only_before_claim(operation: str, effect: MutationEffect) -> None:
+    """Avoid consuming a local plan when the server cannot mutate anything."""
+    if Policy.load().mode is PolicyMode.READ_ONLY:
+        authorize_mutation(operation=operation, effect=effect)
 
 
 def register(mcp: FastMCP) -> None:
@@ -1024,15 +1034,12 @@ def register(mcp: FastMCP) -> None:
     @mcp.tool(annotations=WRITE)
     async def install_app(
         plan_id: str,
-        approved: bool,
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
-        """Apply one approved, unexpired, unchanged install plan exactly once."""
-        if approved is not True:
-            raise PermissionError("approved=true is required to apply an Apps plan")
-        Policy.load().require_high_risk("install_app")
+        """Apply one unexpired, unchanged install plan exactly once."""
+        authorize_mutation(operation="install_app", effect=MutationEffect.CREATE)
         async with client() as sdk:
             context = _context(sdk, cluster, org, project)
             path, plan, payload = claim_for_apply(
@@ -1083,15 +1090,12 @@ def register(mcp: FastMCP) -> None:
     @mcp.tool(annotations=WRITE)
     async def configure_app(
         plan_id: str,
-        approved: bool,
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
-        """Apply one approved, unchanged configure plan after revision drift check."""
-        if approved is not True:
-            raise PermissionError("approved=true is required to apply an Apps plan")
-        Policy.load().require_high_risk("configure_app")
+        """Apply one unchanged configure plan after revision drift check."""
+        _deny_read_only_before_claim("configure_app", MutationEffect.UPDATE)
         async with client() as sdk:
             context = _context(sdk, cluster, org, project)
             path, plan, payload = claim_for_apply(
@@ -1101,6 +1105,15 @@ def register(mcp: FastMCP) -> None:
                 assert payload is not None
                 app = await sdk.apps.get(plan["app_id"])
                 _assert_app_context(app, context)
+                authorize_mutation(
+                    operation="configure_app",
+                    effect=MutationEffect.UPDATE,
+                    resource_type="app",
+                    resource_id=app.id,
+                    cluster=context.cluster,
+                    org=context.org,
+                    project=context.project,
+                )
                 if (
                     app.template_name != plan["template_name"]
                     or app.template_version != plan["template_version"]
@@ -1116,6 +1129,15 @@ def register(mcp: FastMCP) -> None:
                     app_id=plan["app_id"],
                     app_data=payload,
                     comment=plan.get("comment"),
+                )
+                record_resource_action(
+                    resource_type="app",
+                    resource_id=app.id,
+                    cluster=context.cluster,
+                    org=context.org,
+                    project=context.project,
+                    operation="configure_app",
+                    action="updated",
                 )
                 result = {"app": _app_dict(configured), "context": context.as_dict()}
                 record_success(path, plan, result)
@@ -1136,15 +1158,12 @@ def register(mcp: FastMCP) -> None:
     @mcp.tool(annotations=DESTRUCTIVE)
     async def rollback_app(
         plan_id: str,
-        approved: bool,
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
-        """Apply an approved rollback plan; server high-risk policy must allow it."""
-        if approved is not True:
-            raise PermissionError("approved=true is required to apply an Apps plan")
-        Policy.load().require_high_risk("rollback_app")
+        """Apply one unchanged rollback plan under the server mutation policy."""
+        _deny_read_only_before_claim("rollback_app", MutationEffect.UPDATE)
         async with client() as sdk:
             context = _context(sdk, cluster, org, project)
             path, plan, _ = claim_for_apply(
@@ -1153,6 +1172,15 @@ def register(mcp: FastMCP) -> None:
             try:
                 app = await sdk.apps.get(plan["app_id"])
                 _assert_app_context(app, context)
+                authorize_mutation(
+                    operation="rollback_app",
+                    effect=MutationEffect.UPDATE,
+                    resource_type="app",
+                    resource_id=app.id,
+                    cluster=context.cluster,
+                    org=context.org,
+                    project=context.project,
+                )
                 if (
                     app.template_name != plan["template_name"]
                     or app.template_version != plan["template_version"]
@@ -1171,6 +1199,15 @@ def register(mcp: FastMCP) -> None:
                     org_name=context.org,
                     project_name=context.project,
                     comment=plan.get("comment"),
+                )
+                record_resource_action(
+                    resource_type="app",
+                    resource_id=app.id,
+                    cluster=context.cluster,
+                    org=context.org,
+                    project=context.project,
+                    operation="rollback_app",
+                    action="updated",
                 )
                 result = {"app": _app_dict(rolled_back), "context": context.as_dict()}
                 record_success(path, plan, result)
@@ -1191,15 +1228,12 @@ def register(mcp: FastMCP) -> None:
     @mcp.tool(annotations=DESTRUCTIVE)
     async def uninstall_app(
         plan_id: str,
-        approved: bool,
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
-        """Apply an approved uninstall plan; server high-risk policy must allow it."""
-        if approved is not True:
-            raise PermissionError("approved=true is required to apply an Apps plan")
-        Policy.load().require_high_risk("uninstall_app")
+        """Apply one unchanged uninstall plan under the server mutation policy."""
+        _deny_read_only_before_claim("uninstall_app", MutationEffect.DELETE)
         async with client() as sdk:
             context = _context(sdk, cluster, org, project)
             path, plan, _ = claim_for_apply(
@@ -1208,6 +1242,15 @@ def register(mcp: FastMCP) -> None:
             try:
                 app = await sdk.apps.get(plan["app_id"])
                 _assert_app_context(app, context)
+                authorize_mutation(
+                    operation="uninstall_app",
+                    effect=MutationEffect.DELETE,
+                    resource_type="app",
+                    resource_id=app.id,
+                    cluster=context.cluster,
+                    org=context.org,
+                    project=context.project,
+                )
                 if (
                     app.template_name != plan["template_name"]
                     or app.template_version != plan["template_version"]
@@ -1225,6 +1268,15 @@ def register(mcp: FastMCP) -> None:
                     org_name=context.org,
                     project_name=context.project,
                     force=bool(plan.get("force")),
+                )
+                record_resource_action(
+                    resource_type="app",
+                    resource_id=app.id,
+                    cluster=context.cluster,
+                    org=context.org,
+                    project=context.project,
+                    operation="uninstall_app",
+                    action="deleted",
                 )
                 result = {
                     "id": plan["app_id"],

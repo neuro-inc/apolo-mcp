@@ -159,11 +159,6 @@ Create an account and sink its token without returning token material.
 ```json
 {
   "properties": {
-    "approved": {
-      "default": false,
-      "title": "Approved",
-      "type": "boolean"
-    },
     "cluster": {
       "anyOf": [
         {
@@ -260,16 +255,6 @@ Delete one exact immutable account ID after context verification.
     "account_id": {
       "title": "Account Id",
       "type": "string"
-    },
-    "approved": {
-      "default": false,
-      "title": "Approved",
-      "type": "boolean"
-    },
-    "automatic_cleanup": {
-      "default": false,
-      "title": "Automatic Cleanup",
-      "type": "boolean"
     },
     "cluster": {
       "anyOf": [

@@ -179,7 +179,7 @@ Resolve one logical Flow job, with a bounded multi-job result.
 
 ## `flow_live_run`
 
-Start a configured Flow live job after explicit approval and policy.
+Start a configured Flow live job under the server mutation policy.
 
 **Operation type:** write
 
@@ -193,11 +193,6 @@ Start a configured Flow live job after explicit approval and policy.
     "allowed_workspace_root": {
       "title": "Allowed Workspace Root",
       "type": "string"
-    },
-    "approved": {
-      "default": false,
-      "title": "Approved",
-      "type": "boolean"
     },
     "args": {
       "anyOf": [
@@ -519,7 +514,7 @@ Wait a bounded time for a Flow live job to terminate.
 
 ## `flow_live_kill`
 
-Kill a Flow live job after explicit approval and policy.
+Kill a Flow live job under the server mutation policy.
 
 **Operation type:** destructive
 
@@ -533,11 +528,6 @@ Kill a Flow live job after explicit approval and policy.
     "allowed_workspace_root": {
       "title": "Allowed Workspace Root",
       "type": "string"
-    },
-    "approved": {
-      "default": false,
-      "title": "Approved",
-      "type": "boolean"
     },
     "cluster": {
       "title": "Cluster",
@@ -639,11 +629,6 @@ Kill all jobs in exactly one explicit Flow context.
       "title": "Allowed Workspace Root",
       "type": "string"
     },
-    "approved": {
-      "default": false,
-      "title": "Approved",
-      "type": "boolean"
-    },
     "cluster": {
       "title": "Cluster",
       "type": "string"
@@ -726,11 +711,6 @@ Start a bake only through FlowAPI BatchRunner orchestration.
     "allowed_workspace_root": {
       "title": "Allowed Workspace Root",
       "type": "string"
-    },
-    "approved": {
-      "default": false,
-      "title": "Approved",
-      "type": "boolean"
     },
     "batch": {
       "title": "Batch",
@@ -1239,7 +1219,7 @@ Wait a bounded time for a bake attempt to terminate.
 
 ## `flow_bake_cancel`
 
-Cancel a bake attempt after explicit approval and policy.
+Cancel a bake attempt under the server mutation policy.
 
 **Operation type:** destructive
 
@@ -1253,11 +1233,6 @@ Cancel a bake attempt after explicit approval and policy.
     "allowed_workspace_root": {
       "title": "Allowed Workspace Root",
       "type": "string"
-    },
-    "approved": {
-      "default": false,
-      "title": "Approved",
-      "type": "boolean"
     },
     "attempt_no": {
       "default": -1,
@@ -1337,7 +1312,7 @@ Cancel a bake attempt after explicit approval and policy.
 
 ## `flow_bake_restart`
 
-Restart a bake through BatchRunner after approval and policy.
+Restart a bake through BatchRunner under the server mutation policy.
 
 **Operation type:** destructive
 
@@ -1351,11 +1326,6 @@ Restart a bake through BatchRunner after approval and policy.
     "allowed_workspace_root": {
       "title": "Allowed Workspace Root",
       "type": "string"
-    },
-    "approved": {
-      "default": false,
-      "title": "Approved",
-      "type": "boolean"
     },
     "attempt_no": {
       "default": -1,

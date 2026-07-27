@@ -13,11 +13,11 @@ from .._client import client
 from ..context import ApoloContext, resolve_context
 from ..errors import normalize_error
 from ..ledger import (
-    authorize_cleanup,
     ensure_ledger_writable,
     record_created_resource,
+    record_resource_action,
 )
-from ..policy import Policy
+from ..policy import MutationEffect, authorize_mutation
 
 
 READ_ONLY = ToolAnnotations(
@@ -88,10 +88,6 @@ def _assert_context(item: apolo_sdk.Disk, context: ApoloContext) -> None:
         raise ValueError("disk does not belong to the exact resolved context")
 
 
-def _policy(operation: str) -> None:
-    Policy.load().require_high_risk(operation)
-
-
 def register(mcp: FastMCP) -> None:
     @mcp.tool(annotations=READ_ONLY)
     async def list_disks(
@@ -135,15 +131,12 @@ def register(mcp: FastMCP) -> None:
         size_gb: int,
         name: str | None = None,
         timeout_unused_hours: float | None = None,
-        approved: bool = False,
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
-        """Create and ledger a bounded disk; requires high-risk server policy."""
-        _policy("create_disk")
-        if not approved:
-            raise PermissionError("create_disk requires approved=true")
+        """Create and journal a bounded disk when server policy permits writes."""
+        authorize_mutation(operation="create_disk", effect=MutationEffect.CREATE)
         if isinstance(size_gb, bool) or not MIN_DISK_GB <= size_gb <= MAX_DISK_GB:
             raise ValueError(f"size_gb must be between {MIN_DISK_GB} and {MAX_DISK_GB}")
         if name is not None and (not name.strip() or len(name) > 255):
@@ -191,18 +184,13 @@ def register(mcp: FastMCP) -> None:
     @mcp.tool(annotations=DESTRUCTIVE)
     async def delete_disk(
         disk_id: str,
-        approved: bool = False,
-        automatic_cleanup: bool = False,
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
-        """Delete one exact disk ID after approval, or exact ledger-owned cleanup."""
-        _policy("delete_disk")
+        """Delete one exact disk ID under full or ledger-owned managed policy."""
         if not disk_id.strip() or "://" in disk_id or "/" in disk_id:
             raise ValueError("disk_id must be one exact opaque disk ID")
-        if not automatic_cleanup and not approved:
-            raise PermissionError("delete_disk requires approved=true")
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
@@ -219,24 +207,33 @@ def register(mcp: FastMCP) -> None:
                         "disk_id resolved as a name or alias; deletion requires "
                         "the exact immutable disk ID"
                     )
-                if automatic_cleanup:
-                    authorize_cleanup(
-                        resource_type="disk",
-                        resource_id=item.id,
-                        cluster=resolved.cluster,
-                        org=resolved.org,
-                        project=resolved.project,
-                    )
+                authorize_mutation(
+                    operation="delete_disk",
+                    effect=MutationEffect.DELETE,
+                    resource_type="disk",
+                    resource_id=item.id,
+                    cluster=resolved.cluster,
+                    org=resolved.org,
+                    project=resolved.project,
+                )
                 await sdk.disks.rm(
                     item.id,
                     cluster_name=resolved.cluster,
                     org_name=resolved.org,
                     project_name=resolved.project,
                 )
+                record_resource_action(
+                    resource_type="disk",
+                    resource_id=item.id,
+                    cluster=resolved.cluster,
+                    org=resolved.org,
+                    project=resolved.project,
+                    operation="delete_disk",
+                    action="deleted",
+                )
                 return {
                     "status": "deleted",
                     "id": item.id,
-                    "automatic_cleanup": automatic_cleanup,
                     "context": resolved.as_dict(),
                 }
         except Exception as exc:

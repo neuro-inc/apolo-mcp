@@ -1,3 +1,4 @@
+import os
 import stat
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -10,6 +11,7 @@ from mcp.server.fastmcp import FastMCP
 from yarl import URL
 
 from apolo_mcp._client import reset_client_provider, set_client_provider
+from apolo_mcp.errors import ApoloToolError
 from apolo_mcp.tools.buckets import register
 
 
@@ -73,7 +75,7 @@ def blob(key="dir/item.txt", size=12):
 
 @pytest.fixture
 def tools(monkeypatch, tmp_path: Path):
-    monkeypatch.setenv("APOLO_MCP_ENABLE_HIGH_RISK", "true")
+    monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "full")
     monkeypatch.setenv("APOLO_MCP_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
     monkeypatch.setenv("APOLO_MCP_ALLOWED_WORKSPACE", str(tmp_path))
     buckets = MagicMock()
@@ -128,7 +130,7 @@ async def test_bounded_lists_context_and_safe_metadata(tools):
 
 async def test_create_preflights_and_records_ledger(tools):
     mcp, sdk, tmp_path = tools
-    result = await fn(mcp, "create_bucket")("data", approved=True)
+    result = await fn(mcp, "create_bucket")("data")
     assert result["bucket"]["id"] == "bucket-1"
     sdk.buckets.create.assert_awaited_once_with(
         name="data", cluster_name="c", org_name="o", project_name="p"
@@ -146,7 +148,7 @@ async def test_import_reads_credentials_internally_and_never_returns_them(
         "BUCKET_CREDS", '{"access_key":"private-access","region":"west"}'
     )
     result = await fn(mcp, "import_external_bucket")(
-        "aws", "external", "env", "BUCKET_CREDS", approved=True
+        "aws", "external", "env", "BUCKET_CREDS"
     )
     assert "private-access" not in repr(result)
     args = sdk.buckets.import_external.await_args.args
@@ -156,23 +158,24 @@ async def test_import_reads_credentials_internally_and_never_returns_them(
     assert '"operation":"import_external_bucket"' in ledger
 
 
-async def test_all_mutations_require_policy_and_approval(tools, monkeypatch):
+async def test_all_mutations_use_server_policy_without_approval_parameter(
+    tools, monkeypatch
+):
     mcp, sdk, _ = tools
-    for name, args in (
-        ("create_bucket", ()),
-        ("import_external_bucket", ("aws", "external", "env", "CREDS")),
-        ("set_bucket_public_access", ("bucket-1", True)),
-        ("create_bucket_signed_url", ("bucket-1", "one", "signed-url")),
-        ("upload_bucket_file", ("missing", "bucket-1", "one")),
-        ("download_bucket_file", ("bucket-1", "one", "target")),
-        ("delete_bucket_blob", ("bucket-1", "one")),
-        ("delete_bucket", ("bucket-1",)),
+    for name in (
+        "create_bucket",
+        "import_external_bucket",
+        "set_bucket_public_access",
+        "create_bucket_signed_url",
+        "upload_bucket_file",
+        "download_bucket_file",
+        "delete_bucket_blob",
+        "delete_bucket",
     ):
-        with pytest.raises(PermissionError, match="approved=true"):
-            await fn(mcp, name)(*args)
-    monkeypatch.setenv("APOLO_MCP_ENABLE_HIGH_RISK", "false")
-    with pytest.raises(PermissionError, match="server policy"):
-        await fn(mcp, "delete_bucket")("bucket-1", approved=True)
+        assert "approved" not in mcp._tool_manager._tools[name].parameters["properties"]
+    monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "read-only")
+    with pytest.raises(ApoloToolError, match="server policy"):
+        await fn(mcp, "delete_bucket")("bucket-1")
     sdk.buckets.rm.assert_not_awaited()
 
 
@@ -183,7 +186,6 @@ async def test_signed_url_is_short_lived_sink_only_and_preflighted(tools):
         "dir/item.txt",
         "signed/url.txt",
         expires_in_seconds=30,
-        approved=True,
     )
     assert result["expires_in_seconds"] == 30
     assert "url" not in result
@@ -195,7 +197,7 @@ async def test_signed_url_is_short_lived_sink_only_and_preflighted(tools):
     sdk.buckets.make_signed_url.assert_awaited_once()
     with pytest.raises(ValueError, match="expires_in_seconds"):
         await fn(mcp, "create_bucket_signed_url")(
-            "bucket-1", "one", "too-long", expires_in_seconds=3601, approved=True
+            "bucket-1", "one", "too-long", expires_in_seconds=3601
         )
 
 
@@ -204,31 +206,29 @@ async def test_file_transfers_are_workspace_bounded_and_never_return_bytes(tools
     source = tmp_path / "source.bin"
     source.write_bytes(b"x" * 12)
     uploaded = await fn(mcp, "upload_bucket_file")(
-        str(source), "bucket-1", "dir/item.txt", max_bytes=12, approved=True
+        str(source), "bucket-1", "dir/item.txt", max_bytes=12
     )
     assert uploaded["size_bytes"] == 12
     assert "b'" not in repr(uploaded)
     sdk.buckets.upload_file.assert_awaited_once()
     downloaded = await fn(mcp, "download_bucket_file")(
-        "bucket-1", "dir/item.txt", "download.bin", max_bytes=12, approved=True
+        "bucket-1", "dir/item.txt", "download.bin", max_bytes=12
     )
     assert downloaded["size_bytes"] == 12
     assert (tmp_path / "download.bin").read_bytes() == b"x" * 12
     assert "b'" not in repr(downloaded)
     with pytest.raises(PermissionError, match="allowed workspace"):
-        await fn(mcp, "upload_bucket_file")(
-            "/etc/hosts", "bucket-1", "hosts", approved=True
-        )
+        await fn(mcp, "upload_bucket_file")("/etc/hosts", "bucket-1", "hosts")
     with pytest.raises(ValueError, match="max_bytes"):
         await fn(mcp, "upload_bucket_file")(
-            str(source), "bucket-1", "large", max_bytes=1, approved=True
+            str(source), "bucket-1", "large", max_bytes=1
         )
 
 
 async def test_exact_deletes_and_ledger_owned_cleanup(tools):
     mcp, sdk, _ = tools
-    await fn(mcp, "create_bucket")("data", approved=True)
-    await fn(mcp, "delete_bucket_blob")("bucket-1", "dir/item.txt", approved=True)
+    await fn(mcp, "create_bucket")("data")
+    await fn(mcp, "delete_bucket_blob")("bucket-1", "dir/item.txt")
     sdk.buckets.delete_blob.assert_awaited_once_with(
         "bucket-1",
         "dir/item.txt",
@@ -236,13 +236,14 @@ async def test_exact_deletes_and_ledger_owned_cleanup(tools):
         org_name="o",
         project_name="p",
     )
-    result = await fn(mcp, "delete_bucket")("bucket-1", automatic_cleanup=True)
-    assert result["automatic_cleanup"] is True
+    result = await fn(mcp, "delete_bucket")("bucket-1")
+    assert result["id"] == "bucket-1"
+    assert '"action":"deleted"' in Path(os.environ["APOLO_MCP_LEDGER_PATH"]).read_text()
     sdk.buckets.rm.assert_awaited_once_with(
         "bucket-1", cluster_name="c", org_name="o", project_name="p"
     )
     with pytest.raises(ValueError, match="exact"):
-        await fn(mcp, "delete_bucket_blob")("bucket-1", "directory/", approved=True)
+        await fn(mcp, "delete_bucket_blob")("bucket-1", "directory/")
 
 
 async def test_usage_truthfully_reports_bound_and_annotations(tools):

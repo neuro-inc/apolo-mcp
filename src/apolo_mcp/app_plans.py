@@ -243,7 +243,7 @@ def validate_for_apply(
     if datetime.fromisoformat(plan["expires_at"]) <= utc_now():
         raise ValueError("This Apps plan has expired; create a new plan")
     if plan.get("context") != dict(context):
-        raise ValueError("Resolved context differs from the approved plan")
+        raise ValueError("Resolved context differs from the reviewed plan")
     payload: dict[str, Any] | None = None
     if plan.get("inputs_path"):
         inputs = Path(plan["inputs_path"])
@@ -289,11 +289,11 @@ def claim_for_apply(
         _atomic_write(path, json.dumps(claimed, indent=2) + "\n")
         return path, claimed, payload
     except Exception:
-        # Keep the claim marker: a partially claimed approval is never reusable.
+        # Keep the claim marker: a partially claimed plan is never reusable.
         record_failure(
             path,
             initial_plan,
-            "plan claim validation failed; approval permanently consumed",
+            "plan claim validation failed; plan permanently consumed",
         )
         raise
 

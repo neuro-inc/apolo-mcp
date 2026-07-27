@@ -95,7 +95,7 @@ def template() -> SimpleNamespace:
 @pytest.fixture
 def tools(mock_client, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv(app_plans.PLAN_ROOT_ENV, str(tmp_path / "plans"))
-    monkeypatch.setenv("APOLO_MCP_ENABLE_HIGH_RISK", "true")
+    monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "full")
     monkeypatch.setenv("APOLO_MCP_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
     mock_client.config = config()
     mock_client.apps.get_template = AsyncMock(return_value=template())
@@ -161,7 +161,7 @@ async def test_install_plan_and_apply_exact_yaml_once(tools) -> None:
     )
     assert Path(planned["inputs_path"]).exists()
     assert any("discovered schema fields" in item for item in planned["validation"])
-    result = await fn(mcp, "install_app")(planned["plan_id"], True)
+    result = await fn(mcp, "install_app")(planned["plan_id"])
     assert result["plan_status"] == "applied"
     exact = app_plans.load_yaml_exact(Path(planned["inputs_path"]))
     sdk.apps.install.assert_awaited_once_with(
@@ -169,9 +169,9 @@ async def test_install_plan_and_apply_exact_yaml_once(tools) -> None:
     )
     ledger = Path(os.environ["APOLO_MCP_LEDGER_PATH"]).read_text()
     assert '"resource_id":"app-1"' in ledger
-    assert '"state":"created"' in ledger
+    assert '"action":"created"' in ledger
     with pytest.raises(ValueError, match="consumed"):
-        await fn(mcp, "install_app")(planned["plan_id"], True)
+        await fn(mcp, "install_app")(planned["plan_id"])
 
 
 async def test_configure_rejects_edited_file_and_revision_drift(tools) -> None:
@@ -180,16 +180,16 @@ async def test_configure_rejects_edited_file_and_revision_drift(tools) -> None:
     assert sdk.apps.get_input.await_count == 1
     Path(planned["inputs_path"]).write_text("input: {}\n")
     with pytest.raises(ValueError, match="edited"):
-        await fn(mcp, "configure_app")(planned["plan_id"], True)
+        await fn(mcp, "configure_app")(planned["plan_id"])
     sdk.apps.configure.assert_not_awaited()
 
     planned = await fn(mcp, "plan_app_configure")("app-1", {"preset": "cpu-large"})
     sdk.apps.get_revisions.return_value = [revision(4)]
     with pytest.raises(RuntimeError, match="revision changed"):
-        await fn(mcp, "configure_app")(planned["plan_id"], True)
+        await fn(mcp, "configure_app")(planned["plan_id"])
     sdk.apps.configure.assert_not_awaited()
     with pytest.raises(ValueError, match="consumed"):
-        await fn(mcp, "configure_app")(planned["plan_id"], True)
+        await fn(mcp, "configure_app")(planned["plan_id"])
 
 
 async def test_configure_success_preserves_exact_seeded_payload(tools) -> None:
@@ -197,7 +197,7 @@ async def test_configure_success_preserves_exact_seeded_payload(tools) -> None:
     planned = await fn(mcp, "plan_app_configure")(
         "app-1", {"replicas": 2}, comment="scale"
     )
-    result = await fn(mcp, "configure_app")(planned["plan_id"], True)
+    result = await fn(mcp, "configure_app")(planned["plan_id"])
     assert result["plan_status"] == "applied"
     exact = app_plans.load_yaml_exact(Path(planned["inputs_path"]))
     sdk.apps.configure.assert_awaited_once_with(
@@ -220,7 +220,7 @@ async def test_rollback_and_uninstall_plan_apply_require_policy(
     assert rollback["inputs_path"] is None
     assert uninstall["inputs_path"] is None
 
-    monkeypatch.delenv("APOLO_MCP_ENABLE_HIGH_RISK")
+    monkeypatch.delenv("APOLO_MCP_POLICY_MODE")
     for operation, planned in (
         ("install_app", install),
         ("configure_app", configure),
@@ -228,11 +228,11 @@ async def test_rollback_and_uninstall_plan_apply_require_policy(
         ("uninstall_app", uninstall),
     ):
         with pytest.raises(PermissionError, match="server policy"):
-            await fn(mcp, operation)(planned["plan_id"], True)
-    monkeypatch.setenv("APOLO_MCP_ENABLE_HIGH_RISK", "true")
-    await fn(mcp, "rollback_app")(rollback["plan_id"], True)
+            await fn(mcp, operation)(planned["plan_id"])
+    monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "full")
+    await fn(mcp, "rollback_app")(rollback["plan_id"])
     sdk.apps.rollback.assert_awaited_once()
-    await fn(mcp, "uninstall_app")(uninstall["plan_id"], True)
+    await fn(mcp, "uninstall_app")(uninstall["plan_id"])
     sdk.apps.uninstall.assert_awaited_once_with(
         app_id="app-1",
         cluster_name="c",
@@ -242,11 +242,10 @@ async def test_rollback_and_uninstall_plan_apply_require_policy(
     )
 
 
-async def test_all_apply_tools_require_explicit_approval(tools) -> None:
+async def test_apply_tools_do_not_expose_model_supplied_approval(tools) -> None:
     mcp, _ = tools
     for name in ("install_app", "configure_app", "rollback_app", "uninstall_app"):
-        with pytest.raises(PermissionError, match="approved=true"):
-            await fn(mcp, name)("not-used", False)
+        assert "approved" not in mcp._tool_manager._tools[name].parameters["properties"]
 
 
 async def test_truthful_truncation_fetches_one_extra(tools) -> None:
@@ -284,11 +283,11 @@ async def test_failed_sdk_apply_is_redacted_and_permanently_consumed(tools) -> N
         "token=credential-value"
     )
     with pytest.raises(RuntimeError) as error:
-        await fn(mcp, "install_app")(planned["plan_id"], True)
+        await fn(mcp, "install_app")(planned["plan_id"])
     assert "credential-value" not in str(error.value)
     _, audit = app_plans.find_plan(planned["plan_id"])
     assert audit["status"] == "failed"
     assert "credential-value" not in audit["failure"]
     with pytest.raises(ValueError, match="consumed"):
-        await fn(mcp, "install_app")(planned["plan_id"], True)
+        await fn(mcp, "install_app")(planned["plan_id"])
     assert sdk.apps.install.await_count == 1

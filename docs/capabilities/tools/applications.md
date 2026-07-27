@@ -1300,7 +1300,7 @@ Write a no-YAML uninstall plan bound to exact App/current revision.
 
 ## `install_app`
 
-Apply one approved, unexpired, unchanged install plan exactly once.
+Apply one unexpired, unchanged install plan exactly once.
 
 **Operation type:** write
 
@@ -1311,10 +1311,6 @@ Apply one approved, unexpired, unchanged install plan exactly once.
 ```json
 {
   "properties": {
-    "approved": {
-      "title": "Approved",
-      "type": "boolean"
-    },
     "cluster": {
       "anyOf": [
         {
@@ -1357,8 +1353,7 @@ Apply one approved, unexpired, unchanged install plan exactly once.
     }
   },
   "required": [
-    "plan_id",
-    "approved"
+    "plan_id"
   ],
   "title": "install_appArguments",
   "type": "object"
@@ -1377,7 +1372,7 @@ Apply one approved, unexpired, unchanged install plan exactly once.
 
 ## `configure_app`
 
-Apply one approved, unchanged configure plan after revision drift check.
+Apply one unchanged configure plan after revision drift check.
 
 **Operation type:** write
 
@@ -1388,10 +1383,6 @@ Apply one approved, unchanged configure plan after revision drift check.
 ```json
 {
   "properties": {
-    "approved": {
-      "title": "Approved",
-      "type": "boolean"
-    },
     "cluster": {
       "anyOf": [
         {
@@ -1434,8 +1425,7 @@ Apply one approved, unchanged configure plan after revision drift check.
     }
   },
   "required": [
-    "plan_id",
-    "approved"
+    "plan_id"
   ],
   "title": "configure_appArguments",
   "type": "object"
@@ -1454,7 +1444,7 @@ Apply one approved, unchanged configure plan after revision drift check.
 
 ## `rollback_app`
 
-Apply an approved rollback plan; server high-risk policy must allow it.
+Apply one unchanged rollback plan under the server mutation policy.
 
 **Operation type:** destructive
 
@@ -1465,10 +1455,6 @@ Apply an approved rollback plan; server high-risk policy must allow it.
 ```json
 {
   "properties": {
-    "approved": {
-      "title": "Approved",
-      "type": "boolean"
-    },
     "cluster": {
       "anyOf": [
         {
@@ -1511,8 +1497,7 @@ Apply an approved rollback plan; server high-risk policy must allow it.
     }
   },
   "required": [
-    "plan_id",
-    "approved"
+    "plan_id"
   ],
   "title": "rollback_appArguments",
   "type": "object"
@@ -1531,7 +1516,7 @@ Apply an approved rollback plan; server high-risk policy must allow it.
 
 ## `uninstall_app`
 
-Apply an approved uninstall plan; server high-risk policy must allow it.
+Apply one unchanged uninstall plan under the server mutation policy.
 
 **Operation type:** destructive
 
@@ -1542,10 +1527,6 @@ Apply an approved uninstall plan; server high-risk policy must allow it.
 ```json
 {
   "properties": {
-    "approved": {
-      "title": "Approved",
-      "type": "boolean"
-    },
     "cluster": {
       "anyOf": [
         {
@@ -1588,8 +1569,7 @@ Apply an approved uninstall plan; server high-risk policy must allow it.
     }
   },
   "required": [
-    "plan_id",
-    "approved"
+    "plan_id"
   ],
   "title": "uninstall_appArguments",
   "type": "object"

@@ -6,7 +6,7 @@
 
 ## `run_job`
 
-Start an approved job; direct secret values are forbidden.
+Start a policy-authorized job; direct secret values are forbidden.
 
 **Operation type:** write
 
@@ -86,11 +86,6 @@ Start an approved job; direct secret values are forbidden.
     }
   },
   "properties": {
-    "approved": {
-      "default": false,
-      "title": "Approved",
-      "type": "boolean"
-    },
     "cluster": {
       "anyOf": [
         {
@@ -883,7 +878,7 @@ Collect a bounded telemetry summary and optionally bounded raw samples.
 
 ## `bump_job_life_span`
 
-Extend a job lifespan; requires enabled high-risk server policy.
+Extend a job lifespan under full or owned managed policy.
 
 **Operation type:** write
 
@@ -897,11 +892,6 @@ Extend a job lifespan; requires enabled high-risk server policy.
     "additional_seconds": {
       "title": "Additional Seconds",
       "type": "number"
-    },
-    "approved": {
-      "default": false,
-      "title": "Approved",
-      "type": "boolean"
     },
     "cluster": {
       "anyOf": [
@@ -965,7 +955,7 @@ Extend a job lifespan; requires enabled high-risk server policy.
 
 ## `send_job_signal`
 
-Send the SDK's graceful job signal; requires high-risk policy.
+Send the SDK's graceful signal under full or owned managed policy.
 
 **Operation type:** write
 
@@ -976,11 +966,6 @@ Send the SDK's graceful job signal; requires high-risk policy.
 ```json
 {
   "properties": {
-    "approved": {
-      "default": false,
-      "title": "Approved",
-      "type": "boolean"
-    },
     "cluster": {
       "anyOf": [
         {
@@ -1042,7 +1027,7 @@ Send the SDK's graceful job signal; requires high-risk policy.
 
 ## `save_job_image`
 
-Save a job filesystem as an image; requires high-risk policy.
+Save an owned job filesystem to a policy-authorized image target.
 
 **Operation type:** write
 
@@ -1053,11 +1038,6 @@ Save a job filesystem as an image; requires high-risk policy.
 ```json
 {
   "properties": {
-    "approved": {
-      "default": false,
-      "title": "Approved",
-      "type": "boolean"
-    },
     "cluster": {
       "anyOf": [
         {
@@ -1124,7 +1104,7 @@ Save a job filesystem as an image; requires high-risk policy.
 
 ## `kill_job`
 
-Kill a job (destructive); requires enabled high-risk server policy.
+Kill a job under full or owned managed policy.
 
 **Operation type:** destructive
 
@@ -1135,11 +1115,6 @@ Kill a job (destructive); requires enabled high-risk server policy.
 ```json
 {
   "properties": {
-    "approved": {
-      "default": false,
-      "title": "Approved",
-      "type": "boolean"
-    },
     "cluster": {
       "anyOf": [
         {

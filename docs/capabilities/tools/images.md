@@ -17,11 +17,6 @@ Push a local Docker image to one exact Apolo repository and tag.
 ```json
 {
   "properties": {
-    "approved": {
-      "default": false,
-      "title": "Approved",
-      "type": "boolean"
-    },
     "cluster": {
       "anyOf": [
         {
@@ -109,11 +104,6 @@ Pull one exact Apolo image into the MCP host's local Docker engine.
 ```json
 {
   "properties": {
-    "approved": {
-      "default": false,
-      "title": "Approved",
-      "type": "boolean"
-    },
     "cluster": {
       "anyOf": [
         {
@@ -421,7 +411,7 @@ Inspect exact tag metadata: digest and aggregate layer size only.
 
 ## `remove_image`
 
-Remove an exact tag digest after approval and server policy checks.
+Remove an exact tag digest under full or owned managed policy.
 
 **Operation type:** destructive
 
@@ -432,11 +422,6 @@ Remove an exact tag digest after approval and server policy checks.
 ```json
 {
   "properties": {
-    "approved": {
-      "default": false,
-      "title": "Approved",
-      "type": "boolean"
-    },
     "cluster": {
       "anyOf": [
         {

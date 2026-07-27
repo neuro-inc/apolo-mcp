@@ -34,8 +34,9 @@ def image(name="model", tag=None, project="default"):
 
 
 @pytest.fixture()
-def tools(monkeypatch):
-    monkeypatch.setenv("APOLO_MCP_ENABLE_HIGH_RISK", "true")
+def tools(monkeypatch, tmp_path):
+    monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "full")
+    monkeypatch.setenv("APOLO_MCP_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
     cfg = SimpleNamespace(
         cluster_name="alpha",
         org_name="team",
@@ -99,43 +100,43 @@ async def test_lists_are_bounded_filtered_and_inspection_has_no_layers(tools):
 async def test_cross_context_policy_and_exact_digest(tools, monkeypatch):
     with pytest.raises(ApoloToolError, match="does not belong"):
         await fn(tools, "list_image_tags")("image://beta/team/default/model")
-    with pytest.raises(PermissionError, match="approved=true"):
+    monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "read-only")
+    with pytest.raises(ApoloToolError, match="server policy"):
         await fn(tools, "remove_image")("model", "v1", "sha256:" + "a" * 64)
+    monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "full")
     with pytest.raises(ValueError, match="lowercase sha256"):
-        await fn(tools, "remove_image")("model", "v1", "bad", True)
+        await fn(tools, "remove_image")("model", "v1", "bad")
     with pytest.raises(ApoloToolError, match="exact image tag"):
         await fn(tools, "inspect_image")("model", "bad:tag")
-    monkeypatch.setenv("APOLO_MCP_ENABLE_HIGH_RISK", "false")
-    with pytest.raises(PermissionError, match="server policy"):
-        await fn(tools, "remove_image")("model", "v1", "sha256:" + "a" * 64, True)
+    monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "read-only")
+    with pytest.raises(ApoloToolError, match="server policy"):
+        await fn(tools, "remove_image")("model", "v1", "sha256:" + "a" * 64)
 
 
 async def test_remove_revalidates_digest_and_annotations(tools):
     digest = "sha256:" + "a" * 64
-    await fn(tools, "remove_image")("model", "v1", digest, True)
+    await fn(tools, "remove_image")("model", "v1", digest)
     tools[1].images.rm.assert_awaited_once()
     tools[1].images.digest.return_value = "sha256:" + "b" * 64
     with pytest.raises(ApoloToolError, match="no longer matches"):
-        await fn(tools, "remove_image")("model", "v1", digest, True)
+        await fn(tools, "remove_image")("model", "v1", digest)
     assert tools[0]["inspect_image"].annotations.readOnlyHint is True
     assert tools[0]["remove_image"].annotations.destructiveHint is True
 
 
 async def test_push_and_pull_use_sdk_with_exact_context(tools, tmp_path, monkeypatch):
     monkeypatch.setenv("APOLO_MCP_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
-    pushed = await fn(tools, "push_image")("local:model", "model", "v1", approved=True)
+    pushed = await fn(tools, "push_image")("local:model", "model", "v1")
     assert pushed["image"]["project"] == "default"
     tools[1].images.push.assert_awaited_once()
     assert '"resource_type":"image"' in (tmp_path / "ledger.jsonl").read_text()
 
-    pulled = await fn(tools, "pull_image")("model", "v1", "local:copy", approved=True)
+    pulled = await fn(tools, "pull_image")("model", "v1", "local:copy")
     assert pulled["local_image"] == "local:model"
     tools[1].images.pull.assert_awaited_once()
     assert str(tools[1].images.pull.await_args.args[1]) == "local:copy"
 
-    with pytest.raises(PermissionError, match="approved=true"):
-        await fn(tools, "push_image")("local:model", "model", "v1")
+    await fn(tools, "push_image")("local:model", "model", "v1")
+    assert tools[1].images.push.await_count == 2
     with pytest.raises(ValueError, match="timeout_seconds"):
-        await fn(tools, "pull_image")(
-            "model", "v1", timeout_seconds=1801, approved=True
-        )
+        await fn(tools, "pull_image")("model", "v1", timeout_seconds=1801)

@@ -1,4 +1,4 @@
-"""Durable ownership ledger for resources created by apolo-mcp."""
+"""Durable append-only lifecycle journal for resources managed by apolo-mcp."""
 
 from __future__ import annotations
 
@@ -22,8 +22,9 @@ _SAFE_FIELDS = {
     "project",
     "created_at",
     "operation",
-    "state",
+    "action",
 }
+_LIFECYCLE_STATES = {"created", "updated", "deleted"}
 _CREDENTIAL = re.compile(
     r"(?i)(?:"
     r"\b(?:authorization|cookie|token|password|secret|api[-_]?key)\s*[:=]\s*\S+"
@@ -72,7 +73,7 @@ class LedgerEntry:
     project: str
     created_at: str
     operation: str
-    state: str
+    action: str
 
     @classmethod
     def from_dict(cls, value: Mapping[str, Any]) -> LedgerEntry:
@@ -87,6 +88,8 @@ class LedgerEntry:
             raise ValueError("ledger created_at is not an ISO-8601 datetime") from exc
         if parsed.tzinfo is None:
             raise ValueError("ledger created_at must include a timezone")
+        if entry.action not in _LIFECYCLE_STATES:
+            raise ValueError("ledger action must be created, updated, or deleted")
         return entry
 
     def as_dict(self) -> dict[str, str]:
@@ -138,7 +141,7 @@ class Ledger:
         org: str,
         project: str,
         operation: str,
-        state: str = "created",
+        action: str,
         created_at: datetime | None = None,
     ) -> LedgerEntry:
         """Validate and durably append one resource ownership record."""
@@ -154,7 +157,7 @@ class Ledger:
                 "project": project,
                 "created_at": timestamp.astimezone(timezone.utc).isoformat(),
                 "operation": operation,
-                "state": state,
+                "action": action,
             }
         )
         payload = (
@@ -190,6 +193,36 @@ class Ledger:
             os.close(fd)
         return records
 
+    def history(
+        self,
+        *,
+        resource_type: str,
+        resource_id: str,
+        cluster: str,
+        org: str,
+        project: str,
+    ) -> list[LedgerEntry]:
+        """Return lifecycle history for one exact resource and context."""
+        expected = (
+            resource_type,
+            resource_id,
+            cluster,
+            org,
+            project,
+        )
+        result: list[LedgerEntry] = []
+        for entry in self.entries():
+            actual = (
+                entry.resource_type,
+                entry.resource_id,
+                entry.cluster,
+                entry.org,
+                entry.project,
+            )
+            if actual == expected:
+                result.append(entry)
+        return result
+
     def lookup(
         self,
         *,
@@ -199,27 +232,17 @@ class Ledger:
         org: str,
         project: str,
     ) -> LedgerEntry | None:
-        """Find ownership by exact type, identifier, and resolved context only."""
-        expected = (
-            resource_type,
-            resource_id,
-            cluster,
-            org,
-            project,
+        """Return the latest lifecycle entry for one exact resource."""
+        history = self.history(
+            resource_type=resource_type,
+            resource_id=resource_id,
+            cluster=cluster,
+            org=org,
+            project=project,
         )
-        for entry in reversed(self.entries()):
-            actual = (
-                entry.resource_type,
-                entry.resource_id,
-                entry.cluster,
-                entry.org,
-                entry.project,
-            )
-            if actual == expected:
-                return entry
-        return None
+        return history[-1] if history else None
 
-    def authorize_cleanup(
+    def authorize_owned_resource(
         self,
         *,
         resource_type: str,
@@ -228,20 +251,27 @@ class Ledger:
         org: str,
         project: str,
     ) -> LedgerEntry:
-        """Require an exact ownership record before destructive cleanup."""
-        entry = self.lookup(
+        """Require an active creation lifecycle in this exact context."""
+        history = self.history(
             resource_type=resource_type,
             resource_id=resource_id,
             cluster=cluster,
             org=org,
             project=project,
         )
-        if entry is None:
+        last_deleted = max(
+            (index for index, entry in enumerate(history) if entry.action == "deleted"),
+            default=-1,
+        )
+        created = any(
+            entry.action == "created" for entry in history[last_deleted + 1 :]
+        )
+        if not history or not created or history[-1].action == "deleted":
             raise PermissionError(
-                "cleanup denied: no exact ledger ownership record "
-                "for resource and context"
+                "managed mutation denied: no active creation lifecycle for exact "
+                "resource and context"
             )
-        return entry
+        return history[-1]
 
 
 def record_created_resource(
@@ -261,6 +291,29 @@ def record_created_resource(
         org=org,
         project=project,
         operation=operation,
+        action="created",
+    )
+
+
+def record_resource_action(
+    *,
+    resource_type: str,
+    resource_id: str,
+    cluster: str,
+    org: str,
+    project: str,
+    operation: str,
+    action: str,
+) -> LedgerEntry:
+    """Append one successful created, updated, or deleted lifecycle action."""
+    return Ledger().append(
+        resource_type=resource_type,
+        resource_id=resource_id,
+        cluster=cluster,
+        org=org,
+        project=project,
+        operation=operation,
+        action=action,
     )
 
 
@@ -269,7 +322,7 @@ def ensure_ledger_writable() -> None:
     Ledger().ensure_writable()
 
 
-def authorize_cleanup(
+def authorize_owned_resource(
     *,
     resource_type: str,
     resource_id: str,
@@ -277,8 +330,8 @@ def authorize_cleanup(
     org: str,
     project: str,
 ) -> LedgerEntry:
-    """Authorize cleanup against the configured ledger."""
-    return Ledger().authorize_cleanup(
+    """Authorize a managed mutation against an active creation lifecycle."""
+    return Ledger().authorize_owned_resource(
         resource_type=resource_type,
         resource_id=resource_id,
         cluster=cluster,

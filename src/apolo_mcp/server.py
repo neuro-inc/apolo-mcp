@@ -9,9 +9,9 @@ mcp = FastMCP(
         "Before any write, discover and show the resolved cluster, organization, and "
         "project; use explicit context arguments and never change saved context. Never "
         "request, return, or log tokens, cookies, secret values, or service-account "
-        "credentials. Treat annotations as approval hints, not authorization. Keep "
-        "outputs bounded and require both explicit user approval and enabled server "
-        "policy for high-risk operations. The user must already be authenticated with "
+        "credentials. Treat annotations as risk hints, not authorization. Keep "
+        "outputs bounded and obey the server's read-only, managed, or full mutation "
+        "policy. The user must already be authenticated with "
         "`apolo login`."
     ),
 )

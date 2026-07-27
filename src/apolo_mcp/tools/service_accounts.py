@@ -14,8 +14,12 @@ from mcp.types import ToolAnnotations
 from .._client import client
 from ..context import ApoloContext, resolve_context
 from ..errors import normalize_error
-from ..ledger import authorize_cleanup, ensure_ledger_writable, record_created_resource
-from ..policy import Policy
+from ..ledger import (
+    ensure_ledger_writable,
+    record_created_resource,
+    record_resource_action,
+)
+from ..policy import MutationEffect, authorize_mutation
 from .secrets import ALLOWED_WORKSPACE_ENV, _key
 
 
@@ -256,15 +260,14 @@ def register(mcp: FastMCP) -> None:
         destination_type: Literal["file", "secret"],
         destination_name: str,
         name: str | None = None,
-        approved: bool = False,
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
         """Create an account and sink its token without returning token material."""
-        Policy.load().require_high_risk("create_service_account")
-        if not approved:
-            raise PermissionError("create_service_account requires approved=true")
+        authorize_mutation(
+            operation="create_service_account", effect=MutationEffect.CREATE
+        )
         if name is not None:
             _id(name, "name")
         resolved: ApoloContext | None = None
@@ -318,6 +321,14 @@ def register(mcp: FastMCP) -> None:
                         raise RuntimeError(
                             f"{type(exc).__name__} while storing account token"
                         ) from None
+                    record_created_resource(
+                        resource_type="secret",
+                        resource_id=destination_name,
+                        cluster=resolved.cluster,
+                        org=resolved.org,
+                        project=resolved.project,
+                        operation="create_service_account",
+                    )
                     destination = {
                         "type": "secret",
                         "key": destination_name,
@@ -344,16 +355,11 @@ def register(mcp: FastMCP) -> None:
     @mcp.tool(annotations=DESTRUCTIVE)
     async def delete_service_account(
         account_id: str,
-        approved: bool = False,
-        automatic_cleanup: bool = False,
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
         """Delete one exact immutable account ID after context verification."""
-        Policy.load().require_high_risk("delete_service_account")
-        if not automatic_cleanup and not approved:
-            raise PermissionError("delete_service_account requires approved=true")
         value = _id(account_id)
         resolved: ApoloContext | None = None
         try:
@@ -365,19 +371,28 @@ def register(mcp: FastMCP) -> None:
                     raise ValueError(
                         "account_id must be the exact immutable service-account ID"
                     )
-                if automatic_cleanup:
-                    authorize_cleanup(
-                        resource_type="service_account",
-                        resource_id=item.id,
-                        cluster=resolved.cluster,
-                        org=resolved.org,
-                        project=resolved.project,
-                    )
+                authorize_mutation(
+                    operation="delete_service_account",
+                    effect=MutationEffect.DELETE,
+                    resource_type="service_account",
+                    resource_id=item.id,
+                    cluster=resolved.cluster,
+                    org=resolved.org,
+                    project=resolved.project,
+                )
                 await sdk.service_accounts.rm(item.id)
+                record_resource_action(
+                    resource_type="service_account",
+                    resource_id=item.id,
+                    cluster=resolved.cluster,
+                    org=resolved.org,
+                    project=resolved.project,
+                    operation="delete_service_account",
+                    action="deleted",
+                )
                 return {
                     "status": "deleted",
                     "id": item.id,
-                    "automatic_cleanup": automatic_cleanup,
                     "context": resolved.as_dict(),
                 }
         except Exception as exc:

@@ -13,7 +13,8 @@ from yarl import URL
 from .._client import client
 from ..context import ApoloContext, resolve_context
 from ..errors import normalize_error
-from ..policy import Policy
+from ..ledger import ensure_ledger_writable, record_resource_action
+from ..policy import MutationEffect, authorize_mutation
 
 
 READ_ONLY = ToolAnnotations(
@@ -102,8 +103,12 @@ def _file_status(item: apolo_sdk.FileStatus) -> dict[str, Any]:
     }
 
 
-def _policy(operation: str) -> None:
-    Policy.load().require_high_risk(operation)
+async def _exists(sdk: Any, uri: URL) -> bool:
+    try:
+        await sdk.storage.stat(uri)
+    except apolo_sdk.ResourceNotFound:
+        return False
+    return True
 
 
 def register(mcp: FastMCP) -> None:
@@ -229,15 +234,12 @@ def register(mcp: FastMCP) -> None:
     async def write_text(
         path: str,
         content: str,
-        approved: bool = False,
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
-        """Write a small UTF-8 text object; requires high-risk server policy."""
-        _policy("write_text")
-        if not approved:
-            raise PermissionError("write_text requires approved=true")
+        """Create or update a small UTF-8 object under server policy."""
+        authorize_mutation(operation="write_text", effect=MutationEffect.CREATE)
         encoded = content.encode("utf-8", errors="strict")
         if len(encoded) > MAX_TEXT_BYTES:
             raise ValueError(f"UTF-8 content must not exceed {MAX_TEXT_BYTES} bytes")
@@ -246,7 +248,29 @@ def register(mcp: FastMCP) -> None:
             async with client() as sdk:
                 resolved = _context(sdk, cluster, org, project)
                 uri = _storage_uri(path, resolved, allow_root=False)
+                exists = await _exists(sdk, uri)
+                effect = MutationEffect.UPDATE if exists else MutationEffect.CREATE
+                authorize_mutation(
+                    operation="write_text",
+                    effect=effect,
+                    resource_type="storage",
+                    resource_id=str(uri),
+                    cluster=resolved.cluster,
+                    org=resolved.org,
+                    project=resolved.project,
+                )
+                if not exists:
+                    ensure_ledger_writable()
                 await sdk.storage.create(uri, encoded)
+                record_resource_action(
+                    resource_type="storage",
+                    resource_id=str(uri),
+                    cluster=resolved.cluster,
+                    org=resolved.org,
+                    project=resolved.project,
+                    operation="write_text",
+                    action="updated" if exists else "created",
+                )
                 return {
                     "status": "written",
                     "path": str(uri),
@@ -266,21 +290,40 @@ def register(mcp: FastMCP) -> None:
         path: str,
         parents: bool = True,
         exist_ok: bool = True,
-        approved: bool = False,
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
-        """Create an exact directory; requires high-risk server policy."""
-        _policy("make_directory")
-        if not approved:
-            raise PermissionError("make_directory requires approved=true")
+        """Create an exact directory under server policy."""
+        authorize_mutation(operation="make_directory", effect=MutationEffect.CREATE)
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
                 resolved = _context(sdk, cluster, org, project)
                 uri = _storage_uri(path, resolved, allow_root=False)
+                exists = await _exists(sdk, uri)
+                effect = MutationEffect.UPDATE if exists else MutationEffect.CREATE
+                authorize_mutation(
+                    operation="make_directory",
+                    effect=effect,
+                    resource_type="storage",
+                    resource_id=str(uri),
+                    cluster=resolved.cluster,
+                    org=resolved.org,
+                    project=resolved.project,
+                )
+                if not exists:
+                    ensure_ledger_writable()
                 await sdk.storage.mkdir(uri, parents=parents, exist_ok=exist_ok)
+                record_resource_action(
+                    resource_type="storage",
+                    resource_id=str(uri),
+                    cluster=resolved.cluster,
+                    org=resolved.org,
+                    project=resolved.project,
+                    operation="make_directory",
+                    action="updated" if exists else "created",
+                )
                 return {
                     "status": "created",
                     "path": str(uri),
@@ -298,21 +341,35 @@ def register(mcp: FastMCP) -> None:
     async def delete_storage_path(
         path: str,
         recursive: bool = False,
-        approved: bool = False,
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
         """Delete one exact path; recursive deletion removes its entire subtree."""
-        _policy("delete_storage_path")
-        if not approved:
-            raise PermissionError("delete_storage_path requires approved=true")
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
                 resolved = _context(sdk, cluster, org, project)
                 uri = _storage_uri(path, resolved, allow_root=False)
+                authorize_mutation(
+                    operation="delete_storage_path",
+                    effect=MutationEffect.DELETE,
+                    resource_type="storage",
+                    resource_id=str(uri),
+                    cluster=resolved.cluster,
+                    org=resolved.org,
+                    project=resolved.project,
+                )
                 await sdk.storage.rm(uri, recursive=recursive)
+                record_resource_action(
+                    resource_type="storage",
+                    resource_id=str(uri),
+                    cluster=resolved.cluster,
+                    org=resolved.org,
+                    project=resolved.project,
+                    operation="delete_storage_path",
+                    action="deleted",
+                )
                 return {
                     "status": "deleted",
                     "path": str(uri),

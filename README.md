@@ -26,12 +26,37 @@ codex mcp add apolo -- apolo-mcp
 codex mcp list
 ```
 
+To select the policy per Codex session instead of fixing it globally, add only
+the environment-variable allowlist to Codex's `config.toml`:
+
+```toml
+[mcp_servers.apolo]
+command = "apolo-mcp"
+env_vars = ["APOLO_MCP_POLICY_MODE"]
+```
+
+Then choose the mode when starting each session:
+
+```console
+APOLO_MCP_POLICY_MODE=managed codex
+```
+
+Leaving the variable unset keeps the server in its default `read-only` mode.
+
 For Claude Code:
 
 ```console
-claude mcp add apolo --scope user -- apolo-mcp
+claude mcp add apolo \
+  --scope user \
+  -e 'APOLO_MCP_POLICY_MODE=${APOLO_MCP_POLICY_MODE:-read-only}' \
+  -- apolo-mcp
 claude mcp list
 ```
+
+Claude Code expands that environment value when it starts the MCP server, so the
+policy can also be selected per launch with `APOLO_MCP_POLICY_MODE=managed claude`
+or `APOLO_MCP_POLICY_MODE=full claude`. An ordinary `claude` launch remains
+`read-only`.
 
 The equivalent module entry point is `python -m apolo_mcp`. Local stdio is the only
 supported transport. Shared-credential remote service operation is unsupported.
@@ -63,10 +88,14 @@ first July 2026 release, and its Python package version is `26.7.0`.
 
 ## Safety configuration
 
-High-risk operations are disabled by default and require an explicit opt-in by the user
-running the local server. Enabling them does not grant Apolo permissions or replace
-client approval and Apolo RBAC. Read the generated [safety model](docs/getting-started/safety.md)
-before enabling writes, and consult the [capability matrix](docs/capabilities/) for the
-complete current contract.
+The server defaults to `APOLO_MCP_POLICY_MODE=read-only`. Use `managed` to create
+resources and manage only their exact journaled lifecycles, or `full` to permit
+mutations of any exact-context resource. Policy never grants Apolo permissions or
+replaces Apolo RBAC. For Codex, forward the variable name with `env_vars`; for Claude
+Code, use its `${APOLO_MCP_POLICY_MODE:-read-only}` environment expansion. Select the
+value per launch rather than permanently storing `managed` or `full`, unless that is
+intentionally the user's default. Read the generated
+[safety model](docs/getting-started/safety.md) before enabling writes, and consult the
+[capability matrix](docs/capabilities/) for the complete current contract.
 
 Licensed under Apache-2.0. See [SECURITY.md](SECURITY.md) for private reporting.

@@ -20,7 +20,8 @@ from mcp.types import Tool
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from apolo_mcp.policy import HIGH_RISK_ENV, POLICY_FILE_ENV  # noqa: E402
+from apolo_mcp.ledger import LEDGER_ENV  # noqa: E402
+from apolo_mcp.policy import POLICY_FILE_ENV, POLICY_MODE_ENV  # noqa: E402
 from apolo_mcp.tool_registry import TOOL_REGISTRARS  # noqa: E402
 from scripts.install_skills import SKILLS  # noqa: E402
 
@@ -298,8 +299,9 @@ async def generate(*, check: bool) -> int:
             ROOT / "build-tools" / "docs-templates" / "safety.md",
             ROOT / "docs" / "getting-started" / "safety.md",
             {
-                "high_risk_env": HIGH_RISK_ENV,
+                "policy_mode_env": POLICY_MODE_ENV,
                 "policy_file_env": POLICY_FILE_ENV,
+                "ledger_env": LEDGER_ENV,
                 "skill_sections": render_safety(tools),
             },
         ),

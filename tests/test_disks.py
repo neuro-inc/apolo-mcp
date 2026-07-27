@@ -50,7 +50,7 @@ class Disks:
 
 @pytest.fixture()
 def tools(monkeypatch, tmp_path):
-    monkeypatch.setenv("APOLO_MCP_ENABLE_HIGH_RISK", "true")
+    monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "full")
     monkeypatch.setenv("APOLO_MCP_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
     cfg = SimpleNamespace(
         cluster_name="alpha",
@@ -78,7 +78,7 @@ def fn(tools, name):
 async def test_list_bound_create_context_and_ledger(tools):
     result = await fn(tools, "list_disks")(1)
     assert result["truncated"] is True
-    created = await fn(tools, "create_disk")(2, "data", 1, True)
+    created = await fn(tools, "create_disk")(2, "data", 1)
     assert created["disk"]["storage_bytes"] == 2 * 1024**3
     kwargs = tools[1].disks.create.await_args.kwargs
     assert kwargs["cluster_name"] == "alpha" and kwargs["org_name"] == "team"
@@ -87,30 +87,27 @@ async def test_list_bound_create_context_and_ledger(tools):
 
 async def test_create_bounds_before_sdk(tools):
     with pytest.raises(ValueError, match="size_gb"):
-        await fn(tools, "create_disk")(0, approved=True)
-    await fn(tools, "create_disk")(1, timeout_unused_hours=9000, approved=True)
+        await fn(tools, "create_disk")(0)
+    await fn(tools, "create_disk")(1, timeout_unused_hours=9000)
     assert tools[1].disks.create.await_count == 1
     with pytest.raises(ValueError, match="10 years"):
-        await fn(tools, "create_disk")(1, timeout_unused_hours=90000, approved=True)
+        await fn(tools, "create_disk")(1, timeout_unused_hours=90000)
     assert tools[1].disks.create.await_count == 1
 
 
-async def test_delete_exact_approval_and_ledger_cleanup(tools):
-    with pytest.raises(PermissionError, match="approved=true"):
-        await fn(tools, "delete_disk")("disk-1")
-    with pytest.raises(PermissionError, match="approved=true"):
-        await fn(tools, "create_disk")(2)
-    await fn(tools, "create_disk")(2, approved=True)
-    await fn(tools, "delete_disk")("disk-1", automatic_cleanup=True)
+async def test_delete_exact_managed_ownership(tools, monkeypatch):
+    monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "managed")
+    await fn(tools, "create_disk")(2)
+    await fn(tools, "delete_disk")("disk-1")
     tools[1].disks.rm.assert_awaited_once()
     tools[1].disks.get.return_value = disk("disk-2")
-    with pytest.raises(ApoloToolError, match="no exact ledger ownership"):
-        await fn(tools, "delete_disk")("disk-2", automatic_cleanup=True)
+    with pytest.raises(ApoloToolError, match="no active creation lifecycle"):
+        await fn(tools, "delete_disk")("disk-2")
 
 
 async def test_delete_rejects_alias_and_annotations(tools):
     tools[1].disks.get.return_value = disk("actual-id")
     with pytest.raises(ApoloToolError, match="name or alias"):
-        await fn(tools, "delete_disk")("friendly", approved=True)
+        await fn(tools, "delete_disk")("friendly")
     assert tools[0]["list_disks"].annotations.readOnlyHint is True
     assert tools[0]["delete_disk"].annotations.destructiveHint is True
