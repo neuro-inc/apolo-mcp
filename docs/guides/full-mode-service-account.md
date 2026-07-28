@@ -75,39 +75,11 @@ tool surface, so the agent cannot grant itself more access through Apolo MCP.
 
 ## 3. Configure MCP inside the agent job
 
-The job must pass the service-account configuration through to the MCP subprocess.
-For Codex, configure the job-local `config.toml` with environment forwarding:
-
-```toml
-[mcp_servers.apolo]
-command = "apolo-mcp"
-env_vars = [
-  "APOLO_CONFIG",
-  "APOLO_MCP_POLICY_MODE",
-  "APOLO_PASSED_CONFIG",
-]
-```
-
-For Claude Code, use the equivalent job-local MCP registration:
-
-```json
-{
-  "mcpServers": {
-    "apolo": {
-      "command": "apolo-mcp",
-      "args": [],
-      "env": {
-        "APOLO_CONFIG": "${APOLO_CONFIG}",
-        "APOLO_MCP_POLICY_MODE": "full",
-        "APOLO_PASSED_CONFIG": "${APOLO_PASSED_CONFIG}"
-      }
-    }
-  }
-}
-```
-
-Keep this configuration inside the isolated agent image or job workspace. Do not make
-`full` the user's global desktop default.
+Use the canonical installation guide's
+[isolated R&D job configuration](../getting-started/installation.md#isolated-rd-job-configuration).
+It defines the job-local Codex and Claude Code environment forwarding once. Keep that
+configuration inside the isolated image or workspace; never make `full` the user's
+global desktop default.
 
 ## 4. Launch a bounded R&D job
 

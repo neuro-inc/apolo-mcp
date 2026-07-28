@@ -1,34 +1,11 @@
 # Claude Code inside the R&D job
 
-Prefer a pinned image containing Claude Code. If it is absent, download the official
-installer to a file, inspect it, and run it only after user confirmation. This avoids
-executing an uninspected network response through a shell pipe:
+Install Claude Code and the common toolchain through the canonical process linked from
+[runtime-bootstrap.md](runtime-bootstrap.md).
 
-```console
-curl -fsSL https://claude.ai/install.sh -o /tmp/claude-install.sh
-less /tmp/claude-install.sh
-bash /tmp/claude-install.sh
-claude --version
-```
-
-Install and verify Apolo MCP separately:
-
-```console
-uv tool install apolo-mcp==<APOLO_MCP_VERSION>
-uv tool list
-```
-
-Register a job-local MCP server with the isolated Apolo environment forwarded:
-
-```console
-claude mcp add apolo \
-  --scope local \
-  -e 'APOLO_CONFIG=${APOLO_CONFIG}' \
-  -e 'APOLO_MCP_POLICY_MODE=full' \
-  -e 'APOLO_PASSED_CONFIG=${APOLO_PASSED_CONFIG}' \
-  -- apolo-mcp
-claude mcp list
-```
+Follow the
+[isolated R&D job configuration](../../../docs/getting-started/installation.md#isolated-rd-job-configuration)
+for the job-local Claude Code MCP registration, then verify it with `claude mcp list`.
 
 Use a protected provider secret or supported interactive authentication. For scripted
 print mode, Claude Code's `--bare` mode requires API-key or configured helper auth and

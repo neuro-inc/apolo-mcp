@@ -12,8 +12,8 @@ mcp = FastMCP(
         "request, return, or log tokens, cookies, secret values, or service-account "
         "credentials. Treat annotations as risk hints, not authorization. Keep "
         "outputs bounded and obey the server's read-only, managed, or full mutation "
-        "policy. The user must already be authenticated with "
-        "`apolo login`."
+        "policy. Authentication must already be configured through local Apolo "
+        "configuration or an isolated passed configuration."
     ),
 )
 

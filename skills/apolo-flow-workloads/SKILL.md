@@ -20,9 +20,9 @@ description: Validate and operate Apolo Flow live jobs and batch bakes, includin
 6. On controlled failure, inspect structured state and logs, correct the source or
    parameter, present the exact correction diff/parameter change, and use the supported
    restart operation. Preserve the failed evidence; restart approval binds to that fix.
-7. Treat live kill-all, bake cancel, and bake restart as high-risk writes requiring
-   explicit approval plus enabled server policy. Scope kill-all to the exact validated
-   Flow project and context.
+7. Treat live kill-all, bake cancel, and bake restart as destructive writes requiring
+   explicit user approval plus `managed` or `full` server policy. Scope kill-all to the
+   exact validated Flow project and context.
 8. Verify persistent outputs before success and clean up only exact ledger-owned
    resources. Preserve a bounded failure path even when the happy path succeeds.
 

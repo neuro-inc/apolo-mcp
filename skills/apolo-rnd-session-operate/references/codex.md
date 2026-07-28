@@ -1,37 +1,13 @@
 # Codex inside the R&D job
 
-Prefer a pinned image containing Codex. If it is absent, resolve and obtain approval
-for an exact version as described by the runtime-bootstrap plan, then install the
-official package:
+Install the selected Codex version and common toolchain through the canonical process
+linked from [runtime-bootstrap.md](runtime-bootstrap.md).
 
-```console
-npm install --global @openai/codex@<CODEX_VERSION>
-codex --version
-```
-
-Install and verify Apolo MCP separately:
-
-```console
-uv tool install apolo-mcp==<APOLO_MCP_VERSION>
-uv tool list
-```
-
-Create a private job-local home and write configuration to
-`$CODEX_HOME/config.toml`:
-
-```toml
-sandbox_mode = "workspace-write"
-approval_policy = "on-request"
-approvals_reviewer = "user"
-
-[mcp_servers.apolo]
-command = "apolo-mcp"
-env_vars = [
-  "APOLO_CONFIG",
-  "APOLO_MCP_POLICY_MODE",
-  "APOLO_PASSED_CONFIG",
-]
-```
+Create a private job-local home and follow the
+[isolated R&D job configuration](../../../docs/getting-started/installation.md#isolated-rd-job-configuration)
+for `$CODEX_HOME/config.toml`. Keep `sandbox_mode="workspace-write"`,
+`approval_policy="on-request"`, and `approvals_reviewer="user"` unless the user
+explicitly approves a stricter or broader setting after review.
 
 For an interactive session, use Codex device authentication when available or an
 already provisioned job-local authentication store. For noninteractive execution,

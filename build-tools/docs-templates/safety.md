@@ -1,8 +1,9 @@
 # Safety and operation types
 
-Apolo MCP uses the identity established by `apolo login` and cannot elevate that
-user's Apolo permissions. Tool annotations help MCP clients present suitable risk
-prompts; they are hints, not authorization controls.
+Apolo MCP uses the configured Apolo identity—normally a local `apolo login`, or
+`APOLO_PASSED_CONFIG` inside an isolated job—and cannot elevate that identity's Apolo
+permissions. Tool annotations help MCP clients present suitable risk prompts; they are
+hints, not authorization controls.
 
 The user who launches the local stdio server controls `{policy_mode_env}`. It accepts
 exactly three values:
@@ -22,34 +23,9 @@ mode. The server reads the policy once at process startup; changing its environm
 afterward has no effect. There is no policy-file override and no tool argument that can
 elevate or bypass the running server policy.
 
-For Codex, configure forwarding without selecting a permanent policy value:
-
-```toml
-[mcp_servers.apolo]
-command = "apolo-mcp"
-env_vars = ["APOLO_MCP_POLICY_MODE"]
-```
-
-Then use `APOLO_MCP_POLICY_MODE=managed codex` or
-`APOLO_MCP_POLICY_MODE=full codex` for that launch only. An ordinary `codex` launch
-leaves the variable unset and therefore starts Apolo MCP in `read-only` mode. Restart
-Codex after changing MCP configuration so a new server process receives the setting.
-
-For Claude Code, register the same per-launch behavior with a dynamic environment
-expansion:
-
-```console
-claude mcp add apolo \
-  --scope user \
-  -e 'APOLO_MCP_POLICY_MODE=${{APOLO_MCP_POLICY_MODE:-read-only}}' \
-  -- apolo-mcp
-```
-
-Claude Code expands the expression when starting the MCP subprocess. Use an ordinary
-`claude` launch for `read-only`, or prefix the launch with
-`APOLO_MCP_POLICY_MODE=managed` or `APOLO_MCP_POLICY_MODE=full`. The `local`, `project`,
-and `user` scopes control where the MCP registration applies; they do not select the
-policy. Restart Claude Code after changing MCP configuration.
+Follow the [installation and client configuration](installation.md) for
+Codex and Claude Code registration, environment forwarding, scope selection, skill
+installation, and per-launch policy commands.
 
 Successful mutations are written to an append-only lifecycle journal as `created`,
 `updated`, or `deleted` actions. By default it is stored at

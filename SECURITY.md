@@ -11,6 +11,9 @@ GitHub's **Security → Report a vulnerability** flow for `neuro-inc/apolo-mcp`,
 the security contact published by Apolo. Include reproduction steps, affected version,
 and impact, but never include live tokens or customer data.
 
-The server inherits the local user's Apolo identity and RBAC. It does not accept token
-arguments, expose secret values, or provide a generic shell/HTTP tool. High-risk tools
-must be disabled by default at the server and separately approved by the client.
+The server uses the configured Apolo identity and RBAC. It does not accept token
+arguments, expose secret values, or provide a generic shell/HTTP tool. Mutations are
+disabled by default; `managed` and `full` are operator-selected guardrails, not a
+replacement for least-privilege credentials or client approval. Never run `full` with
+a broadly privileged personal identity. See the [safety model](docs/getting-started/safety.md)
+and [full-mode service-account guide](docs/guides/full-mode-service-account.md).

@@ -173,6 +173,7 @@ def test_gitbook_navigation_excludes_generator_sources() -> None:
     assert summary.index("[Getting started]") < summary.index("[Capabilities]")
     assert summary.index("[Capabilities]") < summary.index("[Guides]")
     for target in (
+        "getting-started/installation.md",
         "getting-started/safety.md",
         "capabilities/tools/README.md",
         "capabilities/tools/context.md",

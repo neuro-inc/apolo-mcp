@@ -2,64 +2,21 @@
 
 `apolo-mcp` is a local stdio Model Context Protocol server for typed Apolo platform
 operations. It is a thin adapter over `apolo-sdk`: it never shells out to the CLI and
-uses the identity, permissions, and selected defaults from an existing `apolo login`.
+uses the configured Apolo identity, permissions, and defaults. Local sessions normally
+come from `apolo login`; isolated jobs may use `APOLO_PASSED_CONFIG`.
 
 The server exposes bounded context discovery and typed platform operations. Every
 operational tool accepts explicit `cluster`, `org`, and `project` inputs where the
 SDK supports them; explicit inputs never modify the user's saved context. Secret
 values and one-time credentials are intentionally outside the model-visible interface.
 
-## Install and run
+## Installation
 
-Python 3.10 or newer is required.
-
-```console
-uv tool install apolo-mcp
-apolo login
-apolo-mcp
-```
-
-For Codex:
-
-```console
-codex mcp add apolo -- apolo-mcp
-codex mcp list
-```
-
-To select the policy per Codex session instead of fixing it globally, add only
-the environment-variable allowlist to Codex's `config.toml`:
-
-```toml
-[mcp_servers.apolo]
-command = "apolo-mcp"
-env_vars = ["APOLO_MCP_POLICY_MODE"]
-```
-
-Then choose the mode when starting each session:
-
-```console
-APOLO_MCP_POLICY_MODE=managed codex
-```
-
-Leaving the variable unset keeps the server in its default `read-only` mode.
-
-For Claude Code:
-
-```console
-claude mcp add apolo \
-  --scope user \
-  -e 'APOLO_MCP_POLICY_MODE=${APOLO_MCP_POLICY_MODE:-read-only}' \
-  -- apolo-mcp
-claude mcp list
-```
-
-Claude Code expands that environment value when it starts the MCP server, so the
-policy can also be selected per launch with `APOLO_MCP_POLICY_MODE=managed claude`
-or `APOLO_MCP_POLICY_MODE=full claude`. An ordinary `claude` launch remains
-`read-only`.
-
-The equivalent module entry point is `python -m apolo_mcp`. Local stdio is the only
-supported transport. Shared-credential remote service operation is unsupported.
+Follow the
+[installation and client configuration guide](docs/getting-started/installation.md)
+for prerequisites, server and skill installation, Codex and Claude Code registration,
+per-session policy selection, and verification. Local stdio is the only supported
+transport; shared-credential remote service operation is unsupported.
 
 See the [Apolo MCP documentation](docs/README.md) for prerequisites, safety controls,
 the capability matrix, generated tools and skills catalogs, and task-oriented guides.
@@ -95,10 +52,8 @@ replaces Apolo RBAC, and it is not a security boundary against an agent with dir
 CLI or SDK access. **Never run `full` with a personal administrator, owner, or other
 broadly privileged Apolo account.** Use a dedicated least-privileged service account
 and follow the [full-mode service-account guide](docs/guides/full-mode-service-account.md).
-For Codex, forward the variable name with `env_vars`; for Claude
-Code, use its `${APOLO_MCP_POLICY_MODE:-read-only}` environment expansion. Select the
-value per launch rather than permanently storing `managed` or `full`, unless that is
-intentionally the user's default. Read the generated
+Select policy per launch rather than permanently storing `managed` or `full`; the
+installation guide contains the client-specific configuration. Read the generated
 [safety model](docs/getting-started/safety.md) before enabling writes, and consult the
 [capability matrix](docs/capabilities/) for the complete current contract.
 

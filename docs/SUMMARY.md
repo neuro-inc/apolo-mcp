@@ -2,6 +2,7 @@
 
 * [Apolo MCP documentation](README.md)
 * [Getting started](getting-started/README.md)
+  * [Installation and client configuration](getting-started/installation.md)
   * [Safety and operation types](getting-started/safety.md)
 * [Capabilities](capabilities/README.md)
   * [MCP tool reference](capabilities/tools/README.md)

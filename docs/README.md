@@ -2,11 +2,11 @@
 
 Apolo MCP is a local [Model Context Protocol](https://modelcontextprotocol.io/)
 server that gives an AI client typed, bounded access to Apolo platform operations. It
-uses the identity and permissions from the user's existing `apolo login`; it does not
-shell out to the CLI, return credential values to the model, or grant additional
-permissions. It can create service accounts, but their one-time tokens are written
-directly to a protected file or Apolo secret instead of entering the model
-conversation.
+uses the configured Apolo identity and permissions: normally a local `apolo login`, or
+an isolated job's `APOLO_PASSED_CONFIG`. It does not shell out to the CLI, return
+credential values to the model, or grant additional permissions.
+It can create service accounts, but their one-time tokens are written directly to a
+protected file or Apolo secret instead of entering the model conversation.
 
 The server is intended for discovering platform context, running and observing
 workloads, operating Applications, and managing supported project resources. It does
@@ -16,7 +16,8 @@ service.
 
 ## Start here
 
-1. [Install and configure Apolo MCP](getting-started/) and check its prerequisites.
+1. [Install and configure Apolo MCP](getting-started/installation.md) and check its
+   prerequisites.
 2. Read the generated [safety model](getting-started/safety.md) before enabling writes.
 3. Explore the [capability matrix](capabilities/) to understand what is supported.
 4. Use the generated [tool reference](capabilities/tools/README.md) and
