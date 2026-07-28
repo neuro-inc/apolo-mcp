@@ -91,7 +91,11 @@ first July 2026 release, and its Python package version is `26.7.0`.
 The server defaults to `APOLO_MCP_POLICY_MODE=read-only`. Use `managed` to create
 resources and manage only their exact journaled lifecycles, or `full` to permit
 mutations of any exact-context resource. Policy never grants Apolo permissions or
-replaces Apolo RBAC. For Codex, forward the variable name with `env_vars`; for Claude
+replaces Apolo RBAC, and it is not a security boundary against an agent with direct
+CLI or SDK access. **Never run `full` with a personal administrator, owner, or other
+broadly privileged Apolo account.** Use a dedicated least-privileged service account
+and follow the [full-mode service-account guide](docs/guides/full-mode-service-account.md).
+For Codex, forward the variable name with `env_vars`; for Claude
 Code, use its `${APOLO_MCP_POLICY_MODE:-read-only}` environment expansion. Select the
 value per launch rather than permanently storing `managed` or `full`, unless that is
 intentionally the user's default. Read the generated

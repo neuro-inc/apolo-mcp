@@ -13,8 +13,9 @@ description: Inspect and safely manage Apolo storage, disks, images, buckets/blo
 3. Use deterministic local CLI/scripts for bulk storage, image, or bucket transfer.
    Restrict local paths to the configured workspace root and set explicit size,
    duration, overwrite, and write-approval controls.
-4. Require explicit approval and enabled high-risk policy for every write. Mark exact
-   deletes destructive; reject project roots, ambiguous names, and unbounded recursion.
+4. Require explicit user approval and `managed` or `full` policy for every write. Mark
+   exact deletes destructive; reject project roots, ambiguous names, and unbounded
+   recursion.
 5. Preflight the protected ledger before creation and append the exact returned type,
    ID, context, and operation immediately afterward. Automatic cleanup requires an
    exact ledger match and never a naming convention.

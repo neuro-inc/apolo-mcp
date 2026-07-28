@@ -45,3 +45,19 @@ Discover and compare Apolo App templates; inspect status, logs, events, and outp
 **Client summary:** Manage Apolo resources with bounded safe operations
 
 Inspect and safely manage Apolo storage, disks, images, buckets/blobs, secrets, and service accounts with explicit context, bounded transfers, protected credential sources/sinks, policy gates, and exact ownership. Use for platform resource inventory, metadata, creation, transfer, deletion, or cleanup.
+
+## [Apolo R&D Session Setup](../../skills/apolo-rnd-session-setup/SKILL.md)
+
+**Skill name:** `apolo-rnd-session-setup`
+
+**Client summary:** Provision isolated full-mode R&D sessions
+
+Provision a hardened Apolo R&D session for Codex or Claude Code from a trusted local managed-mode client. Use when a user asks to set up, plan, launch, or grant RBAC for an isolated full-mode agent job backed by a dedicated service account and secret-mounted Apolo credentials.
+
+## [Apolo R&D Session Operations](../../skills/apolo-rnd-session-operate/SKILL.md)
+
+**Skill name:** `apolo-rnd-session-operate`
+
+**Client summary:** Start and operate isolated R&D agents
+
+Bootstrap, start, monitor, and hand off Codex or Claude Code inside an isolated Apolo R&D job using a dedicated service account. Use when operating from inside the job, installing missing agent tooling, configuring Apolo MCP full mode, creating a tmux session, validating identity and RBAC, or diagnosing an existing R&D agent session.

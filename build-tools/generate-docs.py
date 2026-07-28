@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from apolo_mcp.ledger import LEDGER_ENV  # noqa: E402
-from apolo_mcp.policy import POLICY_FILE_ENV, POLICY_MODE_ENV  # noqa: E402
+from apolo_mcp.policy import POLICY_MODE_ENV  # noqa: E402
 from apolo_mcp.tool_registry import TOOL_REGISTRARS  # noqa: E402
 from scripts.install_skills import SKILLS  # noqa: E402
 
@@ -54,6 +54,8 @@ SAFETY_SKILLS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
         "Apolo Resource Management",
         ("Storage", "Disks", "Images", "Buckets", "Secrets", "Service accounts"),
     ),
+    ("apolo-rnd-session-setup", "Apolo R&D Session Setup", ()),
+    ("apolo-rnd-session-operate", "Apolo R&D Session Operations", ()),
 )
 
 
@@ -158,10 +160,16 @@ def render_safety(tools: list[tuple[str, Tool, str]]) -> str:
 
     sections: list[str] = []
     for name, display_name, groups in SAFETY_SKILLS:
+        summary = (
+            f"Tools used by the `{name}` skill."
+            if groups
+            else "This orchestration skill adds no MCP tools; it composes the "
+            "context, job, and resource operations classified above."
+        )
         sections.extend(
             [
                 f"## [{display_name}](../capabilities/skills.md#{name})",
-                f"Tools used by the `{name}` skill.",
+                summary,
                 "### Read-only operations",
                 _safety_tool_list(tools, groups, frozenset({"read-only"})),
                 "### Write operations",
@@ -300,7 +308,6 @@ async def generate(*, check: bool) -> int:
             ROOT / "docs" / "getting-started" / "safety.md",
             {
                 "policy_mode_env": POLICY_MODE_ENV,
-                "policy_file_env": POLICY_FILE_ENV,
                 "ledger_env": LEDGER_ENV,
                 "skill_sections": render_safety(tools),
             },

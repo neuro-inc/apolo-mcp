@@ -1,20 +1,18 @@
-import json
-
 import pytest
 
 from apolo_mcp.ledger import Ledger
 from apolo_mcp.policy import (
-    POLICY_FILE_ENV,
     POLICY_MODE_ENV,
     MutationEffect,
     Policy,
     PolicyMode,
+    _reset_policy_for_tests,
+    current_policy,
 )
 
 
 def test_read_only_is_default_and_denies_every_mutation(monkeypatch) -> None:
     monkeypatch.delenv(POLICY_MODE_ENV, raising=False)
-    monkeypatch.delenv(POLICY_FILE_ENV, raising=False)
     policy = Policy.load()
     assert policy.mode is PolicyMode.READ_ONLY
     with pytest.raises(PermissionError, match="read-only server policy"):
@@ -23,23 +21,21 @@ def test_read_only_is_default_and_denies_every_mutation(monkeypatch) -> None:
 
 def test_removed_high_risk_switch_does_not_enable_mutations(monkeypatch) -> None:
     monkeypatch.delenv(POLICY_MODE_ENV, raising=False)
-    monkeypatch.delenv(POLICY_FILE_ENV, raising=False)
     monkeypatch.setenv("APOLO_MCP_ENABLE_HIGH_RISK", "true")
     assert Policy.load().mode is PolicyMode.READ_ONLY
 
 
-def test_policy_file_and_environment_override(tmp_path, monkeypatch) -> None:
-    path = tmp_path / "policy.json"
-    path.write_text(json.dumps({"mode": "managed"}), encoding="utf-8")
-    monkeypatch.setenv(POLICY_FILE_ENV, str(path))
-    monkeypatch.delenv(POLICY_MODE_ENV, raising=False)
-    assert Policy.load().mode is PolicyMode.MANAGED
+def test_environment_policy_is_frozen_for_process(monkeypatch) -> None:
+    monkeypatch.setenv(POLICY_MODE_ENV, "managed")
+    assert current_policy().mode is PolicyMode.MANAGED
     monkeypatch.setenv(POLICY_MODE_ENV, "full")
-    assert Policy.load().mode is PolicyMode.FULL
+    assert current_policy().mode is PolicyMode.MANAGED
+
+    _reset_policy_for_tests()
+    assert current_policy().mode is PolicyMode.FULL
 
 
 def test_invalid_environment_policy_fails_closed(monkeypatch) -> None:
-    monkeypatch.delenv(POLICY_FILE_ENV, raising=False)
     monkeypatch.setenv(POLICY_MODE_ENV, "perhaps")
     with pytest.raises(ValueError, match="must be one of"):
         Policy.load()

@@ -24,7 +24,7 @@ from ..ledger import (
     record_resource_action,
     redact_credentials,
 )
-from ..policy import MutationEffect, Policy, PolicyMode, authorize_mutation
+from ..policy import MutationEffect, PolicyMode, authorize_mutation, current_policy
 
 
 READ_ONLY = ToolAnnotations(
@@ -542,7 +542,7 @@ def register(mcp: FastMCP) -> None:
         async with _api(scope, "flow_live_kill_all") as api:
             current = await api.live_list(limit=MAX_LIST)
             jobs, current_truncated = _items(current, "jobs", MAX_LIST)
-            policy = Policy.load()
+            policy = current_policy()
             if current_truncated and policy.mode is PolicyMode.MANAGED:
                 raise PermissionError(
                     "Managed policy cannot authorize flow_live_kill_all because "

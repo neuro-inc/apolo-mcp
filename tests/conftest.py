@@ -3,6 +3,16 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def reset_process_policy():
+    """Give each test a fresh process-level policy selection."""
+    from apolo_mcp.policy import _reset_policy_for_tests
+
+    _reset_policy_for_tests()
+    yield
+    _reset_policy_for_tests()
+
+
 @pytest.fixture()
 def mock_client():
     """Provide a mock apolo_sdk.Client for unit tests.

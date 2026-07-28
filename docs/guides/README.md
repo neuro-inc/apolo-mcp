@@ -9,3 +9,5 @@ and the current [capabilities](../capabilities/):
   project, and resource resolution.
 - [Workloads and Flow](workflows.md) covers bounded jobs, live Flow workloads, bakes,
   outputs, and cleanup.
+- [Full mode with a service account](full-mode-service-account.md) covers isolated,
+  least-privilege operation of a headless agent inside an Apolo R&D job.

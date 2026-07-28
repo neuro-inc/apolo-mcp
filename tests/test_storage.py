@@ -100,6 +100,9 @@ async def test_write_caps_policy_and_cross_context(tools, monkeypatch):
     with pytest.raises(ApoloToolError, match="exact resolved context"):
         await fn(tools, "stat_storage")("storage://beta/team/default/file")
     monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "read-only")
+    from apolo_mcp.policy import _reset_policy_for_tests
+
+    _reset_policy_for_tests()
     with pytest.raises(PermissionError, match="server policy"):
         await fn(tools, "write_text")("x", "safe")
 

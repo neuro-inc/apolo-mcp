@@ -55,4 +55,6 @@ def test_default_skill_set_contains_only_runtime_platform_workflows() -> None:
         "apolo-flow-workloads",
         "apolo-applications",
         "apolo-resource-management",
+        "apolo-rnd-session-setup",
+        "apolo-rnd-session-operate",
     )

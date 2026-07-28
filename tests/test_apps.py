@@ -230,6 +230,9 @@ async def test_rollback_and_uninstall_plan_apply_require_policy(
         with pytest.raises(PermissionError, match="server policy"):
             await fn(mcp, operation)(planned["plan_id"])
     monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "full")
+    from apolo_mcp.policy import _reset_policy_for_tests
+
+    _reset_policy_for_tests()
     await fn(mcp, "rollback_app")(rollback["plan_id"])
     sdk.apps.rollback.assert_awaited_once()
     await fn(mcp, "uninstall_app")(uninstall["plan_id"])

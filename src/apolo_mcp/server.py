@@ -1,5 +1,6 @@
 from mcp.server.fastmcp import FastMCP
 
+from .policy import initialize_policy
 from .tool_registry import register_tools
 
 
@@ -20,6 +21,7 @@ register_tools(mcp)
 
 
 def main() -> None:
+    initialize_policy()
     mcp.run()
 
 

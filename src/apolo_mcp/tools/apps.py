@@ -33,7 +33,7 @@ from ..ledger import (
     record_created_resource,
     record_resource_action,
 )
-from ..policy import MutationEffect, Policy, PolicyMode, authorize_mutation
+from ..policy import MutationEffect, PolicyMode, authorize_mutation, current_policy
 
 
 READ_ONLY = ToolAnnotations(
@@ -419,7 +419,7 @@ def _plan_result(plan: Mapping[str, Any]) -> dict[str, Any]:
 
 def _deny_read_only_before_claim(operation: str, effect: MutationEffect) -> None:
     """Avoid consuming a local plan when the server cannot mutate anything."""
-    if Policy.load().mode is PolicyMode.READ_ONLY:
+    if current_policy().mode is PolicyMode.READ_ONLY:
         authorize_mutation(operation=operation, effect=effect)
 
 

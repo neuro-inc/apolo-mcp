@@ -22,7 +22,8 @@ service.
 4. Use the generated [tool reference](capabilities/tools/README.md) and
    [skills catalog](capabilities/skills.md) for exact interfaces and workflows.
 5. Follow a guide for [platform context](guides/platform-context.md),
-   [workloads](guides/workflows.md), or [Applications](guides/applications.md).
+   [workloads](guides/workflows.md), [Applications](guides/applications.md), or
+   [isolated full-mode operation](guides/full-mode-service-account.md).
 
 The repository [README](../README.md) contains the short project summary. This
 documentation is the maintained usage and capability contract for the current release.

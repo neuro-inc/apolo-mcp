@@ -1,0 +1,4 @@
+interface:
+  display_name: "Apolo R&D Session Operations"
+  short_description: "Start and operate isolated R&D agents"
+  default_prompt: "Use $apolo-rnd-session-operate to start and monitor my isolated agent inside an Apolo R&D job."

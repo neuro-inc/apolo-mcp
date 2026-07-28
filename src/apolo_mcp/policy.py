@@ -3,16 +3,12 @@
 from __future__ import annotations
 
 import enum
-import json
 import os
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Any
 
 from .ledger import LedgerEntry, authorize_owned_resource, ensure_ledger_writable
 
 
-POLICY_FILE_ENV = "APOLO_MCP_POLICY_FILE"
 POLICY_MODE_ENV = "APOLO_MCP_POLICY_MODE"
 
 
@@ -40,14 +36,7 @@ class Policy:
 
     @classmethod
     def load(cls) -> "Policy":
-        path = os.environ.get(POLICY_FILE_ENV)
-        file_value: str | None = None
-        if path:
-            raw: Any = json.loads(Path(path).read_text(encoding="utf-8"))
-            if not isinstance(raw, dict) or not isinstance(raw.get("mode"), str):
-                raise ValueError("Policy must contain a string 'mode'")
-            file_value = raw["mode"]
-        value = os.environ.get(POLICY_MODE_ENV, file_value or PolicyMode.READ_ONLY)
+        value = os.environ.get(POLICY_MODE_ENV, PolicyMode.READ_ONLY)
         try:
             mode = PolicyMode(value.strip().lower())
         except (AttributeError, ValueError) as exc:
@@ -89,6 +78,28 @@ class Policy:
         )
 
 
+_active_policy: Policy | None = None
+
+
+def initialize_policy() -> Policy:
+    """Load and freeze the policy for this MCP server process."""
+    global _active_policy
+    if _active_policy is None:
+        _active_policy = Policy.load()
+    return _active_policy
+
+
+def current_policy() -> Policy:
+    """Return the immutable policy selected when this server process started."""
+    return initialize_policy()
+
+
+def _reset_policy_for_tests() -> None:
+    """Clear process policy state between isolated unit tests."""
+    global _active_policy
+    _active_policy = None
+
+
 def authorize_mutation(
     *,
     operation: str,
@@ -100,7 +111,7 @@ def authorize_mutation(
     project: str | None = None,
 ) -> LedgerEntry | None:
     """Load current policy and authorize one exact mutation."""
-    result = Policy.load().authorize(
+    result = current_policy().authorize(
         operation=operation,
         effect=effect,
         resource_type=resource_type,

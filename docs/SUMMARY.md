@@ -20,3 +20,4 @@
   * [Applications](guides/applications.md)
   * [Platform context](guides/platform-context.md)
   * [Workloads and Flow](guides/workflows.md)
+  * [Full mode with a service account](guides/full-mode-service-account.md)

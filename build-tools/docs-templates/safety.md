@@ -13,12 +13,14 @@ exactly three values:
   for the exact resource type, immutable identifier, cluster, organization, and
   project with an active creation lifecycle in the MCP journal.
 - `full` allows mutations of any exact-context resource, subject to the authenticated
-  user's Apolo RBAC.
+  identity's Apolo RBAC. It must not be used with a personal owner, administrator, or
+  otherwise broadly privileged account. Use a dedicated, least-privileged service
+  account; follow the [full-mode service-account guide](../guides/full-mode-service-account.md).
 
 For example, `APOLO_MCP_POLICY_MODE=managed apolo-mcp` starts the server in managed
-mode. `{policy_file_env}` may instead point to JSON containing
-`{{"mode": "managed"}}`; the environment variable takes precedence. There is no tool
-argument that can elevate or bypass this server policy.
+mode. The server reads the policy once at process startup; changing its environment
+afterward has no effect. There is no policy-file override and no tool argument that can
+elevate or bypass the running server policy.
 
 For Codex, configure forwarding without selecting a permanent policy value:
 
@@ -55,6 +57,20 @@ Successful mutations are written to an append-only lifecycle journal as `created
 contains only resource identity, exact Apolo context, operation, action, and timestamp,
 never credentials. A `deleted` action closes that ownership lifecycle; only a later
 MCP-recorded `created` action establishes a new managed lifecycle for the same identity.
+
+"Append-only" describes how a cooperating Apolo MCP process writes the file: it adds
+lifecycle records and never edits earlier records during normal operation. The journal
+is not cryptographically signed, remotely attested, or protected from another process
+running as the same operating-system user. Such a process may replace, truncate, or
+forge it. Therefore it supports managed-mode accident containment and operational
+diagnostics; it is not a tamper-proof audit log, compliance record, or authorization
+boundary against an agent with unrestricted shell access.
+
+The mutation policy as a whole is a guardrail, not a replacement for credential
+isolation. An agent that can use the Apolo CLI or SDK directly can bypass MCP policy.
+The effective security boundary is the Apolo identity and its RBAC. For unattended or
+headless `full` operation, run the agent with only a dedicated service account's token
+and grant that role access solely to the required contexts and resources.
 
 Always verify the explicit cluster, organization, and project before a write. Never
 put tokens, secret values, cookies, or service-account credentials in prompts or tool

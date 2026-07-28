@@ -16,6 +16,8 @@ SKILLS = (
     "apolo-flow-workloads",
     "apolo-applications",
     "apolo-resource-management",
+    "apolo-rnd-session-setup",
+    "apolo-rnd-session-operate",
 )
 
 
