@@ -12,6 +12,9 @@ Start with the [tool reference](tools/README.md) for exact inputs and results, o
 [workload](../guides/workflows.md), and
 [Applications](../guides/applications.md) guides show common tasks end to end.
 
+The [safety model](../getting-started/safety.md) is the authoritative description of
+mutation policy, credential handling, lifecycle journaling, and local-file controls.
+
 Every native list, log, telemetry, and wait operation has a finite bound. Every native
 platform write is subject to `read-only`, `managed`, or `full` server policy and Apolo
 RBAC; destructive operations are also annotated destructive. Successful mutations are
@@ -68,11 +71,11 @@ protected sinks.
 | `apolo app get-input` | Native | `get_app_input` | Seed for safe reconfiguration; secret references remain references. |
 | `apolo app get-values` | Native | `get_app_values` | Bounded non-credential app values; sensitive-looking values are redacted. |
 | Apolo Apps SDK output operation | Native | `get_app_output` | Bounded structured output. |
-| `apolo app logs` | Native | `get_app_logs` | Byte/line/time bound and truncation marker. |
+| `apolo app logs` | Native | `get_app_logs` | Byte/line/time bound, truncation marker, and credential redaction in JSON/Python repr logs. |
 | Apolo Apps SDK events operation | Native | `get_app_events` | Bounded event/resource health output. |
 | `apolo app get-revisions` | Native | `list_app_revisions` | Bounded exact revision metadata. |
 | `apolo app install` | Native plan/apply | `plan_app_install`, `install_app` | Stable YAML + JSON/Markdown plan, checksum/context/version/expiry binding, exact unchanged file, single use, and policy enforcement. |
-| `apolo app configure` | Native plan/apply | `plan_app_configure`, `configure_app` | Seed from current input, revision drift rejection, exact reviewed file, policy, and lifecycle journal. |
+| `apolo app configure` | Native plan/apply | `plan_app_configure`, `configure_app` | Normalizes SDK root/envelope input shapes, patches the exact current input, validates one canonical envelope, rejects revision drift, and applies only the reviewed file under policy/journal controls. |
 | `apolo app rollback` | Native plan/apply | `plan_app_rollback`, `rollback_app` | Exact app/revision/current-state binding, destructive annotation, and policy; no fake YAML. |
 | `apolo app uninstall` | Native plan/apply | `plan_app_uninstall`, `uninstall_app` | Destructive annotation, policy, and a fresh single-use plan. |
 | MCP bounded App polling | Native | `wait_for_app` | Deadline, poll interval, terminal/health summary. |
@@ -100,7 +103,7 @@ protected sinks.
 | `apolo image ls`, `apolo images`; `apolo image tags` | Native | `list_image_repositories`, `list_image_tags` | Bounded metadata only. |
 | `apolo image push`, `apolo push`; `apolo image pull`, `apolo pull` | Native | `push_image`, `pull_image` | Uses the Docker engine on the MCP host; explicit context, policy, journal, and a 30-minute deadline. Transfer size is not limited. |
 | `apolo image digest`, `apolo image size` | Native | `get_image` | Exact tag/digest metadata. |
-| `apolo image rm` | Native | `remove_image` | Exact tag/digest and destructive policy. |
+| `apolo image rm` | Native tag-only | `remove_image_tag` | Removes one exact tag under destructive policy; the MCP never requests deletion by shared manifest digest. |
 | `apolo job save`, `apolo save` | Native | `save_job_image` | Listed under Jobs; exact platform image and bounded progress. |
 
 ## Buckets / blob storage
@@ -109,8 +112,8 @@ protected sinks.
 |---|---|---|---|
 | `apolo blob lsbucket`, `apolo blob statbucket`, `apolo blob mkbucket`, `apolo blob importbucket`, `apolo blob du`, `apolo blob set-bucket-publicity` | Native | bucket list/get/create/import/usage/publicity tools | Metadata-oriented; writes use policy, journal, and resolved context. |
 | `apolo blob ls`, `apolo blob glob`; Apolo SDK blob stat operation | Native | `list_bucket_blobs`, `stat_bucket_blob` | Bounded object metadata. |
-| `apolo blob sign-url` | Native secure-sink only | `create_bucket_signed_url` | Bounded expiry; the temporary access grant is written only to a new protected `0600` workspace file and never returned. |
-| `apolo blob cp` | Native single-file / Manual CLI for recursive | `upload_bucket_file`, `download_bucket_file`; local `apolo blob cp` for recursive work | Native single-file transfers enforce workspace, byte, duration, exact-key, and no-overwrite bounds. Recursive CLI transfer stays outside MCP/model results and is not automated by this package. |
+| `apolo blob sign-url` | Native secure-sink only | `create_bucket_signed_url` | Bounded expiry; the temporary access grant is written only to a protected file and never returned. |
+| `apolo blob cp` | Native single-file / Manual CLI for recursive | `upload_bucket_file`, `download_bucket_file`; local `apolo blob cp` for recursive work | Native single-file transfers enforce byte, duration, exact-key, and no-overwrite bounds. Recursive CLI transfer stays outside MCP/model results and is not automated by this package. |
 | `apolo blob rm`, `apolo blob rmbucket` | Native | exact blob/bucket delete tools | Destructive exact targets with policy and journal checks. |
 | `apolo blob lscredentials`, `apolo blob statcredentials` | Prohibited | none | The supported SDK surface can expose persistent bucket credentials. |
 | `apolo blob mkcredentials` | Prohibited | none | Persistent credential generation is omitted; temporary signed URLs use a protected short-lived sink instead. |
@@ -121,7 +124,7 @@ protected sinks.
 | Public capability | Classification | MCP/fallback | Current behavior |
 |---|---|---|---|
 | `apolo secret ls` | Native | `list_secrets` | Names/owners/context only. |
-| `apolo secret get` | Native | `get_secret_to_file` | Writes only to a new mode-0600 file beneath the allowed workspace; never returns the value to the model. |
+| `apolo secret get` | Native | `get_secret_to_file` | Writes only to a protected new file; never returns the value to the model. |
 | `apolo secret add` | Native secure-source only | `create_secret_from_source` with an environment name, protected file path, or same-context secret key | Value never appears in MCP arguments/results/logs; protected source validation. |
 | `apolo secret rm` | Native | `delete_secret` | Exact key and destructive policy. |
 | `apolo service-account ls`, `apolo service-account get` | Native | list/get service account | Metadata only. |
@@ -130,6 +133,13 @@ protected sinks.
 | `apolo vcluster list-service-accounts`, `apolo vcluster create-service-account`, `apolo vcluster delete-service-account`, `apolo vcluster regenerate-service-account`, `apolo vcluster activate-service-account` | Out of scope | none | Virtual-cluster administration and credential activation are not workload-level service accounts. |
 
 ## Apolo Flow
+
+All native Flow tools accept one `workspace_path`: the Flow project root. It contains
+`.apolo/live.yml` (or `.yaml`) for `kind: live` jobs,
+`.apolo/<batch>.yml` for `kind: batch` tasks, and optionally
+`.apolo/project.yml`. This follows the Flow project layout; exact schemas remain in
+the upstream Apolo Flow reference and the MCP tool descriptions include the minimum
+discoverable shapes needed to select a configured job or batch.
 
 | Public capability | Classification | MCP/fallback | Current behavior |
 |---|---|---|---|

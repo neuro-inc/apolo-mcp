@@ -156,4 +156,3 @@ def _validate_catalog() -> None:
 
 
 _validate_catalog()
-

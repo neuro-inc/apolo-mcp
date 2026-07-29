@@ -56,6 +56,13 @@ put tokens, secret values, cookies, or service-account credentials in prompts or
 arguments. Tools that accept or retrieve sensitive material use protected local
 sources and sinks instead.
 
+Local file access is separately confined below the MCP startup directory. It is fixed
+for the process lifetime: no environment variable or tool argument can widen it, and
+the filesystem root is rejected. This prevents a model from uploading arbitrary host
+files or writing downloaded blobs, signed URLs, exported secrets, and service-account
+tokens outside the intended project. Flow uses the same boundary; callers provide
+only the Flow root below it, never the boundary itself.
+
 Apolo MCP can create service accounts. The generated one-time token is sent directly
 to a new protected local file or a named Apolo secret and is never included in the
 model-visible tool result. Creation still requires `managed` or `full` policy and the
@@ -117,26 +124,26 @@ Tools used by the `apolo-flow-workloads` skill.
 
 ### Read-only operations
 
-- [`flow_live_list`](../capabilities/tools/flow.md#flow_live_list) — List Flow live jobs within explicit context and local path scope.
-- [`flow_live_get`](../capabilities/tools/flow.md#flow_live_get) — Resolve one logical Flow job, with a bounded multi-job result.
-- [`flow_live_logs`](../capabilities/tools/flow.md#flow_live_logs) — Read bounded Flow live logs with MCP-side credential redaction.
-- [`flow_live_wait`](../capabilities/tools/flow.md#flow_live_wait) — Wait a bounded time for a Flow live job to terminate.
-- [`flow_bake_list`](../capabilities/tools/flow.md#flow_bake_list) — List bakes and bounded task state in one explicit context.
-- [`flow_bake_get`](../capabilities/tools/flow.md#flow_bake_get) — Get structured bake, attempt, and bounded task state.
-- [`flow_bake_logs`](../capabilities/tools/flow.md#flow_bake_logs) — Read bounded bake task logs with MCP-side credential redaction.
-- [`flow_bake_wait`](../capabilities/tools/flow.md#flow_bake_wait) — Wait a bounded time for a bake attempt to terminate.
+- [`flow_live_list`](../capabilities/tools/flow.md#flow_live_list) — List Flow live jobs within explicit context and local path scope. workspace_path is the Flow project root and must contain a real .apolo directory.
+- [`flow_live_get`](../capabilities/tools/flow.md#flow_live_get) — Resolve one logical Flow job, with a bounded multi-job result. workspace_path is the Flow project root and must contain a real .apolo directory.
+- [`flow_live_logs`](../capabilities/tools/flow.md#flow_live_logs) — Read bounded Flow live logs with MCP-side credential redaction. workspace_path is the Flow project root and must contain a real .apolo directory.
+- [`flow_live_wait`](../capabilities/tools/flow.md#flow_live_wait) — Wait a bounded time for a Flow live job to terminate. workspace_path is the Flow project root and must contain a real .apolo directory.
+- [`flow_bake_list`](../capabilities/tools/flow.md#flow_bake_list) — List bakes and bounded task state in one explicit context. workspace_path is the Flow project root and must contain a real .apolo directory.
+- [`flow_bake_get`](../capabilities/tools/flow.md#flow_bake_get) — Get structured bake, attempt, and bounded task state. workspace_path is the Flow project root and must contain a real .apolo directory.
+- [`flow_bake_logs`](../capabilities/tools/flow.md#flow_bake_logs) — Read bounded bake task logs with MCP-side credential redaction. workspace_path is the Flow project root and must contain a real .apolo directory.
+- [`flow_bake_wait`](../capabilities/tools/flow.md#flow_bake_wait) — Wait a bounded time for a bake attempt to terminate. workspace_path is the Flow project root and must contain a real .apolo directory.
 
 ### Write operations
 
-- [`flow_live_run`](../capabilities/tools/flow.md#flow_live_run) — Start a configured Flow live job under the server mutation policy.
-- [`flow_bake_start`](../capabilities/tools/flow.md#flow_bake_start) — Start a bake only through FlowAPI BatchRunner orchestration.
+- [`flow_live_run`](../capabilities/tools/flow.md#flow_live_run) — Start a configured Flow live job under the server mutation policy. workspace_path is the Flow project root and must contain a real .apolo directory. flow_live_run reads .apolo/live.yml or .apolo/live.yaml, whose minimum shape is `kind: live` plus a `jobs` mapping; job_id selects a key in that mapping. Each plain job needs an image and may define cmd or bash. Optional project settings belong in .apolo/project.yml or .apolo/project.yaml.
+- [`flow_bake_start`](../capabilities/tools/flow.md#flow_bake_start) — Start a bake only through FlowAPI BatchRunner orchestration. workspace_path is the Flow project root and must contain a real .apolo directory. flow_bake_start reads .apolo/<batch>.yml or .yaml, whose minimum shape is `kind: batch` plus a `tasks` list; batch selects that workflow. Each plain task needs an image and may define cmd or bash. Optional project settings belong in .apolo/project.yml or .apolo/project.yaml.
 
 ### Destructive operations
 
-- [`flow_live_kill`](../capabilities/tools/flow.md#flow_live_kill) — Kill a Flow live job under the server mutation policy.
-- [`flow_live_kill_all`](../capabilities/tools/flow.md#flow_live_kill_all) — Kill all jobs in exactly one explicit Flow context.
-- [`flow_bake_cancel`](../capabilities/tools/flow.md#flow_bake_cancel) — Cancel a bake attempt under the server mutation policy.
-- [`flow_bake_restart`](../capabilities/tools/flow.md#flow_bake_restart) — Restart a bake through BatchRunner under the server mutation policy.
+- [`flow_live_kill`](../capabilities/tools/flow.md#flow_live_kill) — Kill a Flow live job under the server mutation policy. workspace_path is the Flow project root and must contain a real .apolo directory.
+- [`flow_live_kill_all`](../capabilities/tools/flow.md#flow_live_kill_all) — Kill all jobs in exactly one explicit Flow context. workspace_path is the Flow project root and must contain a real .apolo directory.
+- [`flow_bake_cancel`](../capabilities/tools/flow.md#flow_bake_cancel) — Cancel a bake attempt under the server mutation policy. workspace_path is the Flow project root and must contain a real .apolo directory.
+- [`flow_bake_restart`](../capabilities/tools/flow.md#flow_bake_restart) — Restart a bake through BatchRunner under the server mutation policy. workspace_path is the Flow project root and must contain a real .apolo directory.
 
 ## [Apolo Applications](../capabilities/skills.md#apolo-applications)
 
@@ -150,7 +157,7 @@ Tools used by the `apolo-applications` skill.
 - [`list_apps`](../capabilities/tools/applications.md#list_apps) — List Apps with state filtering and a strict result bound.
 - [`get_app`](../capabilities/tools/applications.md#get_app) — Get one App and verify it belongs to the resolved context.
 - [`wait_for_app`](../capabilities/tools/applications.md#wait_for_app) — Wait a bounded time for an App to reach a terminal health state.
-- [`get_app_logs`](../capabilities/tools/applications.md#get_app_logs) — Read bounded UTF-8 logs with timeout and explicit truncation metadata.
+- [`get_app_logs`](../capabilities/tools/applications.md#get_app_logs) — Read bounded UTF-8 logs with credential redaction and truncation metadata. Redaction covers ordinary credential assignments, quoted APOLO_PASSED_CONFIG/APOLO_*TOKEN keys, and JSON or Python-repr environment entries shaped as {name: <sensitive Apolo key>, value: <credential>}.
 - [`get_app_events`](../capabilities/tools/applications.md#get_app_events) — Return bounded, credential-redacted App status events.
 - [`get_app_output`](../capabilities/tools/applications.md#get_app_output) — Return bounded, credential-redacted output for one App.
 - [`get_app_input`](../capabilities/tools/applications.md#get_app_input) — Return bounded App input with likely credential values redacted.
@@ -202,18 +209,18 @@ Tools used by the `apolo-resource-management` skill.
 - [`create_bucket`](../capabilities/tools/buckets.md#create_bucket) — Create and journal a bucket when server policy permits writes.
 - [`import_external_bucket`](../capabilities/tools/buckets.md#import_external_bucket) — Import using bounded JSON credentials from a protected internal source.
 - [`set_bucket_public_access`](../capabilities/tools/buckets.md#set_bucket_public_access) — Set public state for one exact immutable bucket ID.
-- [`create_bucket_signed_url`](../capabilities/tools/buckets.md#create_bucket_signed_url) — Create a short-lived blob URL; no persistent credentials are returned.
-- [`upload_bucket_file`](../capabilities/tools/buckets.md#upload_bucket_file) — Upload one bounded workspace file without serializing object bytes.
-- [`download_bucket_file`](../capabilities/tools/buckets.md#download_bucket_file) — Download one bounded blob to a new file below the workspace root.
-- [`get_secret_to_file`](../capabilities/tools/secrets.md#get_secret_to_file) — Write a secret to a new mode-0600 workspace file; never return its value.
-- [`create_secret_from_source`](../capabilities/tools/secrets.md#create_secret_from_source) — Create a secret without accepting or returning its value.
-- [`create_service_account`](../capabilities/tools/service-accounts.md#create_service_account) — Create an account and sink its token without returning token material.
+- [`create_bucket_signed_url`](../capabilities/tools/buckets.md#create_bucket_signed_url) — Create a short-lived blob URL and write it to a protected local file. The URL is never returned through MCP.
+- [`upload_bucket_file`](../capabilities/tools/buckets.md#upload_bucket_file) — Upload one bounded local file. Object bytes are never serialized through MCP.
+- [`download_bucket_file`](../capabilities/tools/buckets.md#download_bucket_file) — Download one bounded blob to a new local file. Existing files are never overwritten.
+- [`get_secret_to_file`](../capabilities/tools/secrets.md#get_secret_to_file) — Write a secret to a new mode-0600 local file. The destination must be new, and the secret value is never returned.
+- [`create_secret_from_source`](../capabilities/tools/secrets.md#create_secret_from_source) — Create a secret without accepting or returning its value. File sources must be private regular files.
+- [`create_service_account`](../capabilities/tools/service-accounts.md#create_service_account) — Create an account and sink its token without returning token material. File sinks are protected local files. Secret sinks do not use the local filesystem.
 
 ### Destructive operations
 
 - [`delete_storage_path`](../capabilities/tools/storage.md#delete_storage_path) — Delete one exact path; recursive deletion removes its entire subtree.
 - [`delete_disk`](../capabilities/tools/disks.md#delete_disk) — Delete one exact disk ID under full or ledger-owned managed policy.
-- [`remove_image`](../capabilities/tools/images.md#remove_image) — Remove an exact tag digest under full or owned managed policy.
+- [`remove_image_tag`](../capabilities/tools/images.md#remove_image_tag) — Remove one exact image tag without requesting digest deletion. The operation passes the tag reference to the registry. Tags that happen to share a manifest digest are not separate deletion targets.
 - [`delete_bucket_blob`](../capabilities/tools/buckets.md#delete_bucket_blob) — Delete one exact blob key; recursive/prefix deletion is not exposed.
 - [`delete_bucket`](../capabilities/tools/buckets.md#delete_bucket) — Delete one exact empty bucket under full or owned managed policy.
 - [`delete_secret`](../capabilities/tools/secrets.md#delete_secret) — Delete one exact secret under full or owned managed policy.

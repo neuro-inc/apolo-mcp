@@ -58,8 +58,8 @@ def account(id="sa-1"):
 @pytest.fixture
 def tools(monkeypatch, tmp_path: Path):
     monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "full")
-    monkeypatch.setenv("APOLO_MCP_ALLOWED_WORKSPACE", str(tmp_path))
     monkeypatch.setenv("APOLO_MCP_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
+    monkeypatch.chdir(tmp_path)
     service_accounts = MagicMock()
     service_accounts.list = lambda: iterator([account(), account("sa-2")])
     service_accounts.get = AsyncMock(return_value=account())

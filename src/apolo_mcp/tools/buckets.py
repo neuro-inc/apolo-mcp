@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-import stat
 from pathlib import Path
 from typing import Any, Literal
 
@@ -23,6 +22,7 @@ from ..ledger import (
     record_resource_action,
 )
 from ..policy import MutationEffect, authorize_mutation
+from ..workspace import resolve_new_workspace_file, resolve_workspace_path
 from .secrets import MAX_SECRET_BYTES, _key as _secret_key, _source
 from .service_accounts import _atomic_sink, _reserve_file
 
@@ -55,13 +55,6 @@ MAX_WAIT_SECONDS = 300.0
 MAX_SIGNED_URL_SECONDS = 3600
 MAX_TRANSFER_BYTES = 5 * 1024**3
 MAX_TRANSFER_SECONDS = 3600.0
-ALLOWED_WORKSPACE_ENV = "APOLO_MCP_ALLOWED_WORKSPACE"
-
-
-def _context(
-    sdk: Any, cluster: str | None, org: str | None, project: str | None
-) -> ApoloContext:
-    return resolve_context(sdk.config, cluster=cluster, org=org, project=project)
 
 
 def _exact(value: str, field: str) -> str:
@@ -180,54 +173,6 @@ def _blob_uri(bucket: Any, key: str = "") -> URL:
     return URL(str(bucket.uri) + suffix)
 
 
-def _workspace_root() -> Path:
-    configured = os.environ.get(ALLOWED_WORKSPACE_ENV)
-    if not configured:
-        raise PermissionError(f"{ALLOWED_WORKSPACE_ENV} must be configured")
-    configured_root = Path(configured).expanduser()
-    if stat.S_ISLNK(configured_root.lstat().st_mode):
-        raise ValueError("allowed workspace must not be a symlink")
-    root = configured_root.resolve(strict=True)
-    info = root.lstat()
-    if not stat.S_ISDIR(info.st_mode) or stat.S_ISLNK(info.st_mode):
-        raise ValueError("allowed workspace must be a real directory")
-    return root
-
-
-def _upload_path(value: str) -> Path:
-    root = _workspace_root()
-    requested = Path(value).expanduser()
-    if stat.S_ISLNK(requested.lstat().st_mode):
-        raise ValueError("local_path must not be a symlink")
-    path = requested.resolve(strict=True)
-    if path == root or root not in path.parents:
-        raise PermissionError("local_path must be beneath the allowed workspace")
-    info = path.lstat()
-    if not stat.S_ISREG(info.st_mode) or stat.S_ISLNK(info.st_mode):
-        raise ValueError("local_path must be a real regular file")
-    return path
-
-
-def _download_path(value: str) -> Path:
-    root = _workspace_root()
-    requested = Path(value).expanduser()
-    if not requested.is_absolute():
-        requested = root / requested
-    prospective_parent = requested.parent.resolve(strict=False)
-    if prospective_parent != root and root not in prospective_parent.parents:
-        raise PermissionError("local_path must be beneath the allowed workspace")
-    requested.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-    parent = requested.parent.resolve(strict=True)
-    path = parent / requested.name
-    if parent != root and root not in parent.parents:
-        raise PermissionError("local_path must be beneath the allowed workspace")
-    if not path.name or path.name in {".", ".."}:
-        raise ValueError("local_path must name one exact file")
-    if path.exists() or path.is_symlink():
-        raise FileExistsError("local destination already exists")
-    return path
-
-
 def _transfer_bounds(max_bytes: int, timeout_seconds: float) -> None:
     if isinstance(max_bytes, bool) or not 1 <= max_bytes <= MAX_TRANSFER_BYTES:
         raise ValueError(f"max_bytes must be between 1 and {MAX_TRANSFER_BYTES}")
@@ -266,7 +211,9 @@ def register(mcp: FastMCP) -> None:
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 items: list[dict[str, Any]] = []
                 async with sdk.buckets.list(
                     cluster_name=resolved.cluster,
@@ -303,7 +250,9 @@ def register(mcp: FastMCP) -> None:
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 item = await _get_exact(sdk, value, resolved)
                 return {"bucket": _bucket(item), "context": resolved.as_dict()}
         except Exception as exc:
@@ -328,7 +277,9 @@ def register(mcp: FastMCP) -> None:
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 ensure_ledger_writable()
                 item = await sdk.buckets.create(
                     name=name,
@@ -377,7 +328,9 @@ def register(mcp: FastMCP) -> None:
             if credential_source_type != "secret":
                 raw = _source(credential_source_type, credential_source_name)
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 ensure_ledger_writable()
                 if credential_source_type == "secret":
                     source_key = _secret_key(credential_source_name)
@@ -439,7 +392,9 @@ def register(mcp: FastMCP) -> None:
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 item = await _get_exact(sdk, value, resolved)
 
                 async def scan() -> tuple[int, int, bool]:
@@ -494,7 +449,9 @@ def register(mcp: FastMCP) -> None:
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 item = await _get_exact(sdk, value, resolved)
                 entry = await sdk.buckets.head_blob(
                     item.id,
@@ -531,7 +488,9 @@ def register(mcp: FastMCP) -> None:
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 item = await _get_exact(sdk, value, resolved)
                 entries: list[dict[str, Any]] = []
                 async with sdk.buckets.list_blobs(
@@ -569,7 +528,9 @@ def register(mcp: FastMCP) -> None:
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 current = await _get_exact(sdk, value, resolved)
                 if current.id != value:
                     raise ValueError("bucket_id must be the exact immutable bucket ID")
@@ -606,7 +567,10 @@ def register(mcp: FastMCP) -> None:
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
-        """Create a short-lived blob URL; no persistent credentials are returned."""
+        """Create a short-lived blob URL and write it to a protected local file.
+
+        The URL is never returned through MCP.
+        """
         value = _exact(bucket_id, "bucket_id")
         exact_key = _key(key)
         if not 1 <= expires_in_seconds <= MAX_SIGNED_URL_SECONDS:
@@ -620,7 +584,9 @@ def register(mcp: FastMCP) -> None:
         try:
             reserved_fd, reserved_path = _reserve_file(destination_file)
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 item = await _get_exact(sdk, value, resolved)
                 if item.id != value:
                     raise ValueError("bucket_id must be the exact immutable bucket ID")
@@ -678,18 +644,23 @@ def register(mcp: FastMCP) -> None:
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
-        """Upload one bounded workspace file without serializing object bytes."""
+        """Upload one bounded local file.
+
+        Object bytes are never serialized through MCP.
+        """
         value = _exact(bucket_id, "bucket_id")
         exact_key = _key(key)
         _transfer_bounds(max_bytes, timeout_seconds)
-        source = _upload_path(local_path)
+        source = resolve_workspace_path(local_path, name="local_path", directory=False)
         size = source.stat().st_size
         if size > max_bytes:
             raise ValueError("local file exceeds max_bytes")
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 item = await _get_exact(sdk, value, resolved)
                 if item.id != value:
                     raise ValueError("bucket_id must be the exact immutable bucket ID")
@@ -740,16 +711,23 @@ def register(mcp: FastMCP) -> None:
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
-        """Download one bounded blob to a new file below the workspace root."""
+        """Download one bounded blob to a new local file.
+
+        Existing files are never overwritten.
+        """
         value = _exact(bucket_id, "bucket_id")
         exact_key = _key(key)
         _transfer_bounds(max_bytes, timeout_seconds)
-        destination = _download_path(local_path)
+        destination = resolve_new_workspace_file(
+            local_path, name="local_path", create_parents=True
+        )
         resolved: ApoloContext | None = None
         completed = False
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 item = await _get_exact(sdk, value, resolved)
                 if item.id != value:
                     raise ValueError("bucket_id must be the exact immutable bucket ID")
@@ -815,7 +793,9 @@ def register(mcp: FastMCP) -> None:
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 item = await _get_exact(sdk, value, resolved)
                 if item.id != value:
                     raise ValueError("bucket_id must be the exact immutable bucket ID")
@@ -872,7 +852,9 @@ def register(mcp: FastMCP) -> None:
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 item = await _get_exact(sdk, value, resolved)
                 if item.id != value:
                     raise ValueError("bucket_id must be the exact immutable bucket ID")

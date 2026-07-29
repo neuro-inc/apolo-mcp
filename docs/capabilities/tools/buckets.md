@@ -659,7 +659,7 @@ Set public state for one exact immutable bucket ID.
 
 ## `create_bucket_signed_url`
 
-Create a short-lived blob URL; no persistent credentials are returned.
+Create a short-lived blob URL and write it to a protected local file. The URL is never returned through MCP.
 
 **Operation type:** write
 
@@ -746,7 +746,7 @@ Create a short-lived blob URL; no persistent credentials are returned.
 
 ## `upload_bucket_file`
 
-Upload one bounded workspace file without serializing object bytes.
+Upload one bounded local file. Object bytes are never serialized through MCP.
 
 **Operation type:** write
 
@@ -838,7 +838,7 @@ Upload one bounded workspace file without serializing object bytes.
 
 ## `download_bucket_file`
 
-Download one bounded blob to a new file below the workspace root.
+Download one bounded blob to a new local file. Existing files are never overwritten.
 
 **Operation type:** write
 

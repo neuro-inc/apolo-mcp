@@ -48,7 +48,7 @@ codex mcp add apolo -- apolo-mcp
 codex mcp list
 ```
 
-To select policy per Codex launch, keep only the environment-variable forwarding rule
+To select policy per Codex launch, keep only the environment-variable forwarding rules
 in Codex's `config.toml`:
 
 ```toml
@@ -93,8 +93,8 @@ APOLO_MCP_POLICY_MODE=managed claude
 APOLO_MCP_POLICY_MODE=full claude
 ```
 
-Claude Code expands `${APOLO_MCP_POLICY_MODE:-read-only}` when starting the MCP
-subprocess. Use `--scope local` for private current-project configuration, `--scope
+Claude Code expands the policy variable when starting the MCP subprocess. Use
+`--scope local` for private current-project configuration, `--scope
 project` for a shared `.mcp.json`, or `--scope user` across projects. The equivalent
 project configuration is:
 

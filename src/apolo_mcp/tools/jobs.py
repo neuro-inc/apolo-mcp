@@ -70,12 +70,6 @@ class DiskVolumeInput(BaseModel):
     read_only: bool = False
 
 
-def _context(
-    sdk: Any, cluster: str | None, org: str | None, project: str | None
-) -> ApoloContext:
-    return resolve_context(sdk.config, cluster=cluster, org=org, project=project)
-
-
 def _iso(value: Any) -> str | None:
     return value.isoformat() if value is not None else None
 
@@ -254,7 +248,9 @@ def register(mcp: FastMCP) -> None:
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 preset_config = sdk.config.clusters[resolved.cluster].presets.get(
                     preset
                 )
@@ -382,7 +378,9 @@ def register(mcp: FastMCP) -> None:
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 items = []
                 async for item in sdk.jobs.list(
                     statuses=status_filter,
@@ -424,7 +422,9 @@ def register(mcp: FastMCP) -> None:
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 item = await sdk.jobs.status(job_id)
                 _ensure_job_context(item, resolved)
                 return {"job": _job(item), "context": resolved.as_dict()}
@@ -451,7 +451,9 @@ def register(mcp: FastMCP) -> None:
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 loop = asyncio.get_running_loop()
                 deadline = loop.time() + timeout_seconds
                 while True:
@@ -503,7 +505,9 @@ def register(mcp: FastMCP) -> None:
         truncated = False
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 status = await sdk.jobs.status(job_id)
                 _ensure_job_context(status, resolved)
                 try:
@@ -566,7 +570,9 @@ def register(mcp: FastMCP) -> None:
         timed_out = False
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 status = await sdk.jobs.status(job_id)
                 _ensure_job_context(status, resolved)
                 try:
@@ -624,7 +630,9 @@ def register(mcp: FastMCP) -> None:
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 status = await sdk.jobs.status(job_id)
                 _ensure_job_context(status, resolved)
                 authorize_mutation(

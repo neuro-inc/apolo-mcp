@@ -205,6 +205,21 @@ async def test_configure_success_preserves_exact_seeded_payload(tools) -> None:
     )
 
 
+async def test_configure_normalizes_root_shaped_sdk_input(tools) -> None:
+    mcp, sdk = tools
+    sdk.apps.get_input.return_value = {
+        "image": "repo/image:1",
+        "preset": "cpu-small",
+    }
+    planned = await fn(mcp, "plan_app_configure")("app-1", {})
+    exact = app_plans.load_yaml_exact(Path(planned["inputs_path"]))
+    assert exact == {
+        "template_name": "service-deployment",
+        "template_version": "2.4",
+        "input": {"image": "repo/image:1", "preset": "cpu-small"},
+    }
+
+
 async def test_rollback_and_uninstall_plan_apply_require_policy(
     tools, monkeypatch
 ) -> None:
@@ -273,6 +288,37 @@ async def test_logs_are_memory_bounded_context_checked_and_redacted(tools) -> No
     assert "visible" not in result["text"]
     assert "<redacted>" in result["text"]
     assert result["bytes"] <= 100
+
+
+async def test_logs_redact_apolo_credentials_in_json_and_python_repr(tools) -> None:
+    mcp, sdk = tools
+    sdk.apps.logs = lambda **kwargs: iterator(
+        [
+            b'Helm input: {"APOLO_PASSED_CONFIG":"passed-secret",'
+            b'"cleanupEnvs":[{"name":"APOLO_API_TOKEN",'
+            b'"value":"api-secret"}]}'
+            b"\nHelm outputs: {'APOLO_PASSED_CONFIG': 'repr-secret', "
+            b"'postProcessorEnvs': [{'name': 'APOLO_APPS_TOKEN', "
+            b"'value': 'apps-secret'}]}"
+        ]
+    )
+    result = await fn(mcp, "get_app_logs")("app-1", max_bytes=1000, max_lines=10)
+    assert "passed-secret" not in result["text"]
+    assert "api-secret" not in result["text"]
+    assert "repr-secret" not in result["text"]
+    assert "apps-secret" not in result["text"]
+    assert result["text"].count("<redacted>") == 4
+
+
+async def test_logs_redact_structured_credential_cut_by_byte_bound(tools) -> None:
+    mcp, sdk = tools
+    sdk.apps.logs = lambda **kwargs: iterator(
+        [b'prefix {"APOLO_API_TOKEN":"partial-secret-that-is-truncated"}']
+    )
+
+    result = await fn(mcp, "get_app_logs")("app-1", max_bytes=40, max_lines=10)
+    assert "partial" not in result["text"]
+    assert "<redacted>" in result["text"]
 
 
 async def test_failed_sdk_apply_is_redacted_and_permanently_consumed(tools) -> None:

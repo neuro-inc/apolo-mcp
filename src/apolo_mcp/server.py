@@ -12,8 +12,10 @@ mcp = FastMCP(
         "request, return, or log tokens, cookies, secret values, or service-account "
         "credentials. Treat annotations as risk hints, not authorization. Keep "
         "outputs bounded and obey the server's read-only, managed, or full mutation "
-        "policy. Authentication must already be configured through local Apolo "
-        "configuration or an isolated passed configuration."
+        "policy. Local file and Flow paths are confined below the server startup "
+        "directory; tool arguments cannot widen it. Authentication must already be "
+        "configured "
+        "through local Apolo configuration or an isolated passed configuration."
     ),
 )
 

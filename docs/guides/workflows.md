@@ -22,8 +22,8 @@ user-reviewed CLI transfer rather than through model context.
 ## Apolo Flow
 
 For a Flow project, first inspect its configuration and validate the requested project,
-action, parameters, executor, images, volumes, and outputs. Project and configuration
-paths must remain under the allowed workspace.
+action, parameters, executor, images, volumes, and outputs. Local path restrictions are
+defined by the [safety model](../getting-started/safety.md).
 
 Use the typed live-job operations to list, run, inspect, read bounded logs, wait, and
 kill. Start batch bakes through Flow orchestration, then inspect attempts and tasks with

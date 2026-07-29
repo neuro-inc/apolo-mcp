@@ -8,7 +8,7 @@ description: Stage, launch, monitor, evidence, and clean up bounded Apolo resear
 1. Use `$apolo-platform-user-context` to show the exact target and list suitable presets.
    Prefer the least expensive preset that meets stated CPU, memory, and accelerator
    needs. Confirm quota from platform output; never infer it.
-2. Keep source, inputs, outputs, and evidence below the allowed workspace or an exact
+2. Keep source, inputs, outputs, and evidence in approved local paths or an exact
    project storage URI. Use storage mounts or `apolo cp` for bulk/binary data instead
    of moving it through model context.
 3. Make the job bounded: pin an image tag/digest when available, set a lifespan and

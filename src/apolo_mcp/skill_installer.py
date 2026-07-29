@@ -84,12 +84,8 @@ def packaged_skills_root() -> Path:
 
 
 def add_install_arguments(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument(
-        "--client", choices=("codex", "claude", "both"), required=True
-    )
-    parser.add_argument(
-        "--target", choices=("user", "project"), default="user"
-    )
+    parser.add_argument("--client", choices=("codex", "claude", "both"), required=True)
+    parser.add_argument("--target", choices=("user", "project"), default="user")
     parser.add_argument(
         "--root",
         type=Path,

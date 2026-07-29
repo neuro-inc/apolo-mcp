@@ -77,7 +77,7 @@ def blob(key="dir/item.txt", size=12):
 def tools(monkeypatch, tmp_path: Path):
     monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "full")
     monkeypatch.setenv("APOLO_MCP_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
-    monkeypatch.setenv("APOLO_MCP_ALLOWED_WORKSPACE", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
     buckets = MagicMock()
     buckets.list = lambda **kwargs: iterator([bucket(), bucket("bucket-2", "two")])
     buckets.get = AsyncMock(return_value=bucket())
@@ -217,7 +217,7 @@ async def test_file_transfers_are_workspace_bounded_and_never_return_bytes(tools
     assert downloaded["size_bytes"] == 12
     assert (tmp_path / "download.bin").read_bytes() == b"x" * 12
     assert "b'" not in repr(downloaded)
-    with pytest.raises(PermissionError, match="allowed workspace"):
+    with pytest.raises(PermissionError, match="must be beneath"):
         await fn(mcp, "upload_bucket_file")("/etc/hosts", "bucket-1", "hosts")
     with pytest.raises(ValueError, match="max_bytes"):
         await fn(mcp, "upload_bucket_file")(

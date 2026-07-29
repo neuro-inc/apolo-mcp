@@ -409,9 +409,9 @@ Inspect exact tag metadata: digest and aggregate layer size only.
 }
 ```
 
-## `remove_image`
+## `remove_image_tag`
 
-Remove an exact tag digest under full or owned managed policy.
+Remove one exact image tag without requesting digest deletion. The operation passes the tag reference to the registry. Tags that happen to share a manifest digest are not separate deletion targets.
 
 **Operation type:** destructive
 
@@ -433,10 +433,6 @@ Remove an exact tag digest under full or owned managed policy.
       ],
       "default": null,
       "title": "Cluster"
-    },
-    "digest": {
-      "title": "Digest",
-      "type": "string"
     },
     "org": {
       "anyOf": [
@@ -473,10 +469,9 @@ Remove an exact tag digest under full or owned managed policy.
   },
   "required": [
     "repository",
-    "tag",
-    "digest"
+    "tag"
   ],
-  "title": "remove_imageArguments",
+  "title": "remove_image_tagArguments",
   "type": "object"
 }
 ```
@@ -486,7 +481,7 @@ Remove an exact tag digest under full or owned managed policy.
 ```json
 {
   "additionalProperties": true,
-  "title": "remove_imageDictOutput",
+  "title": "remove_image_tagDictOutput",
   "type": "object"
 }
 ```

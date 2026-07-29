@@ -6,7 +6,7 @@
 
 ## `flow_live_list`
 
-List Flow live jobs within explicit context and local path scope.
+List Flow live jobs within explicit context and local path scope. workspace_path is the Flow project root and must contain a real .apolo directory.
 
 **Operation type:** read-only
 
@@ -17,16 +17,8 @@ List Flow live jobs within explicit context and local path scope.
 ```json
 {
   "properties": {
-    "allowed_workspace_root": {
-      "title": "Allowed Workspace Root",
-      "type": "string"
-    },
     "cluster": {
       "title": "Cluster",
-      "type": "string"
-    },
-    "config_path": {
-      "title": "Config Path",
       "type": "string"
     },
     "limit": {
@@ -42,18 +34,6 @@ List Flow live jobs within explicit context and local path scope.
       "title": "Project",
       "type": "string"
     },
-    "project_path": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Project Path"
-    },
     "workspace_path": {
       "title": "Workspace Path",
       "type": "string"
@@ -63,9 +43,7 @@ List Flow live jobs within explicit context and local path scope.
     "cluster",
     "org",
     "project",
-    "allowed_workspace_root",
-    "workspace_path",
-    "config_path"
+    "workspace_path"
   ],
   "title": "flow_live_listArguments",
   "type": "object"
@@ -84,7 +62,7 @@ List Flow live jobs within explicit context and local path scope.
 
 ## `flow_live_get`
 
-Resolve one logical Flow job, with a bounded multi-job result.
+Resolve one logical Flow job, with a bounded multi-job result. workspace_path is the Flow project root and must contain a real .apolo directory.
 
 **Operation type:** read-only
 
@@ -95,16 +73,8 @@ Resolve one logical Flow job, with a bounded multi-job result.
 ```json
 {
   "properties": {
-    "allowed_workspace_root": {
-      "title": "Allowed Workspace Root",
-      "type": "string"
-    },
     "cluster": {
       "title": "Cluster",
-      "type": "string"
-    },
-    "config_path": {
-      "title": "Config Path",
       "type": "string"
     },
     "job_id": {
@@ -123,18 +93,6 @@ Resolve one logical Flow job, with a bounded multi-job result.
     "project": {
       "title": "Project",
       "type": "string"
-    },
-    "project_path": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Project Path"
     },
     "suffix": {
       "anyOf": [
@@ -158,9 +116,7 @@ Resolve one logical Flow job, with a bounded multi-job result.
     "cluster",
     "org",
     "project",
-    "allowed_workspace_root",
-    "workspace_path",
-    "config_path"
+    "workspace_path"
   ],
   "title": "flow_live_getArguments",
   "type": "object"
@@ -179,7 +135,7 @@ Resolve one logical Flow job, with a bounded multi-job result.
 
 ## `flow_live_run`
 
-Start a configured Flow live job under the server mutation policy.
+Start a configured Flow live job under the server mutation policy. workspace_path is the Flow project root and must contain a real .apolo directory. flow_live_run reads .apolo/live.yml or .apolo/live.yaml, whose minimum shape is `kind: live` plus a `jobs` mapping; job_id selects a key in that mapping. Each plain job needs an image and may define cmd or bash. Optional project settings belong in .apolo/project.yml or .apolo/project.yaml.
 
 **Operation type:** write
 
@@ -190,10 +146,6 @@ Start a configured Flow live job under the server mutation policy.
 ```json
 {
   "properties": {
-    "allowed_workspace_root": {
-      "title": "Allowed Workspace Root",
-      "type": "string"
-    },
     "args": {
       "anyOf": [
         {
@@ -211,10 +163,6 @@ Start a configured Flow live job under the server mutation policy.
     },
     "cluster": {
       "title": "Cluster",
-      "type": "string"
-    },
-    "config_path": {
-      "title": "Config Path",
       "type": "string"
     },
     "job_id": {
@@ -244,18 +192,6 @@ Start a configured Flow live job under the server mutation policy.
       "title": "Project",
       "type": "string"
     },
-    "project_path": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Project Path"
-    },
     "suffix": {
       "anyOf": [
         {
@@ -283,9 +219,7 @@ Start a configured Flow live job under the server mutation policy.
     "cluster",
     "org",
     "project",
-    "allowed_workspace_root",
-    "workspace_path",
-    "config_path"
+    "workspace_path"
   ],
   "title": "flow_live_runArguments",
   "type": "object"
@@ -304,7 +238,7 @@ Start a configured Flow live job under the server mutation policy.
 
 ## `flow_live_logs`
 
-Read bounded Flow live logs with MCP-side credential redaction.
+Read bounded Flow live logs with MCP-side credential redaction. workspace_path is the Flow project root and must contain a real .apolo directory.
 
 **Operation type:** read-only
 
@@ -315,16 +249,8 @@ Read bounded Flow live logs with MCP-side credential redaction.
 ```json
 {
   "properties": {
-    "allowed_workspace_root": {
-      "title": "Allowed Workspace Root",
-      "type": "string"
-    },
     "cluster": {
       "title": "Cluster",
-      "type": "string"
-    },
-    "config_path": {
-      "title": "Config Path",
       "type": "string"
     },
     "job_id": {
@@ -348,18 +274,6 @@ Read bounded Flow live logs with MCP-side credential redaction.
     "project": {
       "title": "Project",
       "type": "string"
-    },
-    "project_path": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Project Path"
     },
     "suffix": {
       "anyOf": [
@@ -388,9 +302,7 @@ Read bounded Flow live logs with MCP-side credential redaction.
     "cluster",
     "org",
     "project",
-    "allowed_workspace_root",
-    "workspace_path",
-    "config_path"
+    "workspace_path"
   ],
   "title": "flow_live_logsArguments",
   "type": "object"
@@ -409,7 +321,7 @@ Read bounded Flow live logs with MCP-side credential redaction.
 
 ## `flow_live_wait`
 
-Wait a bounded time for a Flow live job to terminate.
+Wait a bounded time for a Flow live job to terminate. workspace_path is the Flow project root and must contain a real .apolo directory.
 
 **Operation type:** read-only
 
@@ -420,16 +332,8 @@ Wait a bounded time for a Flow live job to terminate.
 ```json
 {
   "properties": {
-    "allowed_workspace_root": {
-      "title": "Allowed Workspace Root",
-      "type": "string"
-    },
     "cluster": {
       "title": "Cluster",
-      "type": "string"
-    },
-    "config_path": {
-      "title": "Config Path",
       "type": "string"
     },
     "job_id": {
@@ -454,18 +358,6 @@ Wait a bounded time for a Flow live job to terminate.
       "title": "Project",
       "type": "string"
     },
-    "project_path": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Project Path"
-    },
     "suffix": {
       "anyOf": [
         {
@@ -493,9 +385,7 @@ Wait a bounded time for a Flow live job to terminate.
     "cluster",
     "org",
     "project",
-    "allowed_workspace_root",
-    "workspace_path",
-    "config_path"
+    "workspace_path"
   ],
   "title": "flow_live_waitArguments",
   "type": "object"
@@ -514,7 +404,7 @@ Wait a bounded time for a Flow live job to terminate.
 
 ## `flow_live_kill`
 
-Kill a Flow live job under the server mutation policy.
+Kill a Flow live job under the server mutation policy. workspace_path is the Flow project root and must contain a real .apolo directory.
 
 **Operation type:** destructive
 
@@ -525,16 +415,8 @@ Kill a Flow live job under the server mutation policy.
 ```json
 {
   "properties": {
-    "allowed_workspace_root": {
-      "title": "Allowed Workspace Root",
-      "type": "string"
-    },
     "cluster": {
       "title": "Cluster",
-      "type": "string"
-    },
-    "config_path": {
-      "title": "Config Path",
       "type": "string"
     },
     "job_id": {
@@ -554,18 +436,6 @@ Kill a Flow live job under the server mutation policy.
       "title": "Project",
       "type": "string"
     },
-    "project_path": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Project Path"
-    },
     "suffix": {
       "anyOf": [
         {
@@ -593,9 +463,7 @@ Kill a Flow live job under the server mutation policy.
     "cluster",
     "org",
     "project",
-    "allowed_workspace_root",
-    "workspace_path",
-    "config_path"
+    "workspace_path"
   ],
   "title": "flow_live_killArguments",
   "type": "object"
@@ -614,7 +482,7 @@ Kill a Flow live job under the server mutation policy.
 
 ## `flow_live_kill_all`
 
-Kill all jobs in exactly one explicit Flow context.
+Kill all jobs in exactly one explicit Flow context. workspace_path is the Flow project root and must contain a real .apolo directory.
 
 **Operation type:** destructive
 
@@ -625,16 +493,8 @@ Kill all jobs in exactly one explicit Flow context.
 ```json
 {
   "properties": {
-    "allowed_workspace_root": {
-      "title": "Allowed Workspace Root",
-      "type": "string"
-    },
     "cluster": {
       "title": "Cluster",
-      "type": "string"
-    },
-    "config_path": {
-      "title": "Config Path",
       "type": "string"
     },
     "limit": {
@@ -650,18 +510,6 @@ Kill all jobs in exactly one explicit Flow context.
       "title": "Project",
       "type": "string"
     },
-    "project_path": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Project Path"
-    },
     "timeout_seconds": {
       "default": 300,
       "title": "Timeout Seconds",
@@ -676,9 +524,7 @@ Kill all jobs in exactly one explicit Flow context.
     "cluster",
     "org",
     "project",
-    "allowed_workspace_root",
-    "workspace_path",
-    "config_path"
+    "workspace_path"
   ],
   "title": "flow_live_kill_allArguments",
   "type": "object"
@@ -697,7 +543,7 @@ Kill all jobs in exactly one explicit Flow context.
 
 ## `flow_bake_start`
 
-Start a bake only through FlowAPI BatchRunner orchestration.
+Start a bake only through FlowAPI BatchRunner orchestration. workspace_path is the Flow project root and must contain a real .apolo directory. flow_bake_start reads .apolo/<batch>.yml or .yaml, whose minimum shape is `kind: batch` plus a `tasks` list; batch selects that workflow. Each plain task needs an image and may define cmd or bash. Optional project settings belong in .apolo/project.yml or .apolo/project.yaml.
 
 **Operation type:** write
 
@@ -708,20 +554,12 @@ Start a bake only through FlowAPI BatchRunner orchestration.
 ```json
 {
   "properties": {
-    "allowed_workspace_root": {
-      "title": "Allowed Workspace Root",
-      "type": "string"
-    },
     "batch": {
       "title": "Batch",
       "type": "string"
     },
     "cluster": {
       "title": "Cluster",
-      "type": "string"
-    },
-    "config_path": {
-      "title": "Config Path",
       "type": "string"
     },
     "local_executor": {
@@ -764,18 +602,6 @@ Start a bake only through FlowAPI BatchRunner orchestration.
       "title": "Project",
       "type": "string"
     },
-    "project_path": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Project Path"
-    },
     "tags": {
       "anyOf": [
         {
@@ -811,9 +637,7 @@ Start a bake only through FlowAPI BatchRunner orchestration.
     "cluster",
     "org",
     "project",
-    "allowed_workspace_root",
-    "workspace_path",
-    "config_path"
+    "workspace_path"
   ],
   "title": "flow_bake_startArguments",
   "type": "object"
@@ -832,7 +656,7 @@ Start a bake only through FlowAPI BatchRunner orchestration.
 
 ## `flow_bake_list`
 
-List bakes and bounded task state in one explicit context.
+List bakes and bounded task state in one explicit context. workspace_path is the Flow project root and must contain a real .apolo directory.
 
 **Operation type:** read-only
 
@@ -843,16 +667,8 @@ List bakes and bounded task state in one explicit context.
 ```json
 {
   "properties": {
-    "allowed_workspace_root": {
-      "title": "Allowed Workspace Root",
-      "type": "string"
-    },
     "cluster": {
       "title": "Cluster",
-      "type": "string"
-    },
-    "config_path": {
-      "title": "Config Path",
       "type": "string"
     },
     "limit": {
@@ -867,18 +683,6 @@ List bakes and bounded task state in one explicit context.
     "project": {
       "title": "Project",
       "type": "string"
-    },
-    "project_path": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Project Path"
     },
     "tags": {
       "anyOf": [
@@ -909,9 +713,7 @@ List bakes and bounded task state in one explicit context.
     "cluster",
     "org",
     "project",
-    "allowed_workspace_root",
-    "workspace_path",
-    "config_path"
+    "workspace_path"
   ],
   "title": "flow_bake_listArguments",
   "type": "object"
@@ -930,7 +732,7 @@ List bakes and bounded task state in one explicit context.
 
 ## `flow_bake_get`
 
-Get structured bake, attempt, and bounded task state.
+Get structured bake, attempt, and bounded task state. workspace_path is the Flow project root and must contain a real .apolo directory.
 
 **Operation type:** read-only
 
@@ -941,10 +743,6 @@ Get structured bake, attempt, and bounded task state.
 ```json
 {
   "properties": {
-    "allowed_workspace_root": {
-      "title": "Allowed Workspace Root",
-      "type": "string"
-    },
     "attempt_no": {
       "default": -1,
       "title": "Attempt No",
@@ -958,10 +756,6 @@ Get structured bake, attempt, and bounded task state.
       "title": "Cluster",
       "type": "string"
     },
-    "config_path": {
-      "title": "Config Path",
-      "type": "string"
-    },
     "org": {
       "title": "Org",
       "type": "string"
@@ -969,18 +763,6 @@ Get structured bake, attempt, and bounded task state.
     "project": {
       "title": "Project",
       "type": "string"
-    },
-    "project_path": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Project Path"
     },
     "task_limit": {
       "default": 100,
@@ -997,9 +779,7 @@ Get structured bake, attempt, and bounded task state.
     "cluster",
     "org",
     "project",
-    "allowed_workspace_root",
-    "workspace_path",
-    "config_path"
+    "workspace_path"
   ],
   "title": "flow_bake_getArguments",
   "type": "object"
@@ -1018,7 +798,7 @@ Get structured bake, attempt, and bounded task state.
 
 ## `flow_bake_logs`
 
-Read bounded bake task logs with MCP-side credential redaction.
+Read bounded bake task logs with MCP-side credential redaction. workspace_path is the Flow project root and must contain a real .apolo directory.
 
 **Operation type:** read-only
 
@@ -1029,10 +809,6 @@ Read bounded bake task logs with MCP-side credential redaction.
 ```json
 {
   "properties": {
-    "allowed_workspace_root": {
-      "title": "Allowed Workspace Root",
-      "type": "string"
-    },
     "attempt_no": {
       "default": -1,
       "title": "Attempt No",
@@ -1044,10 +820,6 @@ Read bounded bake task logs with MCP-side credential redaction.
     },
     "cluster": {
       "title": "Cluster",
-      "type": "string"
-    },
-    "config_path": {
-      "title": "Config Path",
       "type": "string"
     },
     "max_bytes": {
@@ -1067,18 +839,6 @@ Read bounded bake task logs with MCP-side credential redaction.
     "project": {
       "title": "Project",
       "type": "string"
-    },
-    "project_path": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Project Path"
     },
     "task_id": {
       "title": "Task Id",
@@ -1100,9 +860,7 @@ Read bounded bake task logs with MCP-side credential redaction.
     "cluster",
     "org",
     "project",
-    "allowed_workspace_root",
-    "workspace_path",
-    "config_path"
+    "workspace_path"
   ],
   "title": "flow_bake_logsArguments",
   "type": "object"
@@ -1121,7 +879,7 @@ Read bounded bake task logs with MCP-side credential redaction.
 
 ## `flow_bake_wait`
 
-Wait a bounded time for a bake attempt to terminate.
+Wait a bounded time for a bake attempt to terminate. workspace_path is the Flow project root and must contain a real .apolo directory.
 
 **Operation type:** read-only
 
@@ -1132,10 +890,6 @@ Wait a bounded time for a bake attempt to terminate.
 ```json
 {
   "properties": {
-    "allowed_workspace_root": {
-      "title": "Allowed Workspace Root",
-      "type": "string"
-    },
     "attempt_no": {
       "default": -1,
       "title": "Attempt No",
@@ -1147,10 +901,6 @@ Wait a bounded time for a bake attempt to terminate.
     },
     "cluster": {
       "title": "Cluster",
-      "type": "string"
-    },
-    "config_path": {
-      "title": "Config Path",
       "type": "string"
     },
     "org": {
@@ -1165,18 +915,6 @@ Wait a bounded time for a bake attempt to terminate.
     "project": {
       "title": "Project",
       "type": "string"
-    },
-    "project_path": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Project Path"
     },
     "task_limit": {
       "default": 100,
@@ -1198,9 +936,7 @@ Wait a bounded time for a bake attempt to terminate.
     "cluster",
     "org",
     "project",
-    "allowed_workspace_root",
-    "workspace_path",
-    "config_path"
+    "workspace_path"
   ],
   "title": "flow_bake_waitArguments",
   "type": "object"
@@ -1219,7 +955,7 @@ Wait a bounded time for a bake attempt to terminate.
 
 ## `flow_bake_cancel`
 
-Cancel a bake attempt under the server mutation policy.
+Cancel a bake attempt under the server mutation policy. workspace_path is the Flow project root and must contain a real .apolo directory.
 
 **Operation type:** destructive
 
@@ -1230,10 +966,6 @@ Cancel a bake attempt under the server mutation policy.
 ```json
 {
   "properties": {
-    "allowed_workspace_root": {
-      "title": "Allowed Workspace Root",
-      "type": "string"
-    },
     "attempt_no": {
       "default": -1,
       "title": "Attempt No",
@@ -1247,10 +979,6 @@ Cancel a bake attempt under the server mutation policy.
       "title": "Cluster",
       "type": "string"
     },
-    "config_path": {
-      "title": "Config Path",
-      "type": "string"
-    },
     "org": {
       "title": "Org",
       "type": "string"
@@ -1258,18 +986,6 @@ Cancel a bake attempt under the server mutation policy.
     "project": {
       "title": "Project",
       "type": "string"
-    },
-    "project_path": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Project Path"
     },
     "task_limit": {
       "default": 100,
@@ -1291,9 +1007,7 @@ Cancel a bake attempt under the server mutation policy.
     "cluster",
     "org",
     "project",
-    "allowed_workspace_root",
-    "workspace_path",
-    "config_path"
+    "workspace_path"
   ],
   "title": "flow_bake_cancelArguments",
   "type": "object"
@@ -1312,7 +1026,7 @@ Cancel a bake attempt under the server mutation policy.
 
 ## `flow_bake_restart`
 
-Restart a bake through BatchRunner under the server mutation policy.
+Restart a bake through BatchRunner under the server mutation policy. workspace_path is the Flow project root and must contain a real .apolo directory.
 
 **Operation type:** destructive
 
@@ -1323,10 +1037,6 @@ Restart a bake through BatchRunner under the server mutation policy.
 ```json
 {
   "properties": {
-    "allowed_workspace_root": {
-      "title": "Allowed Workspace Root",
-      "type": "string"
-    },
     "attempt_no": {
       "default": -1,
       "title": "Attempt No",
@@ -1338,10 +1048,6 @@ Restart a bake through BatchRunner under the server mutation policy.
     },
     "cluster": {
       "title": "Cluster",
-      "type": "string"
-    },
-    "config_path": {
-      "title": "Config Path",
       "type": "string"
     },
     "from_failed": {
@@ -1362,18 +1068,6 @@ Restart a bake through BatchRunner under the server mutation policy.
       "title": "Project",
       "type": "string"
     },
-    "project_path": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Project Path"
-    },
     "task_limit": {
       "default": 100,
       "title": "Task Limit",
@@ -1394,9 +1088,7 @@ Restart a bake through BatchRunner under the server mutation policy.
     "cluster",
     "org",
     "project",
-    "allowed_workspace_root",
-    "workspace_path",
-    "config_path"
+    "workspace_path"
   ],
   "title": "flow_bake_restartArguments",
   "type": "object"

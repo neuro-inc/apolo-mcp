@@ -474,7 +474,7 @@ Wait a bounded time for an App to reach a terminal health state.
 
 ## `get_app_logs`
 
-Read bounded UTF-8 logs with timeout and explicit truncation metadata.
+Read bounded UTF-8 logs with credential redaction and truncation metadata. Redaction covers ordinary credential assignments, quoted APOLO_PASSED_CONFIG/APOLO_*TOKEN keys, and JSON or Python-repr environment entries shaped as {name: <sensitive Apolo key>, value: <credential>}.
 
 **Operation type:** read-only
 

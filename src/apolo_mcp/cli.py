@@ -38,4 +38,3 @@ def main(argv: list[str] | None = None) -> int:
         except (FileExistsError, FileNotFoundError, ValueError) as error:
             parser.error(str(error))
     parser.error("a command is required")
-

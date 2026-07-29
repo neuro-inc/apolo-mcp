@@ -32,6 +32,7 @@ src/apolo_mcp/
   server.py      — FastMCP app and stdio server lifecycle
   skill_installer.py — packaged skill installation implementation
   _client.py     — apolo_sdk.get() context manager helper
+  workspace.py   — server-controlled local filesystem confinement
   tools/         — registered capability modules; see catalog.py
 ```
 
@@ -58,7 +59,7 @@ src/apolo_mcp/
   | Policy modes and lifecycle journal behavior | `src/apolo_mcp/policy.py`, `src/apolo_mcp/ledger.py`, and `build-tools/docs-templates/safety.md` | generated `docs/getting-started/safety.md` |
   | Canonical skill names and summaries | `src/apolo_mcp/catalog.py`, skill frontmatter, and `agents/openai.yaml` | generated `docs/capabilities/skills.md` |
   | Complete skill instructions and supporting references | `skills/*/SKILL.md` and `skills/*/references/` | generated `docs/capabilities/skills/*/` |
-  | Installation, client registration, policy forwarding, and skill installation | `build-tools/docs-templates/installation.md` | generated `docs/getting-started/installation.md` |
+  | Installation, client registration, policy forwarding, startup-directory confinement, and skill installation | `build-tools/docs-templates/installation.md` | generated `docs/getting-started/installation.md` |
   | Full-mode dedicated-service-account workflow | `build-tools/docs-templates/full-mode-service-account.md` | generated `docs/guides/full-mode-service-account.md` |
   | Self-contained R&D runtime and isolated-job configuration | `build-tools/docs-templates/rnd-runtime.md` | embedded unchanged in the generated full-mode guide and packaged R&D skill reference |
   | Supported, unsupported, and CLI-fallback capabilities | `docs/capabilities/README.md` | the same canonical maintained page |
@@ -116,6 +117,8 @@ Do not duplicate Codex or Claude Code setup here. Use the
 ## Key Conventions
 
 - Storage paths: accept `apolo://...` URIs or bare paths like `/my/dir` (resolved against the current cluster/org/project from config).
+- Centralize all local path confinement in `src/apolo_mcp/workspace.py`; document its
+  behavior only in `build-tools/docs-templates/safety.md`.
 - All tools return plain dicts or strings — no SDK objects cross the boundary.
 - Async tools throughout; FastMCP handles the event loop.
 - Python ≥ 3.10 (matches `apolo-sdk` minimum).

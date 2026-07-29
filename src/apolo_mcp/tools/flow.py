@@ -25,6 +25,7 @@ from ..ledger import (
     redact_credentials,
 )
 from ..policy import MutationEffect, PolicyMode, authorize_mutation, current_policy
+from ..workspace import allowed_workspace_root, resolve_workspace_path
 
 
 READ_ONLY = ToolAnnotations(
@@ -46,6 +47,32 @@ MAX_WAIT_SECONDS = 3_600.0
 MAX_POLL_SECONDS = 60.0
 MAX_WRITE_SECONDS = 600.0
 
+_FLOW_SCOPE_HELP = """\
+workspace_path is the Flow project root and must contain a real .apolo directory.
+"""
+_FLOW_LIVE_HELP = """\
+flow_live_run reads .apolo/live.yml or .apolo/live.yaml, whose minimum shape is
+`kind: live` plus a `jobs` mapping; job_id selects a key in that mapping. Each plain
+job needs an image and may define cmd or bash. Optional project settings belong in
+.apolo/project.yml or .apolo/project.yaml.
+"""
+_FLOW_BATCH_HELP = """\
+flow_bake_start reads .apolo/<batch>.yml or .yaml, whose minimum shape is `kind:
+batch` plus a `tasks` list; batch selects that workflow. Each plain task needs an
+image and may define cmd or bash. Optional project settings belong in
+.apolo/project.yml or .apolo/project.yaml.
+"""
+
+
+def _document_flow_scope(function: Any) -> Any:
+    extra = ""
+    if function.__name__ == "flow_live_run":
+        extra = _FLOW_LIVE_HELP
+    elif function.__name__ == "flow_bake_start":
+        extra = _FLOW_BATCH_HELP
+    function.__doc__ = f"{function.__doc__}\n\n{_FLOW_SCOPE_HELP}{extra}"
+    return function
+
 
 @dataclasses.dataclass(frozen=True)
 class FlowScope:
@@ -54,8 +81,6 @@ class FlowScope:
     project: str
     allowed_workspace_root: Path
     workspace_path: Path
-    config_path: Path
-    project_path: Path | None
 
     def context(self) -> dict[str, str]:
         return {"cluster": self.cluster, "org": self.org, "project": self.project}
@@ -64,8 +89,6 @@ class FlowScope:
         return {
             "allowed_workspace_root": str(self.allowed_workspace_root),
             "workspace_path": str(self.workspace_path),
-            "config_path": str(self.config_path),
-            "project_path": str(self.project_path) if self.project_path else None,
         }
 
 
@@ -113,56 +136,25 @@ def _bound(value: float, name: str, maximum: float) -> None:
         raise ValueError(f"{name} must be greater than 0 and at most {maximum:g}")
 
 
-def _path(value: str, name: str, *, directory: bool) -> Path:
-    try:
-        resolved = Path(value).expanduser().resolve(strict=True)
-    except (OSError, RuntimeError) as exc:
-        raise ValueError(f"{name} must be an existing local path") from exc
-    if directory != resolved.is_dir():
-        kind = "directory" if directory else "file"
-        raise ValueError(f"{name} must be an existing {kind}")
-    return resolved
-
-
 def _scope(
     cluster: str,
     org: str,
     project: str,
-    allowed_workspace_root: str,
     workspace_path: str,
-    config_path: str,
-    project_path: str | None,
 ) -> FlowScope:
     for value, name in ((cluster, "cluster"), (org, "org"), (project, "project")):
         if not value.strip():
             raise ValueError(f"{name} must be explicit and non-empty")
-    root = _path(allowed_workspace_root, "allowed_workspace_root", directory=True)
-    workspace = _path(workspace_path, "workspace_path", directory=True)
-    config = _path(config_path, "config_path", directory=False)
-    project_config = (
-        _path(project_path, "project_path", directory=False)
-        if project_path is not None
-        else None
+    root = allowed_workspace_root()
+    workspace = resolve_workspace_path(
+        workspace_path, name="workspace_path", directory=True
     )
-    for candidate, name in (
-        (workspace, "workspace_path"),
-        (config, "config_path"),
-        (project_config, "project_path"),
-    ):
-        if candidate is None:
-            continue
-        try:
-            candidate.relative_to(root)
-        except ValueError as exc:
-            raise ValueError(f"{name} escapes allowed_workspace_root") from exc
-    for candidate, name in ((config, "config_path"), (project_config, "project_path")):
-        if candidate is None:
-            continue
-        try:
-            candidate.relative_to(workspace)
-        except ValueError as exc:
-            raise ValueError(f"{name} must be inside workspace_path") from exc
-    return FlowScope(cluster, org, project, root, workspace, config, project_config)
+    flow_config = workspace / ".apolo"
+    if flow_config.is_symlink() or not flow_config.is_dir():
+        raise ValueError(
+            "workspace_path must be a Flow root containing a real .apolo directory"
+        )
+    return FlowScope(cluster, org, project, root, workspace)
 
 
 def _authorize_flow_resource(
@@ -264,7 +256,7 @@ def _redacted_log(value: Any, max_bytes: int) -> dict[str, Any]:
     }
 
 
-ScopeArgs = tuple[str, str, str, str, str, str, str | None]
+ScopeArgs = tuple[str, str, str, str]
 
 
 def _make_scope(args: ScopeArgs) -> FlowScope:
@@ -273,14 +265,12 @@ def _make_scope(args: ScopeArgs) -> FlowScope:
 
 def register(mcp: FastMCP) -> None:
     @mcp.tool(annotations=READ_ONLY)
+    @_document_flow_scope
     async def flow_live_list(
         cluster: str,
         org: str,
         project: str,
-        allowed_workspace_root: str,
         workspace_path: str,
-        config_path: str,
-        project_path: str | None = None,
         limit: int = 20,
     ) -> dict[str, Any]:
         """List Flow live jobs within explicit context and local path scope."""
@@ -290,10 +280,7 @@ def register(mcp: FastMCP) -> None:
                 cluster,
                 org,
                 project,
-                allowed_workspace_root,
                 workspace_path,
-                config_path,
-                project_path,
             )
         )
         async with _api(scope, "flow_live_list") as api:
@@ -302,15 +289,13 @@ def register(mcp: FastMCP) -> None:
             return _response(scope, items=items, limit=limit, truncated=truncated)
 
     @mcp.tool(annotations=READ_ONLY)
+    @_document_flow_scope
     async def flow_live_get(
         job_id: str,
         cluster: str,
         org: str,
         project: str,
-        allowed_workspace_root: str,
         workspace_path: str,
-        config_path: str,
-        project_path: str | None = None,
         suffix: str | None = None,
         limit: int = 20,
     ) -> dict[str, Any]:
@@ -321,10 +306,7 @@ def register(mcp: FastMCP) -> None:
                 cluster,
                 org,
                 project,
-                allowed_workspace_root,
                 workspace_path,
-                config_path,
-                project_path,
             )
         )
         async with _api(scope, "flow_live_get") as api:
@@ -333,15 +315,13 @@ def register(mcp: FastMCP) -> None:
             return _response(scope, items=items, limit=limit, truncated=truncated)
 
     @mcp.tool(annotations=WRITE)
+    @_document_flow_scope
     async def flow_live_run(
         job_id: str,
         cluster: str,
         org: str,
         project: str,
-        allowed_workspace_root: str,
         workspace_path: str,
-        config_path: str,
-        project_path: str | None = None,
         suffix: str | None = None,
         params: dict[str, str] | None = None,
         args: list[str] | None = None,
@@ -355,10 +335,7 @@ def register(mcp: FastMCP) -> None:
                 cluster,
                 org,
                 project,
-                allowed_workspace_root,
                 workspace_path,
-                config_path,
-                project_path,
             )
         )
         ensure_ledger_writable()
@@ -384,15 +361,13 @@ def register(mcp: FastMCP) -> None:
             return _response(scope, result=result)
 
     @mcp.tool(annotations=READ_ONLY)
+    @_document_flow_scope
     async def flow_live_logs(
         job_id: str,
         cluster: str,
         org: str,
         project: str,
-        allowed_workspace_root: str,
         workspace_path: str,
-        config_path: str,
-        project_path: str | None = None,
         suffix: str | None = None,
         timeout_seconds: float = 60,
         max_chunks: int = 100,
@@ -407,10 +382,7 @@ def register(mcp: FastMCP) -> None:
                 cluster,
                 org,
                 project,
-                allowed_workspace_root,
                 workspace_path,
-                config_path,
-                project_path,
             )
         )
         async with _api(scope, "flow_live_logs") as api:
@@ -424,15 +396,13 @@ def register(mcp: FastMCP) -> None:
             return _response(scope, log=_redacted_log(result, max_bytes))
 
     @mcp.tool(annotations=READ_ONLY)
+    @_document_flow_scope
     async def flow_live_wait(
         job_id: str,
         cluster: str,
         org: str,
         project: str,
-        allowed_workspace_root: str,
         workspace_path: str,
-        config_path: str,
-        project_path: str | None = None,
         suffix: str | None = None,
         timeout_seconds: float = 300,
         poll_interval_seconds: float = 2,
@@ -447,10 +417,7 @@ def register(mcp: FastMCP) -> None:
                 cluster,
                 org,
                 project,
-                allowed_workspace_root,
                 workspace_path,
-                config_path,
-                project_path,
             )
         )
         async with _api(scope, "flow_live_wait") as api:
@@ -464,15 +431,13 @@ def register(mcp: FastMCP) -> None:
             return _response(scope, items=items, limit=limit, truncated=truncated)
 
     @mcp.tool(annotations=DESTRUCTIVE)
+    @_document_flow_scope
     async def flow_live_kill(
         job_id: str,
         cluster: str,
         org: str,
         project: str,
-        allowed_workspace_root: str,
         workspace_path: str,
-        config_path: str,
-        project_path: str | None = None,
         suffix: str | None = None,
         timeout_seconds: float = 300,
         limit: int = 20,
@@ -485,10 +450,7 @@ def register(mcp: FastMCP) -> None:
                 cluster,
                 org,
                 project,
-                allowed_workspace_root,
                 workspace_path,
-                config_path,
-                project_path,
             )
         )
         async with _api(scope, "flow_live_kill") as api:
@@ -514,14 +476,12 @@ def register(mcp: FastMCP) -> None:
             return _response(scope, items=items, limit=limit, truncated=truncated)
 
     @mcp.tool(annotations=DESTRUCTIVE)
+    @_document_flow_scope
     async def flow_live_kill_all(
         cluster: str,
         org: str,
         project: str,
-        allowed_workspace_root: str,
         workspace_path: str,
-        config_path: str,
-        project_path: str | None = None,
         timeout_seconds: float = 300,
         limit: int = 20,
     ) -> dict[str, Any]:
@@ -533,10 +493,7 @@ def register(mcp: FastMCP) -> None:
                 cluster,
                 org,
                 project,
-                allowed_workspace_root,
                 workspace_path,
-                config_path,
-                project_path,
             )
         )
         async with _api(scope, "flow_live_kill_all") as api:
@@ -570,15 +527,13 @@ def register(mcp: FastMCP) -> None:
             return _response(scope, items=items, limit=limit, truncated=truncated)
 
     @mcp.tool(annotations=WRITE)
+    @_document_flow_scope
     async def flow_bake_start(
         batch: str,
         cluster: str,
         org: str,
         project: str,
-        allowed_workspace_root: str,
         workspace_path: str,
-        config_path: str,
-        project_path: str | None = None,
         params: dict[str, str] | None = None,
         name: str | None = None,
         tags: list[str] | None = None,
@@ -595,10 +550,7 @@ def register(mcp: FastMCP) -> None:
                 cluster,
                 org,
                 project,
-                allowed_workspace_root,
                 workspace_path,
-                config_path,
-                project_path,
             )
         )
         ensure_ledger_writable()
@@ -626,14 +578,12 @@ def register(mcp: FastMCP) -> None:
             return _response(scope, bake=result)
 
     @mcp.tool(annotations=READ_ONLY)
+    @_document_flow_scope
     async def flow_bake_list(
         cluster: str,
         org: str,
         project: str,
-        allowed_workspace_root: str,
         workspace_path: str,
-        config_path: str,
-        project_path: str | None = None,
         limit: int = 20,
         task_limit: int = 100,
         tags: list[str] | None = None,
@@ -646,10 +596,7 @@ def register(mcp: FastMCP) -> None:
                 cluster,
                 org,
                 project,
-                allowed_workspace_root,
                 workspace_path,
-                config_path,
-                project_path,
             )
         )
         async with _api(scope, "flow_bake_list") as api:
@@ -660,15 +607,13 @@ def register(mcp: FastMCP) -> None:
             return _response(scope, items=items, limit=limit, truncated=truncated)
 
     @mcp.tool(annotations=READ_ONLY)
+    @_document_flow_scope
     async def flow_bake_get(
         bake_id_or_name: str,
         cluster: str,
         org: str,
         project: str,
-        allowed_workspace_root: str,
         workspace_path: str,
-        config_path: str,
-        project_path: str | None = None,
         attempt_no: int = -1,
         task_limit: int = 100,
     ) -> dict[str, Any]:
@@ -679,10 +624,7 @@ def register(mcp: FastMCP) -> None:
                 cluster,
                 org,
                 project,
-                allowed_workspace_root,
                 workspace_path,
-                config_path,
-                project_path,
             )
         )
         async with _api(scope, "flow_bake_get") as api:
@@ -692,16 +634,14 @@ def register(mcp: FastMCP) -> None:
             return _response(scope, bake=result)
 
     @mcp.tool(annotations=READ_ONLY)
+    @_document_flow_scope
     async def flow_bake_logs(
         bake_id_or_name: str,
         task_id: str,
         cluster: str,
         org: str,
         project: str,
-        allowed_workspace_root: str,
         workspace_path: str,
-        config_path: str,
-        project_path: str | None = None,
         attempt_no: int = -1,
         timeout_seconds: float = 60,
         max_chunks: int = 100,
@@ -716,10 +656,7 @@ def register(mcp: FastMCP) -> None:
                 cluster,
                 org,
                 project,
-                allowed_workspace_root,
                 workspace_path,
-                config_path,
-                project_path,
             )
         )
         async with _api(scope, "flow_bake_logs") as api:
@@ -734,15 +671,13 @@ def register(mcp: FastMCP) -> None:
             return _response(scope, log=_redacted_log(result, max_bytes))
 
     @mcp.tool(annotations=READ_ONLY)
+    @_document_flow_scope
     async def flow_bake_wait(
         bake_id_or_name: str,
         cluster: str,
         org: str,
         project: str,
-        allowed_workspace_root: str,
         workspace_path: str,
-        config_path: str,
-        project_path: str | None = None,
         attempt_no: int = -1,
         timeout_seconds: float = 300,
         poll_interval_seconds: float = 2,
@@ -757,10 +692,7 @@ def register(mcp: FastMCP) -> None:
                 cluster,
                 org,
                 project,
-                allowed_workspace_root,
                 workspace_path,
-                config_path,
-                project_path,
             )
         )
         async with _api(scope, "flow_bake_wait") as api:
@@ -774,15 +706,13 @@ def register(mcp: FastMCP) -> None:
             return _response(scope, bake=result)
 
     @mcp.tool(annotations=DESTRUCTIVE)
+    @_document_flow_scope
     async def flow_bake_cancel(
         bake_id_or_name: str,
         cluster: str,
         org: str,
         project: str,
-        allowed_workspace_root: str,
         workspace_path: str,
-        config_path: str,
-        project_path: str | None = None,
         attempt_no: int = -1,
         task_limit: int = 100,
         timeout_seconds: float = 300,
@@ -795,10 +725,7 @@ def register(mcp: FastMCP) -> None:
                 cluster,
                 org,
                 project,
-                allowed_workspace_root,
                 workspace_path,
-                config_path,
-                project_path,
             )
         )
         async with _api(scope, "flow_bake_cancel") as api:
@@ -821,15 +748,13 @@ def register(mcp: FastMCP) -> None:
             return _response(scope, bake=result)
 
     @mcp.tool(annotations=DESTRUCTIVE)
+    @_document_flow_scope
     async def flow_bake_restart(
         bake_id_or_name: str,
         cluster: str,
         org: str,
         project: str,
-        allowed_workspace_root: str,
         workspace_path: str,
-        config_path: str,
-        project_path: str | None = None,
         attempt_no: int = -1,
         from_failed: bool = True,
         local_executor: bool = False,
@@ -844,10 +769,7 @@ def register(mcp: FastMCP) -> None:
                 cluster,
                 org,
                 project,
-                allowed_workspace_root,
                 workspace_path,
-                config_path,
-                project_path,
             )
         )
         async with _api(scope, "flow_bake_restart") as api:

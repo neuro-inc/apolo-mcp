@@ -11,8 +11,7 @@ description: Inspect and safely manage Apolo storage, disks, images, buckets/blo
    and duration; return a truthful truncation marker. Never move binary objects,
    container layers, or large directory trees through model context.
 3. Use deterministic local CLI/scripts for bulk storage, image, or bucket transfer.
-   Restrict local paths to the configured workspace root and set explicit size,
-   duration, overwrite, and write-approval controls.
+   Set explicit size, duration, overwrite, and write-approval controls.
 4. Require explicit user approval and `managed` or `full` policy for every write. Mark
    exact deletes destructive; reject project roots, ambiguous names, and unbounded
    recursion.
@@ -26,7 +25,7 @@ description: Inspect and safely manage Apolo storage, disks, images, buckets/blo
    file sink. Atomically write the one-time token directly to that sink and return only
    account metadata and destination. Never return a token even on failure.
 8. Treat signed bucket URLs as temporary credentials. Require explicit scope/expiry,
-   write them only to a new protected `0600` workspace file, and return only sink
+   write them only to a new protected `0600` file, and return only sink
    metadata. Do not create or return bucket credential material to the model.
 
 When a safe public SDK contract is absent, state the precise CLI fallback or

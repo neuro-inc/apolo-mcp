@@ -76,7 +76,7 @@ List names, owners, and context only; never retrieve secret values.
 
 ## `get_secret_to_file`
 
-Write a secret to a new mode-0600 workspace file; never return its value.
+Write a secret to a new mode-0600 local file. The destination must be new, and the secret value is never returned.
 
 **Operation type:** write
 
@@ -153,7 +153,7 @@ Write a secret to a new mode-0600 workspace file; never return its value.
 
 ## `create_secret_from_source`
 
-Create a secret without accepting or returning its value.
+Create a secret without accepting or returning its value. File sources must be private regular files.
 
 **Operation type:** write
 

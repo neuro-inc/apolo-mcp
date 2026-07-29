@@ -48,12 +48,6 @@ _CREDENTIAL = re.compile(
 _URL_CREDENTIAL = re.compile(r"(://)[^/@\s]+@")
 
 
-def _context(
-    sdk: Any, cluster: str | None, org: str | None, project: str | None
-) -> ApoloContext:
-    return resolve_context(sdk.config, cluster=cluster, org=org, project=project)
-
-
 def _storage_uri(path: str, context: ApoloContext, *, allow_root: bool = True) -> URL:
     if not isinstance(path, str) or any(ord(char) < 32 for char in path):
         raise ValueError("storage path must be a string without control characters")
@@ -128,7 +122,9 @@ def register(mcp: FastMCP) -> None:
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 uri = _storage_uri(path, resolved)
                 items: list[dict[str, Any]] = []
                 async for item in sdk.storage.list(uri):
@@ -161,7 +157,9 @@ def register(mcp: FastMCP) -> None:
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 uri = _storage_uri(path, resolved)
                 status = await sdk.storage.stat(uri)
                 return {
@@ -190,7 +188,9 @@ def register(mcp: FastMCP) -> None:
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 uri = _storage_uri(path, resolved)
                 chunks: list[bytes] = []
                 async for chunk in sdk.storage.open(uri, size=max_bytes + 1):
@@ -251,7 +251,9 @@ def register(mcp: FastMCP) -> None:
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 uri = _storage_uri(path, resolved, allow_root=False)
                 exists = await _exists(sdk, uri)
                 effect = MutationEffect.UPDATE if exists else MutationEffect.CREATE
@@ -304,7 +306,9 @@ def register(mcp: FastMCP) -> None:
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 uri = _storage_uri(path, resolved, allow_root=False)
                 exists = await _exists(sdk, uri)
                 effect = MutationEffect.UPDATE if exists else MutationEffect.CREATE
@@ -354,7 +358,9 @@ def register(mcp: FastMCP) -> None:
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 uri = _storage_uri(path, resolved, allow_root=False)
                 authorize_mutation(
                     operation="delete_storage_path",

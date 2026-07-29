@@ -15,6 +15,8 @@ from typing import Any
 
 import yaml
 
+from .workspace import ensure_path_beneath
+
 
 PLAN_ROOT_ENV = "APOLO_MCP_PLAN_ROOT"
 DEFAULT_TTL_SECONDS = 900
@@ -52,8 +54,7 @@ def _safe_target(value: str) -> str:
 def _atomic_write(path: Path, content: str) -> None:
     root = plan_root()
     parent = path.parent.resolve()
-    if root != parent and root not in parent.parents:
-        raise ValueError("Refusing to write outside the configured Apps plan root")
+    ensure_path_beneath(parent, root=root, name="Apps plan path")
     parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=parent)
     try:
@@ -226,8 +227,7 @@ def find_plan(plan_id: str) -> tuple[Path, dict[str, Any]]:
         value = json.loads(path.read_text(encoding="utf-8"))
         if value.get("id") == plan_id:
             resolved = path.resolve()
-            if root not in resolved.parents:
-                raise ValueError("Plan path escaped the configured plan root")
+            ensure_path_beneath(resolved, root=root, name="Apps plan path")
             return path, value
     raise ValueError(f"Unknown Apps plan ID: {plan_id}")
 
@@ -248,8 +248,7 @@ def validate_for_apply(
     if plan.get("inputs_path"):
         inputs = Path(plan["inputs_path"])
         root = plan_root()
-        if root not in inputs.resolve().parents:
-            raise ValueError("Inputs path escaped the configured plan root")
+        ensure_path_beneath(inputs.resolve(), root=root, name="Apps plan inputs path")
         actual_checksum = sha256_bytes(inputs.read_bytes())
         if actual_checksum != plan.get("inputs_sha256"):
             raise ValueError("Reviewed inputs YAML was edited; create a new plan")

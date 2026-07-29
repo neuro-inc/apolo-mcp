@@ -80,10 +80,21 @@ _SENSITIVE = re.compile(
     r"(?i)(password|passwd|token|secret(?:_?value)?|api[-_]?key|private[-_]?key)"
 )
 _LOG_CREDENTIAL = re.compile(
-    r"(?i)\b(authorization|cookie|token|password|secret|api[-_]?key)"
+    r"(?i)\b(authorization|cookie|token|password|secret|api[-_]?key|"
+    r"APOLO_PASSED_CONFIG|APOLO_[A-Z0-9_]*TOKEN)"
     r"(\s*[:=]\s*|\s+)([^\s,;]+)"
 )
 _LOG_URL_CREDENTIAL = re.compile(r"(://)[^/@\s]+@")
+_LOG_QUOTED_CREDENTIAL = re.compile(
+    r"(?i)(?P<prefix>[\"'](?:APOLO_PASSED_CONFIG|APOLO_[A-Z0-9_]*TOKEN)"
+    r"[\"']\s*:\s*[\"'])[^\"'\r\n]*(?P<suffix>[\"']|(?=\r?\n|\Z))"
+)
+_LOG_NAMED_ENV_CREDENTIAL = re.compile(
+    r"(?i)(?P<prefix>[\"']name[\"']\s*:\s*[\"']"
+    r"(?:APOLO_PASSED_CONFIG|APOLO_[A-Z0-9_]*TOKEN)[\"']\s*,\s*"
+    r"[\"']value[\"']\s*:\s*[\"'])[^\"'\r\n]*"
+    r"(?P<suffix>[\"']|(?=\r?\n|\Z))"
+)
 
 
 def _bounded(limit: int) -> int:
@@ -96,12 +107,6 @@ def _iso(value: Any) -> str | None:
     if value is None:
         return None
     return value.isoformat() if hasattr(value, "isoformat") else str(value)
-
-
-def _context(
-    sdk: Any, cluster: str | None, org: str | None, project: str | None
-) -> ApoloContext:
-    return resolve_context(sdk.config, cluster=cluster, org=org, project=project)
 
 
 def _app_dict(app: Any) -> dict[str, Any]:
@@ -147,6 +152,8 @@ def _redact(value: Any) -> Any:
 
 def _redact_log(value: str) -> str:
     value = _LOG_URL_CREDENTIAL.sub(r"\1<redacted>@", value)
+    value = _LOG_NAMED_ENV_CREDENTIAL.sub(r"\g<prefix><redacted>\g<suffix>", value)
+    value = _LOG_QUOTED_CREDENTIAL.sub(r"\g<prefix><redacted>\g<suffix>", value)
     return _LOG_CREDENTIAL.sub(r"\1\2<redacted>", value)
 
 
@@ -434,7 +441,9 @@ def register(mcp: FastMCP) -> None:
         """List templates in an explicitly resolved context, bounded to 100."""
         bounded = _bounded(limit)
         async with client() as sdk:
-            context = _context(sdk, cluster, org, project)
+            context = resolve_context(
+                sdk.config, cluster=cluster, org=org, project=project
+            )
             items = []
             async with sdk.apps.list_templates(
                 cluster_name=context.cluster,
@@ -471,7 +480,9 @@ def register(mcp: FastMCP) -> None:
         """List bounded versions of one Apps template."""
         bounded = _bounded(limit)
         async with client() as sdk:
-            context = _context(sdk, cluster, org, project)
+            context = resolve_context(
+                sdk.config, cluster=cluster, org=org, project=project
+            )
             items = []
             async with sdk.apps.list_template_versions(
                 name=template_name,
@@ -507,7 +518,9 @@ def register(mcp: FastMCP) -> None:
     ) -> dict[str, Any]:
         """Get the exact template version and current input schema."""
         async with client() as sdk:
-            context = _context(sdk, cluster, org, project)
+            context = resolve_context(
+                sdk.config, cluster=cluster, org=org, project=project
+            )
             template = await sdk.apps.get_template(
                 name=template_name,
                 version=template_version,
@@ -547,7 +560,9 @@ def register(mcp: FastMCP) -> None:
             else (None if include_inactive else apolo_sdk.AppState.get_active_states())
         )
         async with client() as sdk:
-            context = _context(sdk, cluster, org, project)
+            context = resolve_context(
+                sdk.config, cluster=cluster, org=org, project=project
+            )
             items = []
             async with sdk.apps.list(
                 states=state_filter,
@@ -575,7 +590,9 @@ def register(mcp: FastMCP) -> None:
     ) -> dict[str, Any]:
         """Get one App and verify it belongs to the resolved context."""
         async with client() as sdk:
-            context = _context(sdk, cluster, org, project)
+            context = resolve_context(
+                sdk.config, cluster=cluster, org=org, project=project
+            )
             app = await sdk.apps.get(app_id)
             _assert_app_context(app, context)
         return {"app": _app_dict(app), "context": context.as_dict()}
@@ -595,7 +612,9 @@ def register(mcp: FastMCP) -> None:
         if not 0.25 <= poll_interval_seconds <= 30:
             raise ValueError("poll_interval_seconds must be between 0.25 and 30")
         async with client() as sdk:
-            context = _context(sdk, cluster, org, project)
+            context = resolve_context(
+                sdk.config, cluster=cluster, org=org, project=project
+            )
             started = monotonic()
             while True:
                 app = await sdk.apps.get(app_id)
@@ -632,7 +651,12 @@ def register(mcp: FastMCP) -> None:
         since: str | None = None,
         timestamps: bool = False,
     ) -> dict[str, Any]:
-        """Read bounded UTF-8 logs with timeout and explicit truncation metadata."""
+        """Read bounded UTF-8 logs with credential redaction and truncation metadata.
+
+        Redaction covers ordinary credential assignments, quoted
+        APOLO_PASSED_CONFIG/APOLO_*TOKEN keys, and JSON or Python-repr environment
+        entries shaped as {name: <sensitive Apolo key>, value: <credential>}.
+        """
         if not 1 <= max_bytes <= MAX_LOG_BYTES or not 1 <= max_lines <= MAX_LOG_LINES:
             raise ValueError("max_bytes/max_lines exceed Apps log safety bounds")
         if not 1 <= timeout_seconds <= 60:
@@ -642,7 +666,9 @@ def register(mcp: FastMCP) -> None:
         lines_seen = 0
         truncated = False
         async with client() as sdk:
-            context = _context(sdk, cluster, org, project)
+            context = resolve_context(
+                sdk.config, cluster=cluster, org=org, project=project
+            )
             app = await sdk.apps.get(app_id)
             _assert_app_context(app, context)
 
@@ -701,7 +727,9 @@ def register(mcp: FastMCP) -> None:
         """Return bounded, credential-redacted App status events."""
         bounded = _bounded(limit)
         async with client() as sdk:
-            context = _context(sdk, cluster, org, project)
+            context = resolve_context(
+                sdk.config, cluster=cluster, org=org, project=project
+            )
             items = []
             async with sdk.apps.get_events(
                 app_id=app_id,
@@ -732,7 +760,9 @@ def register(mcp: FastMCP) -> None:
     ) -> dict[str, Any]:
         """Return bounded, credential-redacted output for one App."""
         async with client() as sdk:
-            context = _context(sdk, cluster, org, project)
+            context = resolve_context(
+                sdk.config, cluster=cluster, org=org, project=project
+            )
             output = await sdk.apps.get_output(
                 app_id=app_id,
                 cluster_name=context.cluster,
@@ -755,7 +785,9 @@ def register(mcp: FastMCP) -> None:
     ) -> dict[str, Any]:
         """Return bounded App input with likely credential values redacted."""
         async with client() as sdk:
-            context = _context(sdk, cluster, org, project)
+            context = resolve_context(
+                sdk.config, cluster=cluster, org=org, project=project
+            )
             value = await sdk.apps.get_input(
                 app_id=app_id,
                 cluster_name=context.cluster,
@@ -780,7 +812,9 @@ def register(mcp: FastMCP) -> None:
         """List bounded configuration revisions after verifying App context."""
         bounded = _bounded(limit)
         async with client() as sdk:
-            context = _context(sdk, cluster, org, project)
+            context = resolve_context(
+                sdk.config, cluster=cluster, org=org, project=project
+            )
             app = await sdk.apps.get(app_id)
             _assert_app_context(app, context)
             revisions = await sdk.apps.get_revisions(app_id=app_id)
@@ -815,7 +849,9 @@ def register(mcp: FastMCP) -> None:
     ) -> dict[str, Any]:
         """Write exact install YAML plus atomic plan.json/PLAN.md for review."""
         async with client() as sdk:
-            context = _context(sdk, cluster, org, project)
+            context = resolve_context(
+                sdk.config, cluster=cluster, org=org, project=project
+            )
             template = await sdk.apps.get_template(
                 name=template_name,
                 version=template_version,
@@ -884,7 +920,9 @@ def register(mcp: FastMCP) -> None:
     ) -> dict[str, Any]:
         """Seed exact YAML with SDK get_input, patch it, and write a review plan."""
         async with client() as sdk:
-            context = _context(sdk, cluster, org, project)
+            context = resolve_context(
+                sdk.config, cluster=cluster, org=org, project=project
+            )
             app = await sdk.apps.get(app_id)
             _assert_app_context(app, context)
             seeded = await sdk.apps.get_input(
@@ -893,11 +931,13 @@ def register(mcp: FastMCP) -> None:
                 org_name=context.org,
                 project_name=context.project,
             )
-            payload = deep_patch(
-                seeded, {"input": deep_patch(seeded.get("input", {}), input_patch)}
-            )
-            payload["template_name"] = app.template_name
-            payload["template_version"] = app.template_version
+            nested = seeded.get("input")
+            current_input = nested if isinstance(nested, Mapping) else seeded
+            payload: dict[str, Any] = {
+                "template_name": app.template_name,
+                "template_version": app.template_version,
+                "input": deep_patch(dict(current_input), input_patch),
+            }
             if display_name is not None:
                 payload["display_name"] = display_name
             ensure_secret_references_only(payload)
@@ -960,7 +1000,9 @@ def register(mcp: FastMCP) -> None:
     ) -> dict[str, Any]:
         """Write a no-YAML rollback plan bound to current and target revisions."""
         async with client() as sdk:
-            context = _context(sdk, cluster, org, project)
+            context = resolve_context(
+                sdk.config, cluster=cluster, org=org, project=project
+            )
             app = await sdk.apps.get(app_id)
             _assert_app_context(app, context)
             revisions = await sdk.apps.get_revisions(app_id=app_id)
@@ -1004,7 +1046,9 @@ def register(mcp: FastMCP) -> None:
     ) -> dict[str, Any]:
         """Write a no-YAML uninstall plan bound to exact App/current revision."""
         async with client() as sdk:
-            context = _context(sdk, cluster, org, project)
+            context = resolve_context(
+                sdk.config, cluster=cluster, org=org, project=project
+            )
             app = await sdk.apps.get(app_id)
             _assert_app_context(app, context)
             current_revision = await _revision(sdk, app_id)
@@ -1041,7 +1085,9 @@ def register(mcp: FastMCP) -> None:
         """Apply one unexpired, unchanged install plan exactly once."""
         authorize_mutation(operation="install_app", effect=MutationEffect.CREATE)
         async with client() as sdk:
-            context = _context(sdk, cluster, org, project)
+            context = resolve_context(
+                sdk.config, cluster=cluster, org=org, project=project
+            )
             path, plan, payload = claim_for_apply(
                 plan_id, kind="install", context=context.as_dict()
             )
@@ -1097,7 +1143,9 @@ def register(mcp: FastMCP) -> None:
         """Apply one unchanged configure plan after revision drift check."""
         _deny_read_only_before_claim("configure_app", MutationEffect.UPDATE)
         async with client() as sdk:
-            context = _context(sdk, cluster, org, project)
+            context = resolve_context(
+                sdk.config, cluster=cluster, org=org, project=project
+            )
             path, plan, payload = claim_for_apply(
                 plan_id, kind="configure", context=context.as_dict()
             )
@@ -1165,7 +1213,9 @@ def register(mcp: FastMCP) -> None:
         """Apply one unchanged rollback plan under the server mutation policy."""
         _deny_read_only_before_claim("rollback_app", MutationEffect.UPDATE)
         async with client() as sdk:
-            context = _context(sdk, cluster, org, project)
+            context = resolve_context(
+                sdk.config, cluster=cluster, org=org, project=project
+            )
             path, plan, _ = claim_for_apply(
                 plan_id, kind="rollback", context=context.as_dict()
             )
@@ -1235,7 +1285,9 @@ def register(mcp: FastMCP) -> None:
         """Apply one unchanged uninstall plan under the server mutation policy."""
         _deny_read_only_before_claim("uninstall_app", MutationEffect.DELETE)
         async with client() as sdk:
-            context = _context(sdk, cluster, org, project)
+            context = resolve_context(
+                sdk.config, cluster=cluster, org=org, project=project
+            )
             path, plan, _ = claim_for_apply(
                 plan_id, kind="uninstall", context=context.as_dict()
             )

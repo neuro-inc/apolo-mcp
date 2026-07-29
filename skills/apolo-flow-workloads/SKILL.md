@@ -5,8 +5,11 @@ description: Validate and operate Apolo Flow live jobs and batch bakes, includin
 
 # Apolo Flow workloads
 
-1. Resolve context with `$apolo-platform-user-context`. Resolve the project directory and
-   every config/action path; reject any path outside the configured workspace root.
+1. Resolve context with `$apolo-platform-user-context`. Resolve `workspace_path` as the
+   Flow project root. It must contain a real `.apolo` directory. Live configuration is
+   `.apolo/live.yml` or `.yaml`; batch configuration is
+   `.apolo/<batch>.yml` or `.yaml`; optional project settings are in
+   `.apolo/project.yml` or `.yaml`.
 2. Read the project's Flow configuration before execution. Validate project, live job
    or batch name, parameters, tags, executor, images, volumes, dependencies, and
    persistent output paths. Do not parse colored human tables for machine state.

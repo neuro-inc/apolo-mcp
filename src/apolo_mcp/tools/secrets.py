@@ -15,6 +15,7 @@ from ..context import ApoloContext, resolve_context
 from ..errors import normalize_error
 from ..ledger import ensure_ledger_writable, record_resource_action
 from ..policy import MutationEffect, authorize_mutation
+from ..workspace import resolve_new_workspace_file, resolve_workspace_path
 
 
 READ_ONLY = ToolAnnotations(
@@ -41,13 +42,6 @@ DESTRUCTIVE = ToolAnnotations(
 
 MAX_LIST_RESULTS = 100
 MAX_SECRET_BYTES = 1024 * 1024
-ALLOWED_WORKSPACE_ENV = "APOLO_MCP_ALLOWED_WORKSPACE"
-
-
-def _context(
-    sdk: Any, cluster: str | None, org: str | None, project: str | None
-) -> ApoloContext:
-    return resolve_context(sdk.config, cluster=cluster, org=org, project=project)
 
 
 def _key(key: str) -> str:
@@ -82,42 +76,11 @@ def _assert_context(item: Any, context: ApoloContext) -> None:
 
 
 def _workspace_path(value: str) -> Path:
-    configured = os.environ.get(ALLOWED_WORKSPACE_ENV)
-    if not configured:
-        raise PermissionError(f"{ALLOWED_WORKSPACE_ENV} must be configured")
-    configured_root = Path(configured).expanduser()
-    if stat.S_ISLNK(configured_root.lstat().st_mode):
-        raise ValueError("allowed workspace must not be a symlink")
-    root = configured_root.resolve(strict=True)
-    requested = Path(value).expanduser()
-    if stat.S_ISLNK(requested.lstat().st_mode):
-        raise ValueError("source_file must not be a symlink")
-    path = requested.resolve(strict=True)
-    if path == root or root not in path.parents:
-        raise PermissionError("source_file must be beneath the allowed workspace")
+    path = resolve_workspace_path(value, name="source_file", directory=False)
     info = path.lstat()
-    if not stat.S_ISREG(info.st_mode) or stat.S_ISLNK(info.st_mode):
-        raise ValueError("source_file must be a real regular file")
     if stat.S_IMODE(info.st_mode) & 0o077:
         raise PermissionError("source_file must not be accessible by group or others")
     return path
-
-
-def _new_workspace_file(value: str) -> Path:
-    configured = os.environ.get(ALLOWED_WORKSPACE_ENV)
-    if not configured:
-        raise PermissionError(f"{ALLOWED_WORKSPACE_ENV} must be configured")
-    configured_root = Path(configured).expanduser()
-    if stat.S_ISLNK(configured_root.lstat().st_mode):
-        raise ValueError("allowed workspace must not be a symlink")
-    root = configured_root.resolve(strict=True)
-    requested = Path(value).expanduser()
-    parent = requested.parent.resolve(strict=True)
-    if parent != root and root not in parent.parents:
-        raise PermissionError("destination_file must be beneath the allowed workspace")
-    if requested.exists() or requested.is_symlink():
-        raise FileExistsError("destination_file must not already exist")
-    return parent / requested.name
 
 
 def _source(source_type: Literal["env", "file"], source_name: str) -> bytes:
@@ -166,7 +129,9 @@ def register(mcp: FastMCP) -> None:
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 items: list[dict[str, str]] = []
                 async with sdk.secrets.list(
                     cluster_name=resolved.cluster,
@@ -199,13 +164,20 @@ def register(mcp: FastMCP) -> None:
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
-        """Write a secret to a new mode-0600 workspace file; never return its value."""
+        """Write a secret to a new mode-0600 local file.
+
+        The destination must be new, and the secret value is never returned.
+        """
         exact_key = _key(key)
-        destination = _new_workspace_file(destination_file)
+        destination = resolve_new_workspace_file(
+            destination_file, name="destination_file", create_parents=False
+        )
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 authorize_mutation(
                     operation="get_secret_to_file",
                     effect=MutationEffect.UPDATE,
@@ -267,7 +239,10 @@ def register(mcp: FastMCP) -> None:
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
-        """Create a secret without accepting or returning its value."""
+        """Create a secret without accepting or returning its value.
+
+        File sources must be private regular files.
+        """
         authorize_mutation(
             operation="create_secret_from_source", effect=MutationEffect.CREATE
         )
@@ -278,7 +253,9 @@ def register(mcp: FastMCP) -> None:
             if source_type != "secret":
                 value = _source(source_type, source_name)
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 exists = await _secret_exists(sdk, exact_key, resolved)
                 effect = MutationEffect.UPDATE if exists else MutationEffect.CREATE
                 authorize_mutation(
@@ -354,7 +331,9 @@ def register(mcp: FastMCP) -> None:
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 authorize_mutation(
                     operation="delete_secret",
                     effect=MutationEffect.DELETE,

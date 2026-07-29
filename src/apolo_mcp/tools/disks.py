@@ -49,12 +49,6 @@ MIN_UNUSED_HOURS = 1.0 / 60.0
 MAX_UNUSED_HOURS = 24.0 * 365.0 * 10.0
 
 
-def _context(
-    sdk: Any, cluster: str | None, org: str | None, project: str | None
-) -> ApoloContext:
-    return resolve_context(sdk.config, cluster=cluster, org=org, project=project)
-
-
 def _iso(value: Any) -> str | None:
     if value is None:
         return None
@@ -102,7 +96,9 @@ def register(mcp: FastMCP) -> None:
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 items: list[dict[str, Any]] = []
                 async for item in sdk.disks.list(
                     cluster_name=resolved.cluster,
@@ -150,7 +146,9 @@ def register(mcp: FastMCP) -> None:
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 ensure_ledger_writable()
                 item = await sdk.disks.create(
                     storage=size_gb * 1024**3,
@@ -194,7 +192,9 @@ def register(mcp: FastMCP) -> None:
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 item = await sdk.disks.get(
                     disk_id,
                     cluster_name=resolved.cluster,

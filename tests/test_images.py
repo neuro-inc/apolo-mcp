@@ -97,31 +97,28 @@ async def test_lists_are_bounded_filtered_and_inspection_has_no_layers(tools):
     assert inspected["size_bytes"] == 123 and "layers" not in inspected
 
 
-async def test_cross_context_policy_and_exact_digest(tools, monkeypatch):
+async def test_cross_context_policy_and_exact_tag(tools, monkeypatch):
     with pytest.raises(ApoloToolError, match="does not belong"):
         await fn(tools, "list_image_tags")("image://beta/team/default/model")
     monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "read-only")
     with pytest.raises(ApoloToolError, match="server policy"):
-        await fn(tools, "remove_image")("model", "v1", "sha256:" + "a" * 64)
+        await fn(tools, "remove_image_tag")("model", "v1")
     monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "full")
-    with pytest.raises(ValueError, match="lowercase sha256"):
-        await fn(tools, "remove_image")("model", "v1", "bad")
     with pytest.raises(ApoloToolError, match="exact image tag"):
         await fn(tools, "inspect_image")("model", "bad:tag")
     monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "read-only")
     with pytest.raises(ApoloToolError, match="server policy"):
-        await fn(tools, "remove_image")("model", "v1", "sha256:" + "a" * 64)
+        await fn(tools, "remove_image_tag")("model", "v1")
 
 
-async def test_remove_revalidates_digest_and_annotations(tools):
-    digest = "sha256:" + "a" * 64
-    await fn(tools, "remove_image")("model", "v1", digest)
-    tools[1].images.rm.assert_awaited_once()
-    tools[1].images.digest.return_value = "sha256:" + "b" * 64
-    with pytest.raises(ApoloToolError, match="no longer matches"):
-        await fn(tools, "remove_image")("model", "v1", digest)
+async def test_remove_passes_tag_not_digest_and_annotations(tools):
+    await fn(tools, "remove_image_tag")("model", "v1")
+    remote, reference = tools[1].images.rm.await_args.args
+    assert remote.tag == "v1"
+    assert reference == "v1"
+    tools[1].images.digest.assert_not_awaited()
     assert tools[0]["inspect_image"].annotations.readOnlyHint is True
-    assert tools[0]["remove_image"].annotations.destructiveHint is True
+    assert tools[0]["remove_image_tag"].annotations.destructiveHint is True
 
 
 async def test_push_and_pull_use_sdk_with_exact_context(tools, tmp_path, monkeypatch):

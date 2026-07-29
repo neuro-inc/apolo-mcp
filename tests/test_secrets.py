@@ -55,8 +55,8 @@ def secret(key="api"):
 @pytest.fixture
 def tools(monkeypatch, tmp_path: Path):
     monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "full")
-    monkeypatch.setenv("APOLO_MCP_ALLOWED_WORKSPACE", str(tmp_path))
     monkeypatch.setenv("APOLO_MCP_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
+    monkeypatch.chdir(tmp_path)
     secrets = MagicMock()
     secrets.list = lambda **kwargs: iterator([secret("one"), secret("two")])
     secrets.add = AsyncMock()
@@ -142,14 +142,6 @@ async def test_get_secret_writes_new_protected_file_without_returning_value(
     assert destination.stat().st_mode & 0o777 == 0o600
     with pytest.raises(Exception, match="must not already exist"):
         await fn(mcp, "get_secret_to_file")("api", str(destination))
-
-    real_root = tmp_path / "real-root"
-    real_root.mkdir()
-    linked_root = tmp_path / "linked-root"
-    linked_root.symlink_to(real_root, target_is_directory=True)
-    monkeypatch.setenv("APOLO_MCP_ALLOWED_WORKSPACE", str(linked_root))
-    with pytest.raises(ValueError, match="must not be a symlink"):
-        await fn(mcp, "get_secret_to_file")("api", str(linked_root / "secret"))
 
 
 async def test_creation_ledger_preflight_happens_before_sdk_write(

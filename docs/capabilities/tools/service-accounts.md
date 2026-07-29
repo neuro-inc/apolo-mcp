@@ -148,7 +148,7 @@ Get safe service-account metadata in one exact default context.
 
 ## `create_service_account`
 
-Create an account and sink its token without returning token material.
+Create an account and sink its token without returning token material. File sinks are protected local files. Secret sinks do not use the local filesystem.
 
 **Operation type:** write
 

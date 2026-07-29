@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import re
 from typing import Any
 
 import apolo_sdk
@@ -33,7 +32,7 @@ WRITE = ToolAnnotations(
     openWorldHint=True,
 )
 DESTRUCTIVE = ToolAnnotations(
-    title="Remove an exact Apolo image manifest",
+    title="Remove an exact Apolo image tag",
     readOnlyHint=False,
     destructiveHint=True,
     idempotentHint=True,
@@ -42,13 +41,6 @@ DESTRUCTIVE = ToolAnnotations(
 
 MAX_LIST_RESULTS = 100
 MAX_TRANSFER_SECONDS = 1800.0
-_DIGEST = re.compile(r"sha256:[0-9a-f]{64}\Z")
-
-
-def _context(
-    sdk: Any, cluster: str | None, org: str | None, project: str | None
-) -> ApoloContext:
-    return resolve_context(sdk.config, cluster=cluster, org=org, project=project)
 
 
 def _repository_uri(repository: str, context: ApoloContext) -> str:
@@ -139,7 +131,9 @@ def register(mcp: FastMCP) -> None:
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 local = sdk.parse.local_image(local_image)
                 remote = _remote(sdk, repository, resolved, tag)
                 try:
@@ -202,7 +196,9 @@ def register(mcp: FastMCP) -> None:
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 ensure_ledger_writable()
                 remote = _remote(sdk, repository, resolved, tag)
                 local = sdk.parse.local_image(local_image) if local_image else None
@@ -245,7 +241,9 @@ def register(mcp: FastMCP) -> None:
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 candidates = await sdk.images.list(cluster_name=resolved.cluster)
                 matching = [
                     item
@@ -280,7 +278,9 @@ def register(mcp: FastMCP) -> None:
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 remote = _remote(sdk, repository, resolved)
                 tags = await sdk.images.tags(remote)
                 return {
@@ -310,7 +310,9 @@ def register(mcp: FastMCP) -> None:
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 remote = _remote(sdk, repository, resolved, tag)
                 digest = await sdk.images.digest(remote)
                 info = await sdk.images.tag_info(remote)
@@ -330,24 +332,27 @@ def register(mcp: FastMCP) -> None:
             ) from None
 
     @mcp.tool(annotations=DESTRUCTIVE)
-    async def remove_image(
+    async def remove_image_tag(
         repository: str,
         tag: str,
-        digest: str,
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
-        """Remove an exact tag digest under full or owned managed policy."""
-        if not _DIGEST.fullmatch(digest):
-            raise ValueError("digest must be an exact lowercase sha256 digest")
+        """Remove one exact image tag without requesting digest deletion.
+
+        The operation passes the tag reference to the registry. Tags that happen to
+        share a manifest digest are not separate deletion targets.
+        """
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 remote = _remote(sdk, repository, resolved, tag)
                 authorize_mutation(
-                    operation="remove_image",
+                    operation="remove_image_tag",
                     effect=MutationEffect.DELETE,
                     resource_type="image",
                     resource_id=str(remote),
@@ -355,32 +360,25 @@ def register(mcp: FastMCP) -> None:
                     org=resolved.org,
                     project=resolved.project,
                 )
-                actual_digest = await sdk.images.digest(remote)
-                if actual_digest != digest:
-                    raise ValueError(
-                        "provided digest no longer matches the exact image tag; "
-                        "inspect the current digest before removal"
-                    )
-                await sdk.images.rm(remote, digest)
+                await sdk.images.rm(remote, tag)
                 record_resource_action(
                     resource_type="image",
                     resource_id=str(remote),
                     cluster=resolved.cluster,
                     org=resolved.org,
                     project=resolved.project,
-                    operation="remove_image",
+                    operation="remove_image_tag",
                     action="deleted",
                 )
                 return {
                     "status": "deleted",
                     "image": _image(remote),
-                    "digest": digest,
                     "context": resolved.as_dict(),
                 }
         except Exception as exc:
             raise normalize_error(
                 exc,
-                operation="remove_image",
+                operation="remove_image_tag",
                 context=resolved.as_dict() if resolved else None,
-                resource=f"{repository}:{tag}@{digest}",
+                resource=f"{repository}:{tag}",
             ) from None

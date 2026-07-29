@@ -20,7 +20,8 @@ from ..ledger import (
     record_resource_action,
 )
 from ..policy import MutationEffect, authorize_mutation
-from .secrets import ALLOWED_WORKSPACE_ENV, _key
+from ..workspace import resolve_new_workspace_file
+from .secrets import _key
 
 
 READ_ONLY = ToolAnnotations(
@@ -47,12 +48,6 @@ DESTRUCTIVE = ToolAnnotations(
 
 MAX_LIST_RESULTS = 100
 MAX_LIST_SCAN = 1000
-
-
-def _context(
-    sdk: Any, cluster: str | None, org: str | None, project: str | None
-) -> ApoloContext:
-    return resolve_context(sdk.config, cluster=cluster, org=org, project=project)
 
 
 def _id(value: str, field: str = "account_id") -> str:
@@ -91,37 +86,9 @@ def _assert_context(item: Any, context: ApoloContext) -> None:
 
 
 def _reserve_file(destination: str) -> tuple[int, Path]:
-    configured = os.environ.get(ALLOWED_WORKSPACE_ENV)
-    if not configured:
-        raise PermissionError(f"{ALLOWED_WORKSPACE_ENV} must be configured")
-    configured_root = Path(configured).expanduser()
-    root_info = configured_root.lstat()
-    if stat.S_ISLNK(root_info.st_mode):
-        raise ValueError("allowed workspace must not be a symlink")
-    root = configured_root.resolve(strict=True)
-    if not root.is_dir():
-        raise ValueError("allowed workspace must be a real directory")
-    requested = Path(destination).expanduser()
-    if not requested.is_absolute():
-        requested = root / requested
-    if not requested.name or requested.name in {".", ".."}:
-        raise ValueError("destination_file must name one exact file")
-    prospective_parent = requested.parent.resolve(strict=False)
-    if prospective_parent != root and root not in prospective_parent.parents:
-        raise PermissionError("destination_file must be beneath the allowed workspace")
-    lexical_parent = requested.parent
-    probe = lexical_parent
-    while probe != root:
-        if probe.exists() and stat.S_ISLNK(probe.lstat().st_mode):
-            raise ValueError("destination_file parents must not be symlinks")
-        if probe.parent == probe:
-            break
-        probe = probe.parent
-    requested.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-    parent = requested.parent.resolve(strict=True)
-    target = parent / requested.name
-    if parent != root and root not in parent.parents:
-        raise PermissionError("destination_file must be beneath the allowed workspace")
+    target = resolve_new_workspace_file(
+        destination, name="destination_file", create_parents=True
+    )
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
     if hasattr(os, "O_NOFOLLOW"):
         flags |= os.O_NOFOLLOW
@@ -189,7 +156,9 @@ def register(mcp: FastMCP) -> None:
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 matching: list[dict[str, Any]] = []
                 scanned = 0
                 scan_limited = False
@@ -243,7 +212,9 @@ def register(mcp: FastMCP) -> None:
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 item = await sdk.service_accounts.get(value)
                 _assert_context(item, resolved)
                 return {"account": _account(item), "context": resolved.as_dict()}
@@ -264,7 +235,11 @@ def register(mcp: FastMCP) -> None:
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
-        """Create an account and sink its token without returning token material."""
+        """Create an account and sink its token without returning token material.
+
+        File sinks are protected local files. Secret sinks do not use the local
+        filesystem.
+        """
         authorize_mutation(
             operation="create_service_account", effect=MutationEffect.CREATE
         )
@@ -280,7 +255,9 @@ def register(mcp: FastMCP) -> None:
             else:
                 destination_name = _key(destination_name)
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 ensure_ledger_writable()
                 if destination_type == "secret":
                     await _secret_available(sdk, destination_name, resolved)
@@ -364,7 +341,9 @@ def register(mcp: FastMCP) -> None:
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
-                resolved = _context(sdk, cluster, org, project)
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
                 item = await sdk.service_accounts.get(value)
                 _assert_context(item, resolved)
                 if item.id != value:

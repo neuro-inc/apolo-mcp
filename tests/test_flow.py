@@ -144,14 +144,12 @@ def tools(tmp_path, monkeypatch):
     project_config = config_dir / "project.yml"
     config.write_text("kind: live")
     project_config.write_text("id: demo")
+    monkeypatch.chdir(workspace)
     scope = {
         "cluster": "alpha",
         "org": "team",
         "project": "default",
-        "allowed_workspace_root": str(tmp_path),
         "workspace_path": str(workspace),
-        "config_path": str(config),
-        "project_path": str(project_config),
     }
     fake = FakeAPI()
     provider = Provider(fake)
@@ -196,6 +194,14 @@ def test_tools_and_destructive_annotations(tools):
         assert registered[name].annotations.destructiveHint is True
     assert registered["flow_live_run"].annotations.destructiveHint is False
     assert registered["flow_bake_start"].annotations.destructiveHint is False
+    for name in expected:
+        parameters = registered[name].parameters["properties"]
+        assert "allowed_workspace_root" not in parameters
+        assert "config_path" not in parameters
+        assert "project_path" not in parameters
+        assert "workspace_path is the Flow project root" in registered[name].description
+    assert ".apolo/live.yml" in registered["flow_live_run"].description
+    assert ".apolo/<batch>.yml" in registered["flow_bake_start"].description
 
 
 async def test_reads_are_structured_bounded_and_redacted(tools):
@@ -207,7 +213,7 @@ async def test_reads_are_structured_bounded_and_redacted(tools):
         "org": "team",
         "project": "default",
     }
-    assert provider.scopes[0].config_path.name == "live.yml"
+    assert provider.scopes[0].workspace_path.name == "workspace"
     await fn(tools, "flow_live_get")("worker", **scope)
     live_log = await fn(tools, "flow_live_logs")("worker", **scope, max_bytes=100)
     assert "unsafe" not in live_log["log"]["logs"]
@@ -232,10 +238,10 @@ async def test_reads_are_structured_bounded_and_redacted(tools):
 
 async def test_scope_escape_and_hard_caps_are_rejected_before_provider(tools):
     _, fake, _, scope, tmp_path = tools
-    outside = tmp_path.parent / "outside-flow.yml"
-    outside.write_text("kind: live")
-    escaped = {**scope, "config_path": str(outside)}
-    with pytest.raises(ValueError, match="escapes allowed_workspace_root"):
+    outside = tmp_path / "outside"
+    (outside / ".apolo").mkdir(parents=True)
+    escaped = {**scope, "workspace_path": str(outside)}
+    with pytest.raises(PermissionError, match="must be beneath"):
         await fn(tools, "flow_live_list")(**escaped)
     with pytest.raises(ValueError, match="limit"):
         await fn(tools, "flow_live_list")(**scope, limit=MAX_LIST + 1)
@@ -320,8 +326,6 @@ async def test_default_provider_uses_released_explicit_context_factory(
         project="project-a",
         allowed_workspace_root=workspace,
         workspace_path=workspace,
-        config_path=flow_dir / "live.yml",
-        project_path=None,
     )
     seen = {}
 

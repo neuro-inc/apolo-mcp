@@ -54,6 +54,13 @@ put tokens, secret values, cookies, or service-account credentials in prompts or
 arguments. Tools that accept or retrieve sensitive material use protected local
 sources and sinks instead.
 
+Local file access is separately confined below the MCP startup directory. It is fixed
+for the process lifetime: no environment variable or tool argument can widen it, and
+the filesystem root is rejected. This prevents a model from uploading arbitrary host
+files or writing downloaded blobs, signed URLs, exported secrets, and service-account
+tokens outside the intended project. Flow uses the same boundary; callers provide
+only the Flow root below it, never the boundary itself.
+
 Apolo MCP can create service accounts. The generated one-time token is sent directly
 to a new protected local file or a named Apolo secret and is never included in the
 model-visible tool result. Creation still requires `managed` or `full` policy and the
