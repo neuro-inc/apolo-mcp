@@ -2,7 +2,14 @@ from pathlib import Path
 
 import pytest
 
-from scripts.install_skills import SKILLS, _destinations, install_one
+from apolo_mcp.catalog import SKILL_SPECS
+from apolo_mcp.cli import main as cli_main
+from apolo_mcp.skill_installer import (
+    SKILL_NAMES,
+    destinations,
+    install_one,
+    packaged_skills_root,
+)
 
 
 def skill(path: Path, content: str = "canonical") -> Path:
@@ -37,19 +44,24 @@ def test_copy_refuses_local_modification_without_overwrite(tmp_path: Path) -> No
 
 
 def test_project_destinations_are_client_specific(tmp_path: Path) -> None:
-    assert _destinations("project", "both", tmp_path) == [
-        (tmp_path / ".codex" / "skills").resolve(),
+    assert destinations("project", "both", tmp_path) == [
+        (tmp_path / ".agents" / "skills").resolve(),
         (tmp_path / ".claude" / "skills").resolve(),
     ]
 
 
-def test_shared_requires_explicit_root() -> None:
-    with pytest.raises(ValueError, match="--root"):
-        _destinations("shared", "codex", None)
+def test_user_destinations_use_supported_skill_locations(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+    assert destinations("user", "both", None) == [
+        (tmp_path / ".agents" / "skills").resolve(),
+        (tmp_path / ".claude" / "skills").resolve(),
+    ]
 
 
 def test_default_skill_set_contains_only_runtime_platform_workflows() -> None:
-    assert SKILLS == (
+    assert SKILL_NAMES == (
         "apolo-platform-user-context",
         "apolo-research-job",
         "apolo-flow-workloads",
@@ -58,3 +70,36 @@ def test_default_skill_set_contains_only_runtime_platform_workflows() -> None:
         "apolo-rnd-session-setup",
         "apolo-rnd-session-operate",
     )
+    assert SKILL_NAMES == tuple(item.name for item in SKILL_SPECS)
+
+
+def test_packaged_skills_root_contains_every_skill() -> None:
+    root = packaged_skills_root()
+    assert all((root / name / "SKILL.md").is_file() for name in SKILL_NAMES)
+
+
+def test_cli_installs_selected_skill_for_both_clients(tmp_path: Path) -> None:
+    source_root = tmp_path / "source"
+    name = SKILL_NAMES[0]
+    skill(source_root / name)
+    project = tmp_path / "project"
+    assert (
+        cli_main(
+            [
+                "skills",
+                "install",
+                "--client",
+                "both",
+                "--target",
+                "project",
+                "--root",
+                str(project),
+                "--source",
+                str(source_root),
+                name,
+            ]
+        )
+        == 0
+    )
+    assert (project / ".agents" / "skills" / name / "SKILL.md").is_file()
+    assert (project / ".claude" / "skills" / name / "SKILL.md").is_file()

@@ -17,18 +17,22 @@ It is a thin adapter layer over `apolo-sdk`. It does **not** shell out to the `a
 
 ## Tool Surface
 
-`src/apolo_mcp/tool_registry.py` is the canonical module registry. Registered FastMCP
-metadata generates the complete [capability matrix](docs/capabilities/README.md) and
-[tool reference](docs/capabilities/tools/README.md); do not maintain a duplicate tool
-table here.
+`src/apolo_mcp/catalog.py` is the canonical ordered catalog for capability groups,
+runtime registration, documentation descriptions, and owning skills. Registered
+FastMCP metadata remains canonical for individual tool schemas and operation types. It
+generates the complete [tool reference](docs/capabilities/tools/README.md); do not
+maintain a duplicate tool table here.
 
 ## Package Structure
 
 ```
 src/apolo_mcp/
-  server.py      — FastMCP app, registers all tools, entry point
+  cli.py         — server and packaged-skill command-line interface
+  catalog.py     — declarative capability and skill ownership catalog
+  server.py      — FastMCP app and stdio server lifecycle
+  skill_installer.py — packaged skill installation implementation
   _client.py     — apolo_sdk.get() context manager helper
-  tools/         — registered capability modules; see tool_registry.py
+  tools/         — registered capability modules; see catalog.py
 ```
 
 ## Tooling
@@ -49,10 +53,14 @@ src/apolo_mcp/
 
   | Subject | Authoritative source | Published documentation |
   |---|---|---|
-  | MCP tools, schemas, annotations, and operation types | registered FastMCP metadata via `src/apolo_mcp/tool_registry.py` | generated `docs/capabilities/tools/` and generated sections of the safety model |
+  | Capability order, descriptions, runtime registration, and skill ownership | `src/apolo_mcp/catalog.py` | generated tool navigation, skills catalog, and safety sections |
+  | MCP tool names, schemas, annotations, and operation types | registered FastMCP metadata in `src/apolo_mcp/tools/` | generated `docs/capabilities/tools/` and generated sections of the safety model |
   | Policy modes and lifecycle journal behavior | `src/apolo_mcp/policy.py`, `src/apolo_mcp/ledger.py`, and `build-tools/docs-templates/safety.md` | generated `docs/getting-started/safety.md` |
-  | Canonical skill names and summaries | skill frontmatter plus `scripts/install_skills.py` | generated `docs/capabilities/skills.md` |
-  | Installation, client registration, policy forwarding, skill installation, and R&D runtime bootstrap | `docs/getting-started/installation.md` | the same canonical maintained page |
+  | Canonical skill names and summaries | `src/apolo_mcp/catalog.py`, skill frontmatter, and `agents/openai.yaml` | generated `docs/capabilities/skills.md` |
+  | Complete skill instructions and supporting references | `skills/*/SKILL.md` and `skills/*/references/` | generated `docs/capabilities/skills/*/` |
+  | Installation, client registration, policy forwarding, and skill installation | `build-tools/docs-templates/installation.md` | generated `docs/getting-started/installation.md` |
+  | Full-mode dedicated-service-account workflow | `build-tools/docs-templates/full-mode-service-account.md` | generated `docs/guides/full-mode-service-account.md` |
+  | Self-contained R&D runtime and isolated-job configuration | `build-tools/docs-templates/rnd-runtime.md` | embedded unchanged in the generated full-mode guide and packaged R&D skill reference |
   | Supported, unsupported, and CLI-fallback capabilities | `docs/capabilities/README.md` | the same canonical maintained page |
 
 - Treat MCP code, registered tool metadata, policy constants, and canonical skill
@@ -61,14 +69,18 @@ src/apolo_mcp/
   must include the corresponding documentation update in the same change.
 - Edit maintained prose under `docs/` and generator templates under
   `build-tools/docs-templates/`. Never edit generated files under
-  `docs/capabilities/tools/`, `docs/capabilities/skills.md`, or
-  `docs/getting-started/safety.md` directly.
+  `docs/capabilities/tools/`, `docs/capabilities/skills.md`,
+  `docs/capabilities/skills/`, or
+  `docs/getting-started/installation.md`, `docs/getting-started/safety.md`,
+  `docs/guides/full-mode-service-account.md`, or the packaged R&D skill's generated
+  `references/installation.md` directly.
 - Run `make docs` after relevant code or skill changes, commit the generated Markdown,
   then run `make docs-check` and pre-commit. Generation must not modify GitBook-owned
   navigation such as `docs/SUMMARY.md`.
 - Do not create a second installation or client-configuration guide. The canonical
-  `docs/getting-started/installation.md` owns all install commands and configuration
-  snippets; automated tests reject duplicated markers elsewhere.
+  `build-tools/docs-templates/installation.md` owns all install commands and
+  configuration snippets. Generated and maintained pages should link to the published
+  `docs/getting-started/installation.md`.
 - Keep `docs/capabilities/README.md` current and use complete executable CLI commands,
   including the `apolo` or `apolo-flow` entry point. Do not use internal shorthand such
   as `job/root`.

@@ -14,6 +14,23 @@ not provide arbitrary shell or HTTP access, Kubernetes administration, identity 
 administration, model-visible secrets, interactive terminal streams, or a shared remote
 service.
 
+## Components
+
+Apolo MCP ships two complementary capabilities:
+
+1. **Local MCP server.** A local stdio process exposes typed, bounded Apolo operations
+   to an MCP client. The server owns platform access, explicit context resolution,
+   output bounds, credential protection, mutation policy, and lifecycle journaling.
+   See the [capability matrix](capabilities/) and generated
+   [MCP tool reference](capabilities/tools/README.md).
+2. **Agent skills catalogue.** Packaged skills for Codex and Claude Code teach the
+   client how to combine MCP tools into task-oriented workflows such as context
+   discovery, research jobs, Flow workloads, Applications, resource management, and
+   isolated R&D sessions. See the generated [skills catalogue](capabilities/skills.md).
+
+The MCP server is the controlled execution layer. The skills catalogue is the workflow
+layer that guides an agent in using that execution layer safely and consistently.
+
 ## Start here
 
 1. [Install and configure Apolo MCP](getting-started/installation.md) and check its

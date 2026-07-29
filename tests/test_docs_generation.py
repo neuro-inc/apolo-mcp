@@ -64,7 +64,7 @@ def test_generated_reference_covers_every_tool_and_skill() -> None:
         for path in (ROOT / "docs" / "capabilities" / "tools").glob("*.md")
         if path.name != "README.md"
     }
-    expected_groups = {module._group_slug(group) for group, _ in module.TOOL_REGISTRARS}
+    expected_groups = {item.slug for item in module.CAPABILITY_SPECS}
     assert references.keys() == expected_groups
     for group, tool, _ in tools:
         page = references[module._group_slug(group)]
@@ -74,7 +74,30 @@ def test_generated_reference_covers_every_tool_and_skill() -> None:
             for slug, other_page in references.items()
             if slug != module._group_slug(group)
         )
-    assert all(skills.count(f"**Skill name:** `{name}`") == 1 for name in module.SKILLS)
+    assert all(
+        skills.count(f"**Skill name:** `{item.name}`") == 1
+        for item in module.SKILL_SPECS
+    )
+    detail_root = ROOT / "docs" / "capabilities" / "skills"
+    details = {
+        path.parent.name: path.read_text(encoding="utf-8")
+        for path in detail_root.glob("*/README.md")
+    }
+    assert details.keys() == {item.name for item in module.SKILL_SPECS}
+    for item in module.SKILL_SPECS:
+        source_root = ROOT / "skills" / item.name
+        assert (
+            module._skill_instructions(source_root / "SKILL.md") in details[item.name]
+        )
+        expected_references = (
+            {path.name for path in (source_root / "references").glob("*.md")}
+            if (source_root / "references").is_dir()
+            else set()
+        )
+        generated_references = {
+            path.name for path in (detail_root / item.name / "references").glob("*.md")
+        }
+        assert generated_references == expected_references
 
 
 def test_tool_index_describes_groups_without_counts() -> None:
@@ -82,8 +105,8 @@ def test_tool_index_describes_groups_without_counts() -> None:
     index = (ROOT / "docs" / "capabilities" / "tools" / "README.md").read_text(
         encoding="utf-8"
     )
-    for group, _ in module.TOOL_REGISTRARS:
-        assert module.TOOL_GROUP_DESCRIPTIONS[group] in index
+    for capability in module.CAPABILITY_SPECS:
+        assert capability.description in index
     assert not re.search(r"\b\d+ tools\b", index)
 
 
@@ -102,7 +125,11 @@ def test_check_mode_reports_stale_document(tmp_path, capsys) -> None:  # type: i
 
 
 def test_local_documentation_links_resolve() -> None:
-    sources = [ROOT / "README.md", *sorted((ROOT / "docs").rglob("*.md"))]
+    sources = [
+        ROOT / "README.md",
+        *sorted((ROOT / "docs").rglob("*.md")),
+        *sorted((ROOT / "skills").rglob("*.md")),
+    ]
     broken: list[str] = []
     for source in sources:
         for target in LOCAL_LINK.findall(source.read_text(encoding="utf-8")):
@@ -148,9 +175,17 @@ def test_overview_explains_credential_creation_boundary() -> None:
 
 def test_generated_documentation_has_no_trailing_whitespace() -> None:
     generated = (
+        ROOT / "docs" / "getting-started" / "installation.md",
         ROOT / "docs" / "getting-started" / "safety.md",
+        ROOT / "docs" / "guides" / "full-mode-service-account.md",
         ROOT / "docs" / "capabilities" / "skills.md",
+        ROOT
+        / "skills"
+        / "apolo-rnd-session-operate"
+        / "references"
+        / "installation.md",
         *sorted((ROOT / "docs" / "capabilities" / "tools").glob("*.md")),
+        *sorted((ROOT / "docs" / "capabilities" / "skills").rglob("*.md")),
     )
     offenders = [
         f"{path.relative_to(ROOT)}:{number}"
@@ -165,11 +200,30 @@ def test_generated_documentation_has_no_trailing_whitespace() -> None:
     )
 
 
+def test_rnd_runtime_fragment_is_shared_by_advanced_guide_and_skill() -> None:
+    installation = (ROOT / "docs" / "getting-started" / "installation.md").read_text()
+    guide = (ROOT / "docs" / "guides" / "full-mode-service-account.md").read_text()
+    packaged = (
+        ROOT / "skills" / "apolo-rnd-session-operate" / "references" / "installation.md"
+    ).read_text()
+    fragment = (ROOT / "build-tools" / "docs-templates" / "rnd-runtime.md").read_text()
+    assert fragment not in installation
+    assert fragment in guide
+    assert fragment in packaged
+    assert "../guides/full-mode-service-account.md" in installation
+    assert "../../apolo-rnd-session-setup/SKILL.md" in packaged
+
+
 def test_gitbook_navigation_excludes_generator_sources() -> None:
     summary = (ROOT / "docs" / "SUMMARY.md").read_text(encoding="utf-8")
     assert "_templates" not in summary
     assert not (ROOT / "docs" / "_templates").exists()
     assert (ROOT / "build-tools" / "docs-templates" / "safety.md").is_file()
+    assert (ROOT / "build-tools" / "docs-templates" / "installation.md").is_file()
+    assert (
+        ROOT / "build-tools" / "docs-templates" / "full-mode-service-account.md"
+    ).is_file()
+    assert (ROOT / "build-tools" / "docs-templates" / "rnd-runtime.md").is_file()
     assert summary.index("[Getting started]") < summary.index("[Capabilities]")
     assert summary.index("[Capabilities]") < summary.index("[Guides]")
     for target in (
@@ -179,6 +233,13 @@ def test_gitbook_navigation_excludes_generator_sources() -> None:
         "capabilities/tools/context.md",
         "capabilities/tools/service-accounts.md",
         "capabilities/skills.md",
+        "capabilities/skills/apolo-platform-user-context/README.md",
+        "capabilities/skills/apolo-research-job/README.md",
+        "capabilities/skills/apolo-flow-workloads/README.md",
+        "capabilities/skills/apolo-applications/README.md",
+        "capabilities/skills/apolo-resource-management/README.md",
+        "capabilities/skills/apolo-rnd-session-setup/README.md",
+        "capabilities/skills/apolo-rnd-session-operate/README.md",
     ):
         assert target in summary
 
@@ -190,12 +251,11 @@ def test_safety_is_grouped_by_skill_then_operation_type() -> None:
         encoding="utf-8"
     )
     positions = [
-        safety.index(f"## [{display_name}]")
-        for _, display_name, _ in module.SAFETY_SKILLS
+        safety.index(f"## [{skill.display_name}]") for skill in module.SKILL_SPECS
     ]
     assert positions == sorted(positions)
-    for index, (_, display_name, _) in enumerate(module.SAFETY_SKILLS):
-        start = safety.index(f"## [{display_name}]")
+    for index, skill in enumerate(module.SKILL_SPECS):
+        start = safety.index(f"## [{skill.display_name}]")
         end = positions[index + 1] if index + 1 < len(positions) else len(safety)
         section = safety[start:end]
         assert section.index("### Read-only operations") < section.index(

@@ -1,7 +1,7 @@
-"""Run the local stdio server with ``python -m apolo_mcp``."""
+"""Run the Apolo MCP command-line interface."""
 
-from .server import main
+from .cli import main
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
