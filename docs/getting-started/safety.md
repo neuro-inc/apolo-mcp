@@ -35,6 +35,7 @@ Successful mutations are written to an append-only lifecycle journal as `created
 contains only resource identity, exact Apolo context, operation, action, and timestamp,
 never credentials. A `deleted` action closes that ownership lifecycle; only a later
 MCP-recorded `created` action establishes a new managed lifecycle for the same identity.
+An unknown or malformed row causes journal reads to fail closed.
 
 "Append-only" describes how a cooperating Apolo MCP process writes the file: it adds
 lifecycle records and never edits earlier records during normal operation. The journal
@@ -101,7 +102,7 @@ Tools used by the `apolo-research-job` skill.
 
 ### Write operations
 
-- [`run_job`](../capabilities/tools/jobs.md#run_job) — Start a policy-authorized job; direct secret values are forbidden.
+- [`run_job`](../capabilities/tools/jobs.md#run_job) — Start a policy-authorized job; direct secret values are forbidden. Mount item schemas, included here for MCP clients that do not expand JSON Schema references: - storage_volumes: {storage, container_path, read_only=false} - disk_volumes: {disk, container_path, read_only=false} - secret_files: {secret, container_path} storage and disk accept short references or exact same-context URIs. secret must be a secret: reference. secret_env maps an environment variable name to a secret: reference; env accepts non-sensitive literal values only.
 - [`bump_job_life_span`](../capabilities/tools/jobs.md#bump_job_life_span) — Extend a job lifespan under full or owned managed policy.
 - [`send_job_signal`](../capabilities/tools/jobs.md#send_job_signal) — Send the SDK's graceful signal under full or owned managed policy.
 - [`save_job_image`](../capabilities/tools/jobs.md#save_job_image) — Save an owned job filesystem to a policy-authorized image target.

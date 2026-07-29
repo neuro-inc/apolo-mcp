@@ -6,7 +6,7 @@
 
 ## `run_job`
 
-Start a policy-authorized job; direct secret values are forbidden.
+Start a policy-authorized job; direct secret values are forbidden. Mount item schemas, included here for MCP clients that do not expand JSON Schema references: - storage_volumes: {storage, container_path, read_only=false} - disk_volumes: {disk, container_path, read_only=false} - secret_files: {secret, container_path} storage and disk accept short references or exact same-context URIs. secret must be a secret: reference. secret_env maps an environment variable name to a secret: reference; env accepts non-sensitive literal values only.
 
 **Operation type:** write
 

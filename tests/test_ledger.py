@@ -122,6 +122,15 @@ def test_update_record_alone_never_establishes_managed_ownership(tmp_path):
         ledger.authorize_owned_resource(**exact)
 
 
+def test_unknown_ledger_shape_still_fails_closed(tmp_path):
+    path = tmp_path / "private" / "ledger.jsonl"
+    path.parent.mkdir(parents=True)
+    path.write_text('{"unexpected":"shape"}\n')
+
+    with pytest.raises(ValueError, match="unexpected or missing fields"):
+        Ledger(path).entries()
+
+
 def test_concurrent_append_is_valid_jsonl_with_private_permissions(tmp_path):
     path = tmp_path / "private" / "ledger.jsonl"
     ledger = Ledger(path)

@@ -94,6 +94,21 @@ async def test_bounded_list_read_and_serialization(tools):
     assert read["redacted"] is True and read["bytes"] <= 100
 
 
+async def test_stat_uses_the_resolved_canonical_uri(tools):
+    tools[1].storage.stat.return_value = apolo_sdk.FileStatus(
+        path="/var/storage/internal/file",
+        size=4,
+        type=apolo_sdk.FileStatusType.FILE,
+        modification_time=1,
+        permission=apolo_sdk.Action.READ,
+        uri=URL("storage://alpha/var/storage/internal/file"),
+    )
+
+    result = await fn(tools, "stat_storage")("data/file")
+
+    assert result["item"]["uri"] == "storage://alpha/team/default/data/file"
+
+
 async def test_write_caps_policy_and_cross_context(tools, monkeypatch):
     with pytest.raises(ValueError, match="must not exceed"):
         await fn(tools, "write_text")("x", "x" * (MAX_TEXT_BYTES + 1))

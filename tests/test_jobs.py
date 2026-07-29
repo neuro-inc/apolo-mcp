@@ -219,6 +219,21 @@ async def test_run_job_rejects_secret_values_and_bounds_before_sdk(tools):
     tools[1].jobs.start.assert_not_awaited()
 
 
+def test_run_job_description_explains_nested_mount_schemas(tools):
+    description = tools[0]["run_job"].description
+    for field in (
+        "storage_volumes",
+        "disk_volumes",
+        "secret_files",
+        "storage",
+        "disk",
+        "secret",
+        "container_path",
+        "read_only",
+    ):
+        assert field in description
+
+
 async def test_run_job_resolves_platform_image_and_rejects_cross_context_uri(tools):
     await fn(tools, "run_job")("image:model", "gpu-small")
     assert tools[1].jobs.start.await_args.kwargs["image"] == (

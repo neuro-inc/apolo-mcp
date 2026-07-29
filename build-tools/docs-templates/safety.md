@@ -33,6 +33,7 @@ Successful mutations are written to an append-only lifecycle journal as `created
 contains only resource identity, exact Apolo context, operation, action, and timestamp,
 never credentials. A `deleted` action closes that ownership lifecycle; only a later
 MCP-recorded `created` action establishes a new managed lifecycle for the same identity.
+An unknown or malformed row causes journal reads to fail closed.
 
 "Append-only" describes how a cooperating Apolo MCP process writes the file: it adds
 lifecycle records and never edits earlier records during normal operation. The journal

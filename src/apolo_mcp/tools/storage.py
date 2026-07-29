@@ -91,11 +91,13 @@ def _storage_uri(path: str, context: ApoloContext, *, allow_root: bool = True) -
     return base.with_path(base.path + "/".join(relative))
 
 
-def _file_status(item: apolo_sdk.FileStatus) -> dict[str, Any]:
+def _file_status(
+    item: apolo_sdk.FileStatus, *, canonical_uri: URL | None = None
+) -> dict[str, Any]:
     return {
         "name": item.name,
         "path": item.path,
-        "uri": str(item.uri),
+        "uri": str(canonical_uri or item.uri),
         "type": item.type.value,
         "size_bytes": item.size,
         "modification_time": item.modification_time,
@@ -162,7 +164,10 @@ def register(mcp: FastMCP) -> None:
                 resolved = _context(sdk, cluster, org, project)
                 uri = _storage_uri(path, resolved)
                 status = await sdk.storage.stat(uri)
-                return {"item": _file_status(status), "context": resolved.as_dict()}
+                return {
+                    "item": _file_status(status, canonical_uri=uri),
+                    "context": resolved.as_dict(),
+                }
         except Exception as exc:
             raise normalize_error(
                 exc,
