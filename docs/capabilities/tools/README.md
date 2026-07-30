@@ -9,7 +9,7 @@ Each page corresponds exactly to one entry in the declarative capability catalog
 
 - [Context](context.md) — Platform context, discovery, presets, and resource resolution.
 - [Jobs](jobs.md) — Job lifecycle, logs, telemetry, signals, and image snapshots.
-- [Flow](flow.md) — Live Flow jobs and batch bake lifecycle operations.
+- [Flow](flow.md) — Schema-guided Flow configuration plus live-job and batch-bake lifecycles.
 - [Applications](applications.md) — App discovery, inspection, planning, and lifecycle operations.
 - [Storage](storage.md) — Remote storage listing, metadata, text files, and directories.
 - [Disks](disks.md) — Persistent disk discovery, creation, and deletion.

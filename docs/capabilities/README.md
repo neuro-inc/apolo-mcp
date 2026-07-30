@@ -143,10 +143,11 @@ discoverable shapes needed to select a configured job or batch.
 
 | Public capability | Classification | MCP/fallback | Current behavior |
 |---|---|---|---|
-| `apolo-flow ps`, `apolo-flow status`, `apolo-flow logs` | Native | `flow_live_list`, `flow_live_get`, `flow_live_logs` | Bounded typed facade results through `apolo-flow>=26.7.1` explicit-context lifecycle. |
+| Flow JSON schemas and canonical `.apolo` YAML authoring | Native | `flow_config_schema`, `flow_config_validate`, `flow_config_write` | Explore bounded schema definitions from the installed Flow version's release tag; validate existing live, batch, and project files; or validate and create a new non-overwriting file with the pinned YAML-language-server URL. |
+| `apolo-flow ps`, `apolo-flow status`, `apolo-flow logs` | Native | `flow_live_list`, `flow_live_get`, `flow_live_logs` | Bounded typed facade results through `apolo-flow>=26.7.2` explicit-context lifecycle. |
 | `apolo-flow run` | Native | `flow_live_run` | Detached asynchronous submission by default (`detach: true` in the selected job), followed by separate bounded get/log/wait monitoring; includes project confinement, explicit context, policy, and journal. |
 | `apolo-flow kill` | Native | `flow_live_kill`, `flow_live_kill_all` | Destructive policy; exact/all targets are resolved before managed authorization. |
-| `apolo-flow bake`, `apolo-flow bakes`, `apolo-flow show`, `apolo-flow inspect`, `apolo-flow logs` | Native | `flow_bake_start`, `flow_bake_list`, `flow_bake_get`, `flow_bake_logs` | Start performs asynchronous Flow orchestration and returns the bake for separate monitoring; never posts directly to the persistence API. |
+| `apolo-flow bake`, `apolo-flow bakes`, `apolo-flow show`, `apolo-flow inspect`, `apolo-flow logs` | Native | `flow_bake_start`, `flow_bake_list`, `flow_bake_get`, `flow_bake_logs` | Start uses supported Flow orchestration and returns structured bake state; the upstream runner may keep the bounded call open until its remote executor exits, so monitor later state through separate get/log/wait calls. |
 | `apolo-flow cancel`, `apolo-flow restart` | Native | `flow_bake_cancel`, `flow_bake_restart` | Policy-governed writes with exact bake/attempt state and journaled lifecycle. |
 | live/bake terminal polling | Native | `flow_live_wait`, `flow_bake_wait` | MCP-added deadline and machine result. |
 | `apolo-flow build`, `apolo-flow upload`, `apolo-flow download`, `apolo-flow mkvolumes`, `apolo-flow clean`, `apolo-flow clear-cache`, `apolo-flow delete-flow` | Skill/CLI | bounded local CLI | Build/data/cache/project-maintenance operations are local/high-bandwidth or destructive; allowed-root/duration/write controls. |

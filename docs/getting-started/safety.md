@@ -80,7 +80,7 @@ Tools used by the `apolo-platform-user-context` skill.
 
 ### Read-only operations
 
-- [`get_apolo_context`](../capabilities/tools/context.md#get_apolo_context) — Return selected context and safe local metadata; never tokens or cookies.
+- [`get_apolo_context`](../capabilities/tools/context.md#get_apolo_context) — Return selected context and safe client versions; never credentials.
 - [`list_clusters`](../capabilities/tools/context.md#list_clusters) — List clusters visible to the authenticated user (bounded to 100).
 - [`list_organizations`](../capabilities/tools/context.md#list_organizations) — List organizations for an explicit or selected cluster.
 - [`list_projects`](../capabilities/tools/context.md#list_projects) — List projects for explicit context without changing saved selection.
@@ -124,6 +124,8 @@ Tools used by the `apolo-flow-workloads` skill.
 
 ### Read-only operations
 
+- [`flow_config_schema`](../capabilities/tools/flow.md#flow_config_schema) — Explore a bounded root or definition from the version-pinned Flow schema.
+- [`flow_config_validate`](../capabilities/tools/flow.md#flow_config_validate) — Validate one canonical .apolo YAML file against its pinned Flow schema.
 - [`flow_live_list`](../capabilities/tools/flow.md#flow_live_list) — List Flow live jobs within explicit context and local path scope. workspace_path is the Flow project root and must contain a real .apolo directory.
 - [`flow_live_get`](../capabilities/tools/flow.md#flow_live_get) — Resolve one logical Flow job, with a bounded multi-job result. workspace_path is the Flow project root and must contain a real .apolo directory.
 - [`flow_live_logs`](../capabilities/tools/flow.md#flow_live_logs) — Read bounded Flow live logs with MCP-side credential redaction. workspace_path is the Flow project root and must contain a real .apolo directory.
@@ -135,6 +137,7 @@ Tools used by the `apolo-flow-workloads` skill.
 
 ### Write operations
 
+- [`flow_config_write`](../capabilities/tools/flow.md#flow_config_write) — Validate and create one new canonical .apolo YAML file without overwrite.
 - [`flow_live_run`](../capabilities/tools/flow.md#flow_live_run) — Start a detached Flow live job under the server mutation policy. Set ``detach: true`` on the selected job so this operation returns after submission. Monitor it separately with get, logs, and bounded wait. Pre/post raw-ID comparison journals only newly created jobs when upstream startup times out after submission. workspace_path is the Flow project root and must contain a real .apolo directory. flow_live_run reads .apolo/live.yml or .apolo/live.yaml, whose minimum shape is `kind: live` plus a `jobs` mapping; job_id selects a key in that mapping. Each plain job needs an image and may define cmd or bash. Set `detach: true` on jobs started by MCP, then monitor them with separate get, logs, and bounded wait calls. Optional project settings belong in .apolo/project.yml or .apolo/project.yaml.
 - [`flow_bake_start`](../capabilities/tools/flow.md#flow_bake_start) — Start a bake only through FlowAPI BatchRunner orchestration. An internal unique correlation tag lets MCP journal a bake even when the upstream runner fails after creating it. workspace_path is the Flow project root and must contain a real .apolo directory. flow_bake_start reads .apolo/<batch>.yml or .yaml, whose minimum shape is `kind: batch` plus a `tasks` list; batch selects that workflow. Each plain task needs an image and may define cmd or bash. Optional project settings belong in .apolo/project.yml or .apolo/project.yaml.
 

@@ -9,10 +9,9 @@ description = "MCP server for the Apolo platform"
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [{ name = "Apolo Team", email = "dev@apolo.us" }]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 classifiers = [
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -25,12 +24,10 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
 ]
 dependencies = [
-    # apolo-sdk 26.3.0's S3 stream adapter is incompatible with aiobotocore 3.7+.
-    # drop direct aiobotocore dependency after resolving the issue in apolo-sdk
-    "aiobotocore>=3.4,<3.5",
-    "apolo-flow>=26.7.1",
-    "apolo-sdk>=26.3",
+    "apolo-flow>=26.7.2",
+    "apolo-sdk>=26.7.2",
     "async-timeout>=5",
+    "jsonschema>=4.23,<5",
     "mcp>=1.28,<2",
     "pyyaml>=6.0",
 ]
@@ -52,6 +49,7 @@ dev = [
     "pytest-asyncio>=0.23",
     "pre-commit>=3.0",
     "towncrier==25.8.0",
+    "types-jsonschema>=4.23",
     "types-PyYAML>=6.0",
 ]
 

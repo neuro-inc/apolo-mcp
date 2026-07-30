@@ -1,6 +1,6 @@
 # Contributing
 
-Use Python 3.10+ and `uv`. Create a focused branch, add tests for every tool/schema or
+Use Python 3.11+ and `uv`. Create a focused branch, add tests for every tool/schema or
 policy change, and run:
 
 ```console

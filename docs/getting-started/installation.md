@@ -6,7 +6,7 @@
 
 You need:
 
-- Python 3.10 or newer;
+- Python 3.11 or newer;
 - `pipx` for installing Python command-line applications;
 - access to an Apolo cluster, organization, and project;
 - Codex or Claude Code with local stdio MCP support.

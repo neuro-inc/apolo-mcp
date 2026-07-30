@@ -15,7 +15,7 @@ Before configuring unattended `full` operation, use the
 For the MVP, use `node:22-bookworm-slim` as an example bootstrap image. Resolve the
 tag to a registry digest before launch and record the exact image reference. This is an
 upstream convenience image, not an Apolo-supported R&D image; another glibc-based
-Debian or Ubuntu image is acceptable when it provides Node.js 22 and Python 3.10 or
+Debian or Ubuntu image is acceptable when it provides Node.js 22 and Python 3.11 or
 newer.
 
 Start the bounded job with `sleep infinity`, enter it with `apolo exec`, and install the

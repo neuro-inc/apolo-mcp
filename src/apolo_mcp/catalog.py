@@ -85,7 +85,7 @@ CAPABILITY_SPECS: tuple[CapabilitySpec, ...] = (
     CapabilitySpec(
         "Flow",
         "flow",
-        "Live Flow jobs and batch bake lifecycle operations.",
+        "Schema-guided Flow configuration plus live-job and batch-bake lifecycles.",
         flow.register,
         FLOW_WORKLOADS,
     ),

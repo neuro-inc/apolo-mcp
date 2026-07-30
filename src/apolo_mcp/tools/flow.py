@@ -28,6 +28,7 @@ from ..ledger import (
 )
 from ..policy import MutationEffect, PolicyMode, authorize_mutation, current_policy
 from ..workspace import allowed_workspace_root, resolve_workspace_path
+from . import flow_config
 
 
 READ_ONLY = ToolAnnotations(
@@ -336,6 +337,8 @@ def _make_scope(args: ScopeArgs) -> FlowScope:
 
 
 def register(mcp: FastMCP) -> None:
+    flow_config.register(mcp)
+
     @mcp.tool(annotations=READ_ONLY)
     @_document_flow_scope
     async def flow_live_list(

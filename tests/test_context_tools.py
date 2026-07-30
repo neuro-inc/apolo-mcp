@@ -86,8 +86,7 @@ async def test_get_context_contains_metadata_but_no_credentials() -> None:
     result = await tool("get_apolo_context")()
     assert result["cluster"] == "alpha"
     assert result["username"] == "user@example.test"
-    assert result["versions"]["server"] is None
-    assert "no public server-version accessor" in result["versions"]["server_note"]
+    assert result["versions"]["apolo_flow"] != "unknown"
     serialized = repr(result).lower()
     assert "token" not in serialized
     assert "cookie" not in serialized

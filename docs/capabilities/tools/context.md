@@ -6,7 +6,7 @@
 
 ## `get_apolo_context`
 
-Return selected context and safe local metadata; never tokens or cookies.
+Return selected context and safe client versions; never credentials.
 
 **Operation type:** read-only
 

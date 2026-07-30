@@ -15,6 +15,7 @@ from typing import Any
 
 import yaml
 
+from .security import ensure_secret_references_only
 from .workspace import ensure_path_beneath
 
 
@@ -22,10 +23,6 @@ PLAN_ROOT_ENV = "APOLO_MCP_PLAN_ROOT"
 DEFAULT_TTL_SECONDS = 900
 MAX_TTL_SECONDS = 3600
 _SAFE_TARGET = re.compile(r"[^A-Za-z0-9_.-]+")
-_SENSITIVE_KEY = re.compile(
-    r"(?i)(password|passwd|token|secret(?:_?value)?|api[-_]?key|private[-_]?key)"
-)
-_SECRET_VALUE = re.compile(r"(?i)^(?:bearer\s+|-----BEGIN .*PRIVATE KEY-----)")
 
 
 def utc_now() -> datetime:
@@ -87,40 +84,6 @@ def load_yaml_exact(path: Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ValueError("The reviewed inputs YAML must contain a mapping")
     return value
-
-
-def ensure_secret_references_only(value: Any, path: str = "input") -> None:
-    """Reject likely inline credentials while allowing explicit references."""
-    if isinstance(value, Mapping):
-        reference_type = str(value.get("type", "")).lower()
-        is_reference = reference_type in {
-            "secret",
-            "secret-ref",
-            "secret-reference",
-            "app-instance-ref",
-        }
-        for key, item in value.items():
-            item_path = f"{path}.{key}"
-            if (
-                _SENSITIVE_KEY.search(str(key))
-                and not isinstance(item, (Mapping, list))
-                and item not in (None, "")
-            ):
-                string_reference = isinstance(item, str) and item.startswith(
-                    ("secret:", "apolo-secret:")
-                )
-                if not (is_reference or string_reference):
-                    raise ValueError(
-                        f"{item_path} may contain a secret value; "
-                        "use a secret reference"
-                    )
-            ensure_secret_references_only(item, item_path)
-    elif isinstance(value, list):
-        for index, item in enumerate(value):
-            ensure_secret_references_only(item, f"{path}[{index}]")
-    elif isinstance(value, str) and _SECRET_VALUE.search(value):
-        if not value.startswith(("secret:", "apolo-secret:")):
-            raise ValueError(f"{path} looks like inline credential material")
 
 
 def deep_patch(base: dict[str, Any], patch: Mapping[str, Any]) -> dict[str, Any]:

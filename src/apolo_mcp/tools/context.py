@@ -53,7 +53,7 @@ def _accelerator(preset: Any) -> dict[str, Any] | None:
 def register(mcp: FastMCP) -> None:
     @mcp.tool(annotations=READ_ONLY)
     async def get_apolo_context() -> dict[str, Any]:
-        """Return selected context and safe local metadata; never tokens or cookies."""
+        """Return selected context and safe client versions; never credentials."""
         try:
             async with client() as sdk:
                 config = sdk.config
@@ -68,12 +68,9 @@ def register(mcp: FastMCP) -> None:
                     },
                     "versions": {
                         "apolo_mcp": __version__,
+                        "apolo_flow": _package_version("apolo-flow"),
                         "apolo_sdk": apolo_sdk.__version__,
                         "mcp": _package_version("mcp"),
-                        "server": None,
-                        "server_note": (
-                            "apolo-sdk 26.3 has no public server-version accessor"
-                        ),
                     },
                 }
         except Exception as exc:

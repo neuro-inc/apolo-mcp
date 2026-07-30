@@ -4,6 +4,181 @@
 
 [Back to the MCP tool reference](README.md).
 
+## `flow_config_schema`
+
+Explore a bounded root or definition from the version-pinned Flow schema.
+
+**Operation type:** read-only
+
+**Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
+
+**Input schema:**
+
+```json
+{
+  "properties": {
+    "config_type": {
+      "enum": [
+        "live",
+        "batch",
+        "project"
+      ],
+      "title": "Config Type",
+      "type": "string"
+    },
+    "definition": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Definition"
+    }
+  },
+  "required": [
+    "config_type"
+  ],
+  "title": "flow_config_schemaArguments",
+  "type": "object"
+}
+```
+
+**Output schema:**
+
+```json
+{
+  "additionalProperties": true,
+  "title": "flow_config_schemaDictOutput",
+  "type": "object"
+}
+```
+
+## `flow_config_validate`
+
+Validate one canonical .apolo YAML file against its pinned Flow schema.
+
+**Operation type:** read-only
+
+**Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
+
+**Input schema:**
+
+```json
+{
+  "properties": {
+    "batch_name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Batch Name"
+    },
+    "config_type": {
+      "enum": [
+        "live",
+        "batch",
+        "project"
+      ],
+      "title": "Config Type",
+      "type": "string"
+    },
+    "workspace_path": {
+      "title": "Workspace Path",
+      "type": "string"
+    }
+  },
+  "required": [
+    "workspace_path",
+    "config_type"
+  ],
+  "title": "flow_config_validateArguments",
+  "type": "object"
+}
+```
+
+**Output schema:**
+
+```json
+{
+  "additionalProperties": true,
+  "title": "flow_config_validateDictOutput",
+  "type": "object"
+}
+```
+
+## `flow_config_write`
+
+Validate and create one new canonical .apolo YAML file without overwrite.
+
+**Operation type:** write
+
+**Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
+
+**Input schema:**
+
+```json
+{
+  "properties": {
+    "batch_name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Batch Name"
+    },
+    "config": {
+      "additionalProperties": true,
+      "title": "Config",
+      "type": "object"
+    },
+    "config_type": {
+      "enum": [
+        "live",
+        "batch",
+        "project"
+      ],
+      "title": "Config Type",
+      "type": "string"
+    },
+    "workspace_path": {
+      "title": "Workspace Path",
+      "type": "string"
+    }
+  },
+  "required": [
+    "workspace_path",
+    "config_type",
+    "config"
+  ],
+  "title": "flow_config_writeArguments",
+  "type": "object"
+}
+```
+
+**Output schema:**
+
+```json
+{
+  "additionalProperties": true,
+  "title": "flow_config_writeDictOutput",
+  "type": "object"
+}
+```
+
 ## `flow_live_list`
 
 List Flow live jobs within explicit context and local path scope. workspace_path is the Flow project root and must contain a real .apolo directory.

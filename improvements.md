@@ -2,6 +2,9 @@
 
 ## Flow validation and planning
 
+- Add a public launch-only remote-bake operation to `apolo-flow`, then make
+  `flow_bake_start` return after executor submission instead of waiting for the remote
+  executor to exit. Preserve separate get, logs, and bounded wait monitoring.
 - Add a read-only `flow_live_validate` operation with semantics equivalent to
   `apolo-flow run --dry-run`: resolve the selected job, suffix, parameters,
   expressions, image, volumes, environment names, and final launch plan without
@@ -17,10 +20,11 @@
 
 ## Upstream compatibility
 
-- Fix the remote bake executor's `Cannot close a running event loop` failure in
-  `apolo-flow`, then repeat the native `flow_bake_start` lifecycle smoke test.
-- Update `apolo-sdk` bucket streaming for current `aiobotocore`, then remove the
-  temporary `aiobotocore>=3.4,<3.5` compatibility constraint from `apolo-mcp`.
+- Live-reverify SDK bucket upload/download under `aiobotocore` 3.8 after restarting
+  the installed MCP environment; the temporary `<3.5` constraint is now removed.
+- Package `flow-schema.json` and `project-schema.json` in the `apolo-flow` wheel, then
+  prefer package resources for offline MCP validation while retaining release-pinned
+  raw GitHub URLs in YAML language-server comments.
 - Support OCI manifest media types in the SDK image inspection path.
 - Resolve the registry `DIGEST_INVALID` response for exact image-tag removal.
 

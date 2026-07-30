@@ -129,5 +129,5 @@ Do not duplicate Codex or Claude Code setup here. Use the
   behavior only in `build-tools/docs-templates/safety.md`.
 - All tools return plain dicts or strings — no SDK objects cross the boundary.
 - Async tools throughout; FastMCP handles the event loop.
-- Python ≥ 3.10 (matches `apolo-sdk` minimum).
+- Python ≥ 3.11 (matches `apolo-sdk` minimum).
 - Ruff owns formatting and import sorting; `apolo_mcp` is the configured first-party package.
