@@ -99,6 +99,7 @@ def tools(monkeypatch, tmp_path: Path):
     buckets.upload_file = AsyncMock()
     buckets.download_file = AsyncMock(side_effect=download_file)
     buckets.delete_blob = AsyncMock()
+    buckets.blob_rm = AsyncMock()
     buckets.rm = AsyncMock()
     secrets = SimpleNamespace(get=AsyncMock(return_value=b'{"access_key":"private"}'))
     sdk = SimpleNamespace(config=config(), buckets=buckets, secrets=secrets)
@@ -239,6 +240,7 @@ async def test_exact_deletes_and_ledger_owned_cleanup(tools):
     result = await fn(mcp, "delete_bucket")("bucket-1")
     assert result["id"] == "bucket-1"
     assert '"action":"deleted"' in Path(os.environ["APOLO_MCP_LEDGER_PATH"]).read_text()
+    sdk.buckets.blob_rm.assert_awaited_once_with(bucket().uri, recursive=True)
     sdk.buckets.rm.assert_awaited_once_with(
         "bucket-1", cluster_name="c", org_name="o", project_name="p"
     )

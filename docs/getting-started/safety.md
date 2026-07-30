@@ -135,8 +135,8 @@ Tools used by the `apolo-flow-workloads` skill.
 
 ### Write operations
 
-- [`flow_live_run`](../capabilities/tools/flow.md#flow_live_run) — Start a configured Flow live job under the server mutation policy. workspace_path is the Flow project root and must contain a real .apolo directory. flow_live_run reads .apolo/live.yml or .apolo/live.yaml, whose minimum shape is `kind: live` plus a `jobs` mapping; job_id selects a key in that mapping. Each plain job needs an image and may define cmd or bash. Optional project settings belong in .apolo/project.yml or .apolo/project.yaml.
-- [`flow_bake_start`](../capabilities/tools/flow.md#flow_bake_start) — Start a bake only through FlowAPI BatchRunner orchestration. workspace_path is the Flow project root and must contain a real .apolo directory. flow_bake_start reads .apolo/<batch>.yml or .yaml, whose minimum shape is `kind: batch` plus a `tasks` list; batch selects that workflow. Each plain task needs an image and may define cmd or bash. Optional project settings belong in .apolo/project.yml or .apolo/project.yaml.
+- [`flow_live_run`](../capabilities/tools/flow.md#flow_live_run) — Start a detached Flow live job under the server mutation policy. Set ``detach: true`` on the selected job so this operation returns after submission. Monitor it separately with get, logs, and bounded wait. Pre/post raw-ID comparison journals only newly created jobs when upstream startup times out after submission. workspace_path is the Flow project root and must contain a real .apolo directory. flow_live_run reads .apolo/live.yml or .apolo/live.yaml, whose minimum shape is `kind: live` plus a `jobs` mapping; job_id selects a key in that mapping. Each plain job needs an image and may define cmd or bash. Set `detach: true` on jobs started by MCP, then monitor them with separate get, logs, and bounded wait calls. Optional project settings belong in .apolo/project.yml or .apolo/project.yaml.
+- [`flow_bake_start`](../capabilities/tools/flow.md#flow_bake_start) — Start a bake only through FlowAPI BatchRunner orchestration. An internal unique correlation tag lets MCP journal a bake even when the upstream runner fails after creating it. workspace_path is the Flow project root and must contain a real .apolo directory. flow_bake_start reads .apolo/<batch>.yml or .yaml, whose minimum shape is `kind: batch` plus a `tasks` list; batch selects that workflow. Each plain task needs an image and may define cmd or bash. Optional project settings belong in .apolo/project.yml or .apolo/project.yaml.
 
 ### Destructive operations
 
@@ -222,7 +222,7 @@ Tools used by the `apolo-resource-management` skill.
 - [`delete_disk`](../capabilities/tools/disks.md#delete_disk) — Delete one exact disk ID under full or ledger-owned managed policy.
 - [`remove_image_tag`](../capabilities/tools/images.md#remove_image_tag) — Remove one exact image tag without requesting digest deletion. The operation passes the tag reference to the registry. Tags that happen to share a manifest digest are not separate deletion targets.
 - [`delete_bucket_blob`](../capabilities/tools/buckets.md#delete_bucket_blob) — Delete one exact blob key; recursive/prefix deletion is not exposed.
-- [`delete_bucket`](../capabilities/tools/buckets.md#delete_bucket) — Delete one exact empty bucket under full or owned managed policy.
+- [`delete_bucket`](../capabilities/tools/buckets.md#delete_bucket) — Recursively delete one exact bucket under full or owned managed policy.
 - [`delete_secret`](../capabilities/tools/secrets.md#delete_secret) — Delete one exact secret under full or owned managed policy.
 - [`delete_service_account`](../capabilities/tools/service-accounts.md#delete_service_account) — Delete one exact immutable account ID after context verification.
 

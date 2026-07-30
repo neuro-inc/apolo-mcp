@@ -1007,7 +1007,7 @@ Delete one exact blob key; recursive/prefix deletion is not exposed.
 
 ## `delete_bucket`
 
-Delete one exact empty bucket under full or owned managed policy.
+Recursively delete one exact bucket under full or owned managed policy.
 
 **Operation type:** destructive
 

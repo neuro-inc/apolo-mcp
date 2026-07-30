@@ -25,10 +25,13 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
 ]
 dependencies = [
+    # apolo-sdk 26.3.0's S3 stream adapter is incompatible with aiobotocore 3.7+.
+    # drop direct aiobotocore dependency after resolving the issue in apolo-sdk
+    "aiobotocore>=3.4,<3.5",
     "apolo-flow>=26.7.1",
     "apolo-sdk>=26.3",
     "async-timeout>=5",
-    "mcp>=1.28",
+    "mcp>=1.28,<2",
     "pyyaml>=6.0",
 ]
 

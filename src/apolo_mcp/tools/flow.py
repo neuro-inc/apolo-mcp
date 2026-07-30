@@ -5,6 +5,8 @@ from __future__ import annotations
 import dataclasses
 import enum
 import os
+import re
+import uuid
 from collections.abc import AsyncIterator, Mapping, Sequence
 from contextlib import asynccontextmanager
 from contextvars import ContextVar, Token
@@ -46,6 +48,7 @@ MAX_LOG_SECONDS = 300.0
 MAX_WAIT_SECONDS = 3_600.0
 MAX_POLL_SECONDS = 60.0
 MAX_WRITE_SECONDS = 600.0
+_BAKE_ID = re.compile(r"\bbake-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\b")
 
 _FLOW_SCOPE_HELP = """\
 workspace_path is the Flow project root and must contain a real .apolo directory.
@@ -53,8 +56,9 @@ workspace_path is the Flow project root and must contain a real .apolo directory
 _FLOW_LIVE_HELP = """\
 flow_live_run reads .apolo/live.yml or .apolo/live.yaml, whose minimum shape is
 `kind: live` plus a `jobs` mapping; job_id selects a key in that mapping. Each plain
-job needs an image and may define cmd or bash. Optional project settings belong in
-.apolo/project.yml or .apolo/project.yaml.
+job needs an image and may define cmd or bash. Set `detach: true` on jobs started by
+MCP, then monitor them with separate get, logs, and bounded wait calls. Optional
+project settings belong in .apolo/project.yml or .apolo/project.yaml.
 """
 _FLOW_BATCH_HELP = """\
 flow_bake_start reads .apolo/<batch>.yml or .yaml, whose minimum shape is `kind:
@@ -236,6 +240,74 @@ def _items(value: Any, field: str, limit: int) -> tuple[list[Any], bool]:
     return raw[:limit], bool(getattr(value, "truncated", False) or len(raw) > limit)
 
 
+async def _journal_failed_bake_start(
+    api: Any, correlation_tag: str, error: Exception, scope: FlowScope
+) -> tuple[str, ...]:
+    """Recover and journal bake IDs when orchestration fails after creation."""
+    bake_ids: set[str] = set()
+    try:
+        result = await api.bake_list(
+            limit=2,
+            task_limit=1,
+            tags=frozenset({correlation_tag}),
+        )
+        bakes, _ = _items(result, "bakes", 2)
+        bake_ids.update(
+            bake_id
+            for bake in bakes
+            if (bake_id := getattr(bake, "id", None)) is not None
+        )
+    except Exception:
+        # The upstream facade currently includes the created ID in its post-create
+        # RuntimeError. Use it only as a recovery fallback if structured lookup fails.
+        pass
+    if not bake_ids:
+        bake_ids.update(_BAKE_ID.findall(str(error)))
+    for bake_id in sorted(bake_ids):
+        record_created_resource(
+            resource_type="bake",
+            resource_id=bake_id,
+            cluster=scope.cluster,
+            org=scope.org,
+            project=scope.project,
+            operation="flow_bake_start",
+        )
+    return tuple(sorted(bake_ids))
+
+
+def _live_raw_ids(value: Any) -> set[str]:
+    return {
+        raw_id
+        for item in value
+        if (raw_id := getattr(item, "raw_id", None)) is not None
+    }
+
+
+async def _journal_failed_live_run(
+    api: Any,
+    job_id: str,
+    suffix: str | None,
+    previous_ids: set[str],
+    scope: FlowScope,
+) -> tuple[str, ...]:
+    """Journal only live jobs that appeared after a failed start attempt."""
+    try:
+        current = await api.live_get(job_id, suffix)
+    except Exception:
+        return ()
+    created_ids = _live_raw_ids(current) - previous_ids
+    for raw_id in sorted(created_ids):
+        record_created_resource(
+            resource_type="job",
+            resource_id=raw_id,
+            cluster=scope.cluster,
+            org=scope.org,
+            project=scope.project,
+            operation="flow_live_run",
+        )
+    return tuple(sorted(created_ids))
+
+
 def _redacted_log(value: Any, max_bytes: int) -> dict[str, Any]:
     raw = bytes(getattr(value, "data", b""))
     decoded = raw.decode("utf-8", errors="replace")
@@ -324,10 +396,15 @@ def register(mcp: FastMCP) -> None:
         workspace_path: str,
         suffix: str | None = None,
         params: dict[str, str] | None = None,
-        args: list[str] | None = None,
         timeout_seconds: float = 300,
     ) -> dict[str, Any]:
-        """Start a configured Flow live job under the server mutation policy."""
+        """Start a detached Flow live job under the server mutation policy.
+
+        Set ``detach: true`` on the selected job so this operation returns after
+        submission. Monitor it separately with get, logs, and bounded wait. Pre/post
+        raw-ID comparison journals only newly created jobs when upstream startup
+        times out after submission.
+        """
         authorize_mutation(operation="flow_live_run", effect=MutationEffect.CREATE)
         _bound(timeout_seconds, "timeout_seconds", MAX_WRITE_SECONDS)
         scope = _make_scope(
@@ -340,13 +417,24 @@ def register(mcp: FastMCP) -> None:
         )
         ensure_ledger_writable()
         async with _api(scope, "flow_live_run") as api:
-            result = await api.live_run(
-                job_id,
-                suffix=suffix,
-                params=params,
-                args=tuple(args) if args else None,
-                timeout=timeout_seconds,
-            )
+            previous_ids = _live_raw_ids(await api.live_get(job_id, suffix))
+            try:
+                result = await api.live_run(
+                    job_id,
+                    suffix=suffix,
+                    params=params,
+                    timeout=timeout_seconds,
+                )
+            except Exception as exc:
+                created_ids = await _journal_failed_live_run(
+                    api, job_id, suffix, previous_ids, scope
+                )
+                if created_ids:
+                    raise RuntimeError(
+                        "Flow live orchestration failed after creating and journaling "
+                        f"{', '.join(created_ids)}; upstream error: {exc}"
+                    ) from exc
+                raise
             for item in getattr(result, "jobs", ()):
                 raw_id = getattr(item, "raw_id", None)
                 if raw_id:
@@ -541,7 +629,11 @@ def register(mcp: FastMCP) -> None:
         task_limit: int = 100,
         timeout_seconds: float = 300,
     ) -> dict[str, Any]:
-        """Start a bake only through FlowAPI BatchRunner orchestration."""
+        """Start a bake only through FlowAPI BatchRunner orchestration.
+
+        An internal unique correlation tag lets MCP journal a bake even when the
+        upstream runner fails after creating it.
+        """
         authorize_mutation(operation="flow_bake_start", effect=MutationEffect.CREATE)
         _bound(task_limit, "task_limit", MAX_TASKS)
         _bound(timeout_seconds, "timeout_seconds", MAX_WRITE_SECONDS)
@@ -554,16 +646,28 @@ def register(mcp: FastMCP) -> None:
             )
         )
         ensure_ledger_writable()
+        correlation_tag = f"apolo-mcp-correlation-{uuid.uuid4().hex}"
         async with _api(scope, "flow_bake_start") as api:
-            result = await api.bake_start(
-                batch,
-                params=params,
-                name=name,
-                tags=tags or (),
-                local_executor=local_executor,
-                task_limit=task_limit,
-                timeout=timeout_seconds,
-            )
+            try:
+                result = await api.bake_start(
+                    batch,
+                    params=params,
+                    name=name,
+                    tags=(*tuple(tags or ()), correlation_tag),
+                    local_executor=local_executor,
+                    task_limit=task_limit,
+                    timeout=timeout_seconds,
+                )
+            except Exception as exc:
+                bake_ids = await _journal_failed_bake_start(
+                    api, correlation_tag, exc, scope
+                )
+                if bake_ids:
+                    raise RuntimeError(
+                        "Flow bake orchestration failed after creating and journaling "
+                        f"{', '.join(bake_ids)}; upstream error: {exc}"
+                    ) from exc
+                raise
             bake_id = getattr(result, "id", None)
             if not bake_id:
                 raise ValueError("FlowAPI bake_start returned no bake ID")

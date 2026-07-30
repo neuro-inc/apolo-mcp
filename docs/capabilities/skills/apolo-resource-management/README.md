@@ -27,3 +27,26 @@
 
 When a safe public SDK contract is absent, state the precise CLI fallback or
 future-scoped limitation instead of inventing a tool.
+
+For recursive local transfers, recommend these explicit CLI fallbacks. Use full
+same-context URIs, inspect the local tree before upload, choose a new uniquely scoped
+destination, disable interactive progress, verify the downloaded tree byte-for-byte,
+and clean up only that exact destination:
+
+```bash
+# Local directory -> Apolo storage, then Apolo storage -> new local directory
+apolo storage cp --no-progress --recursive --no-target-directory \
+  LOCAL_SOURCE storage://CLUSTER/ORG/PROJECT/REMOTE_PATH
+apolo storage cp --no-progress --recursive --no-target-directory \
+  storage://CLUSTER/ORG/PROJECT/REMOTE_PATH LOCAL_DESTINATION
+
+# Local directory -> bucket, then bucket -> new local directory
+apolo blob cp --no-progress --recursive --no-target-directory \
+  LOCAL_SOURCE blob://CLUSTER/ORG/PROJECT/BUCKET
+apolo blob cp --no-progress --recursive --no-target-directory \
+  blob://CLUSTER/ORG/PROJECT/BUCKET LOCAL_DESTINATION
+```
+
+Do not serialize transferred files through MCP. Prefer an MCP-created storage
+directory or bucket so managed-mode cleanup remains ledger-owned; otherwise require
+the user to approve the exact CLI cleanup target.

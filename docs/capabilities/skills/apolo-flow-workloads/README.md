@@ -10,11 +10,14 @@
 2. Read the project's Flow configuration before execution. Validate project, live job
    or batch name, parameters, tags, executor, images, volumes, dependencies, and
    persistent output paths. Do not parse colored human tables for machine state.
-3. For live work, use the typed operations in order: list/resolve, run, get, bounded
-   logs, and bounded wait. Match Flow's project/job/suffix resolution rules.
-4. For batch work, start bakes through Flow orchestration only. Never post directly to
-   the Flow persistence API: setup must collect configuration, handle images, and
-   launch the supported executor.
+3. Run live jobs asynchronously by default. Ensure the selected job has `detach: true`
+   before `flow_live_run`; do not keep the MCP start call attached to the workload.
+   After start returns, monitor separately with get, bounded logs, and bounded wait.
+   Match Flow's project/job/suffix resolution rules.
+4. Treat bake start as asynchronous submission too: start through Flow orchestration,
+   record the returned bake, then inspect or wait in separate bounded calls. Never post
+   directly to the Flow persistence API: setup must collect configuration, handle
+   images, and launch the supported executor.
 5. Record every returned job/bake identifier and context in the session ledger. Keep
    attempt/task status, terminal reason, outputs, and executor evidence bounded.
 6. On controlled failure, inspect structured state and logs, correct the source or

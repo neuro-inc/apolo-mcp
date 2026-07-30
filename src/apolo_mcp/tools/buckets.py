@@ -847,7 +847,7 @@ def register(mcp: FastMCP) -> None:
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
-        """Delete one exact empty bucket under full or owned managed policy."""
+        """Recursively delete one exact bucket under full or owned managed policy."""
         value = _exact(bucket_id, "bucket_id")
         resolved: ApoloContext | None = None
         try:
@@ -861,6 +861,7 @@ def register(mcp: FastMCP) -> None:
                 _authorize_bucket(
                     "delete_bucket", MutationEffect.DELETE, item, resolved
                 )
+                await sdk.buckets.blob_rm(item.uri, recursive=True)
                 await sdk.buckets.rm(
                     item.id,
                     cluster_name=resolved.cluster,

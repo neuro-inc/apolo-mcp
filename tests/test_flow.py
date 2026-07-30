@@ -73,7 +73,13 @@ class FakeAPI:
         self.called("live_get", args, kwargs)
         return (Job("worker", "job-1"),)
 
-    async def live_run(self, *args, **kwargs):
+    async def live_run(self, job_id, *, suffix=None, params=None, timeout=300.0):
+        args = (job_id,)
+        kwargs = {
+            "suffix": suffix,
+            "params": params,
+            "timeout": timeout,
+        }
         self.called("live_run", args, kwargs)
         return RunResult("worker", (Job("worker", "job-1"), Job("worker", "job-2")))
 
@@ -199,6 +205,8 @@ def test_tools_and_destructive_annotations(tools):
         assert "allowed_workspace_root" not in parameters
         assert "config_path" not in parameters
         assert "project_path" not in parameters
+        if name == "flow_live_run":
+            assert "args" not in parameters
         assert "workspace_path is the Flow project root" in registered[name].description
     assert ".apolo/live.yml" in registered["flow_live_run"].description
     assert ".apolo/<batch>.yml" in registered["flow_bake_start"].description
@@ -296,6 +304,52 @@ async def test_writes_call_facade_and_immediately_ledger_new_ids(tools):
     assert '"resource_id":"job-1"' in ledger
     assert '"resource_id":"job-2"' in ledger
     assert '"resource_id":"bake-1"' in ledger
+
+
+async def test_failed_bake_start_recovers_and_journals_created_id(tools):
+    _, fake, _, scope, tmp_path = tools
+
+    async def fail(*args, **kwargs):
+        raise RuntimeError(
+            "batch runner exited before bake "
+            "'bake-11111111-2222-3333-4444-555555555555' reached terminal state"
+        )
+
+    async def correlated(*, tags, **kwargs):
+        assert any(tag.startswith("apolo-mcp-correlation-") for tag in tags)
+        return BakeList((Bake("bake-11111111-2222-3333-4444-555555555555"),), False)
+
+    fake.bake_start = fail
+    fake.bake_list = correlated
+    with pytest.raises(ApoloToolError, match="creating and journaling"):
+        await fn(tools, "flow_bake_start")("train", **scope)
+
+    ledger = (tmp_path / "ledger.jsonl").read_text()
+    assert '"resource_id":"bake-11111111-2222-3333-4444-555555555555"' in ledger
+
+
+async def test_failed_live_run_journals_only_new_job_ids(tools):
+    _, fake, _, scope, tmp_path = tools
+    calls = 0
+
+    async def live_get(job_id, suffix=None):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return (Job("worker", "job-before"),)
+        return (Job("worker", "job-before"), Job("worker", "job-created"))
+
+    async def fail(*args, **kwargs):
+        raise TimeoutError("timed out starting live job")
+
+    fake.live_get = live_get
+    fake.live_run = fail
+    with pytest.raises(ApoloToolError, match="creating and journaling job-created"):
+        await fn(tools, "flow_live_run")("worker", **scope)
+
+    ledger = (tmp_path / "ledger.jsonl").read_text()
+    assert '"resource_id":"job-created"' in ledger
+    assert '"resource_id":"job-before"' not in ledger
 
 
 async def test_provider_errors_are_normalized(tools):

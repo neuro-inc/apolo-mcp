@@ -114,7 +114,7 @@ protected sinks.
 | `apolo blob ls`, `apolo blob glob`; Apolo SDK blob stat operation | Native | `list_bucket_blobs`, `stat_bucket_blob` | Bounded object metadata. |
 | `apolo blob sign-url` | Native secure-sink only | `create_bucket_signed_url` | Bounded expiry; the temporary access grant is written only to a protected file and never returned. |
 | `apolo blob cp` | Native single-file / Manual CLI for recursive | `upload_bucket_file`, `download_bucket_file`; local `apolo blob cp` for recursive work | Native single-file transfers enforce byte, duration, exact-key, and no-overwrite bounds. Recursive CLI transfer stays outside MCP/model results and is not automated by this package. |
-| `apolo blob rm`, `apolo blob rmbucket` | Native | exact blob/bucket delete tools | Destructive exact targets with policy and journal checks. |
+| `apolo blob rm`, `apolo blob rmbucket --force` | Native | exact blob/bucket delete tools | Destructive exact targets with policy and journal checks; bucket deletion recursively removes its contained blobs before deleting the bucket. |
 | `apolo blob lscredentials`, `apolo blob statcredentials` | Prohibited | none | The supported SDK surface can expose persistent bucket credentials. |
 | `apolo blob mkcredentials` | Prohibited | none | Persistent credential generation is omitted; temporary signed URLs use a protected short-lived sink instead. |
 | `apolo blob rmcredentials` | Prohibited | none | Credential-record mutation is unavailable. |
@@ -144,9 +144,9 @@ discoverable shapes needed to select a configured job or batch.
 | Public capability | Classification | MCP/fallback | Current behavior |
 |---|---|---|---|
 | `apolo-flow ps`, `apolo-flow status`, `apolo-flow logs` | Native | `flow_live_list`, `flow_live_get`, `flow_live_logs` | Bounded typed facade results through `apolo-flow>=26.7.1` explicit-context lifecycle. |
-| `apolo-flow run` | Native | `flow_live_run` | Project root confinement, explicit context, Flow-compatible suffix/parameter resolution, policy, and journal. |
+| `apolo-flow run` | Native | `flow_live_run` | Detached asynchronous submission by default (`detach: true` in the selected job), followed by separate bounded get/log/wait monitoring; includes project confinement, explicit context, policy, and journal. |
 | `apolo-flow kill` | Native | `flow_live_kill`, `flow_live_kill_all` | Destructive policy; exact/all targets are resolved before managed authorization. |
-| `apolo-flow bake`, `apolo-flow bakes`, `apolo-flow show`, `apolo-flow inspect`, `apolo-flow logs` | Native | `flow_bake_start`, `flow_bake_list`, `flow_bake_get`, `flow_bake_logs` | Start uses Flow orchestration, never raw persistence API. |
+| `apolo-flow bake`, `apolo-flow bakes`, `apolo-flow show`, `apolo-flow inspect`, `apolo-flow logs` | Native | `flow_bake_start`, `flow_bake_list`, `flow_bake_get`, `flow_bake_logs` | Start performs asynchronous Flow orchestration and returns the bake for separate monitoring; never posts directly to the persistence API. |
 | `apolo-flow cancel`, `apolo-flow restart` | Native | `flow_bake_cancel`, `flow_bake_restart` | Policy-governed writes with exact bake/attempt state and journaled lifecycle. |
 | live/bake terminal polling | Native | `flow_live_wait`, `flow_bake_wait` | MCP-added deadline and machine result. |
 | `apolo-flow build`, `apolo-flow upload`, `apolo-flow download`, `apolo-flow mkvolumes`, `apolo-flow clean`, `apolo-flow clear-cache`, `apolo-flow delete-flow` | Skill/CLI | bounded local CLI | Build/data/cache/project-maintenance operations are local/high-bandwidth or destructive; allowed-root/duration/write controls. |

@@ -135,7 +135,7 @@ Resolve one logical Flow job, with a bounded multi-job result. workspace_path is
 
 ## `flow_live_run`
 
-Start a configured Flow live job under the server mutation policy. workspace_path is the Flow project root and must contain a real .apolo directory. flow_live_run reads .apolo/live.yml or .apolo/live.yaml, whose minimum shape is `kind: live` plus a `jobs` mapping; job_id selects a key in that mapping. Each plain job needs an image and may define cmd or bash. Optional project settings belong in .apolo/project.yml or .apolo/project.yaml.
+Start a detached Flow live job under the server mutation policy. Set ``detach: true`` on the selected job so this operation returns after submission. Monitor it separately with get, logs, and bounded wait. Pre/post raw-ID comparison journals only newly created jobs when upstream startup times out after submission. workspace_path is the Flow project root and must contain a real .apolo directory. flow_live_run reads .apolo/live.yml or .apolo/live.yaml, whose minimum shape is `kind: live` plus a `jobs` mapping; job_id selects a key in that mapping. Each plain job needs an image and may define cmd or bash. Set `detach: true` on jobs started by MCP, then monitor them with separate get, logs, and bounded wait calls. Optional project settings belong in .apolo/project.yml or .apolo/project.yaml.
 
 **Operation type:** write
 
@@ -146,21 +146,6 @@ Start a configured Flow live job under the server mutation policy. workspace_pat
 ```json
 {
   "properties": {
-    "args": {
-      "anyOf": [
-        {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Args"
-    },
     "cluster": {
       "title": "Cluster",
       "type": "string"
@@ -543,7 +528,7 @@ Kill all jobs in exactly one explicit Flow context. workspace_path is the Flow p
 
 ## `flow_bake_start`
 
-Start a bake only through FlowAPI BatchRunner orchestration. workspace_path is the Flow project root and must contain a real .apolo directory. flow_bake_start reads .apolo/<batch>.yml or .yaml, whose minimum shape is `kind: batch` plus a `tasks` list; batch selects that workflow. Each plain task needs an image and may define cmd or bash. Optional project settings belong in .apolo/project.yml or .apolo/project.yaml.
+Start a bake only through FlowAPI BatchRunner orchestration. An internal unique correlation tag lets MCP journal a bake even when the upstream runner fails after creating it. workspace_path is the Flow project root and must contain a real .apolo directory. flow_bake_start reads .apolo/<batch>.yml or .yaml, whose minimum shape is `kind: batch` plus a `tasks` list; batch selects that workflow. Each plain task needs an image and may define cmd or bash. Optional project settings belong in .apolo/project.yml or .apolo/project.yaml.
 
 **Operation type:** write
 
