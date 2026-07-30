@@ -20,8 +20,6 @@
 
 ## Upstream compatibility
 
-- Live-reverify SDK bucket upload/download under `aiobotocore` 3.8 after restarting
-  the installed MCP environment; the temporary `<3.5` constraint is now removed.
 - Package `flow-schema.json` and `project-schema.json` in the `apolo-flow` wheel, then
   prefer package resources for offline MCP validation while retaining release-pinned
   raw GitHub URLs in YAML language-server comments.
