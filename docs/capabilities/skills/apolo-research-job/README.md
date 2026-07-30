@@ -2,6 +2,11 @@
 
 # Apolo research job
 
+Use jobs for bounded R&D, experiments, builds, migrations, batch work, and tests. Do
+not run a database, API, web UI, or other long-running deployment as a job; hand that
+workload to `$apolo-applications`. A remote image builder is appropriately a job
+because it terminates after producing the image.
+
 1. Use `$apolo-platform-user-context` to show the exact target and list suitable presets.
    Prefer the least expensive preset that meets stated CPU, memory, and accelerator
    needs. Confirm quota from platform output; never infer it.

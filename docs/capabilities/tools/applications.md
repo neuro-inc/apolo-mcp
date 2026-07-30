@@ -474,7 +474,7 @@ Wait a bounded time for an App to reach a terminal health state.
 
 ## `get_app_logs`
 
-Read bounded UTF-8 logs with credential redaction and truncation metadata. Redaction covers ordinary credential assignments, quoted APOLO_PASSED_CONFIG/APOLO_*TOKEN keys, and JSON or Python-repr environment entries shaped as {name: <sensitive Apolo key>, value: <credential>}.
+Read bounded UTF-8 logs with credential redaction and truncation metadata. Redaction covers ordinary credential assignments, quoted APOLO_PASSED_CONFIG/APOLO_*TOKEN and dockerconfigjson keys, and JSON or Python-repr environment entries shaped as {name: <sensitive Apolo key>, value: <credential>}.
 
 **Operation type:** read-only
 
@@ -1300,7 +1300,7 @@ Write a no-YAML uninstall plan bound to exact App/current revision.
 
 ## `install_app`
 
-Apply one unexpired, unchanged install plan exactly once.
+Apply an install plan identified by ID and reviewed PLAN.md path.
 
 **Operation type:** write
 
@@ -1339,6 +1339,10 @@ Apply one unexpired, unchanged install plan exactly once.
       "title": "Plan Id",
       "type": "string"
     },
+    "plan_path": {
+      "title": "Plan Path",
+      "type": "string"
+    },
     "project": {
       "anyOf": [
         {
@@ -1353,7 +1357,8 @@ Apply one unexpired, unchanged install plan exactly once.
     }
   },
   "required": [
-    "plan_id"
+    "plan_id",
+    "plan_path"
   ],
   "title": "install_appArguments",
   "type": "object"
@@ -1372,7 +1377,7 @@ Apply one unexpired, unchanged install plan exactly once.
 
 ## `configure_app`
 
-Apply one unchanged configure plan after revision drift check.
+Apply one configure plan identified by ID and reviewed PLAN.md path.
 
 **Operation type:** write
 
@@ -1411,6 +1416,10 @@ Apply one unchanged configure plan after revision drift check.
       "title": "Plan Id",
       "type": "string"
     },
+    "plan_path": {
+      "title": "Plan Path",
+      "type": "string"
+    },
     "project": {
       "anyOf": [
         {
@@ -1425,7 +1434,8 @@ Apply one unchanged configure plan after revision drift check.
     }
   },
   "required": [
-    "plan_id"
+    "plan_id",
+    "plan_path"
   ],
   "title": "configure_appArguments",
   "type": "object"
@@ -1444,7 +1454,7 @@ Apply one unchanged configure plan after revision drift check.
 
 ## `rollback_app`
 
-Apply one unchanged rollback plan under the server mutation policy.
+Apply one rollback plan identified by ID and reviewed PLAN.md path.
 
 **Operation type:** destructive
 
@@ -1483,6 +1493,10 @@ Apply one unchanged rollback plan under the server mutation policy.
       "title": "Plan Id",
       "type": "string"
     },
+    "plan_path": {
+      "title": "Plan Path",
+      "type": "string"
+    },
     "project": {
       "anyOf": [
         {
@@ -1497,7 +1511,8 @@ Apply one unchanged rollback plan under the server mutation policy.
     }
   },
   "required": [
-    "plan_id"
+    "plan_id",
+    "plan_path"
   ],
   "title": "rollback_appArguments",
   "type": "object"
@@ -1516,7 +1531,7 @@ Apply one unchanged rollback plan under the server mutation policy.
 
 ## `uninstall_app`
 
-Apply one unchanged uninstall plan under the server mutation policy.
+Apply one uninstall plan identified by ID and reviewed PLAN.md path.
 
 **Operation type:** destructive
 
@@ -1555,6 +1570,10 @@ Apply one unchanged uninstall plan under the server mutation policy.
       "title": "Plan Id",
       "type": "string"
     },
+    "plan_path": {
+      "title": "Plan Path",
+      "type": "string"
+    },
     "project": {
       "anyOf": [
         {
@@ -1569,7 +1588,8 @@ Apply one unchanged uninstall plan under the server mutation policy.
     }
   },
   "required": [
-    "plan_id"
+    "plan_id",
+    "plan_path"
   ],
   "title": "uninstall_appArguments",
   "type": "object"

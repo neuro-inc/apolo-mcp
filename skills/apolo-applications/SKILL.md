@@ -5,6 +5,10 @@ description: Discover and compare Apolo App templates; inspect status, logs, eve
 
 # Apolo applications
 
+Use Apps for long-running deployments and managed services, including databases,
+APIs, and web UIs. Use jobs only for bounded R&D, builds, migrations, batch work, and
+tests; never keep a job alive to emulate a deployment.
+
 1. Resolve the exact context and call `list_app_templates` before selecting a template.
    Compare the available templates against the user's requested outcome using titles,
    descriptions, tags, current versions, and known operational tradeoffs. Do not assume
@@ -36,6 +40,27 @@ description: Discover and compare Apolo App templates; inspect status, logs, eve
    for an operation whose SDK/CLI has no file input.
 9. Record created app IDs in the ledger and automatically clean up only exact
    ledger-owned IDs. Preserve reviewed inputs and the sanitized execution result.
+
+When an App needs a custom image, build it remotely with
+`apolo-extras image build LOCAL_CONTEXT image:UNIQUE_REPOSITORY:UNIQUE_TAG` unless a
+typed MCP/Flow build operation is available. The Kaniko builder is a bounded job; the
+resulting service still belongs in an App. Record the exact builder job, build-context
+path, and image tag, then clean only those created targets.
+
+For the Service Deployment template, preserve Apolo image URI semantics in the
+template input. Use an `image:` repository reference and pass its tag separately:
+
+```yaml
+image:
+  repository: image:my-service
+  tag: release-2026-07-30
+  pull_policy: IfNotPresent
+```
+
+Do not replace it with the resolved `registry.<cluster>...` hostname. The `image:`
+reference lets the platform resolve the current context and inject the required image
+pull credentials. Discover the current template schema first because the repository
+and tag field shape remains template-version-specific.
 
 Never reuse a consumed or failed plan, accept approval for a changed file, or declare
 rollout success from submission alone.

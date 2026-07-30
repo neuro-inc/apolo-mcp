@@ -15,6 +15,14 @@ It is a thin adapter layer over `apolo-sdk`. It does **not** shell out to the `a
 - **`apolo_sdk.get()`** is the entry point: an async context manager yielding `Client`.
 - **`fastmcp`** (the `mcp` package's high-level API) for tool registration and server lifecycle.
 
+## Workload boundary
+
+- Use **jobs** for bounded R&D, experiments, builds, migrations, batch work, and tests.
+- Use **Apps** for long-running deployments and managed services, including databases,
+  APIs, and web UIs. Do not emulate a deployment by keeping a job alive.
+- A remote image builder may run as a job because the build is bounded; deploy the
+  resulting image through an App template such as Service Deployment.
+
 ## Tool Surface
 
 `src/apolo_mcp/catalog.py` is the canonical ordered catalog for capability groups,

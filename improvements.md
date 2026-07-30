@@ -30,3 +30,16 @@
   Consider native MCP directory transfers only after defining enforceable file-count,
   total-byte, duration, symlink, overwrite, and partial-cleanup bounds that do not move
   object contents through model context.
+
+## Skills knowledge
+
+- Teach the packaged workload skills an Apolo-native container build workflow. When
+  an agent needs a new image, prefer
+  `apolo-extras image build <context> <image-uri>` (remote Kaniko build) or an
+  `apolo-flow` live build over host-local Docker. Local Docker should be used only
+  when the user explicitly requests it.
+- Document how the skill should select a unique image URI, inspect and record the
+  remote builder job and produced tag, monitor the build separately, and clean only
+  the exact build job and tag created by the workflow.
+- Once the Flow programmatic API exposes a suitable typed image-build operation,
+  prefer an MCP-backed skill path instead of invoking a CLI fallback.

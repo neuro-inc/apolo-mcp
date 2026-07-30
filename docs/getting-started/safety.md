@@ -157,7 +157,7 @@ Tools used by the `apolo-applications` skill.
 - [`list_apps`](../capabilities/tools/applications.md#list_apps) — List Apps with state filtering and a strict result bound.
 - [`get_app`](../capabilities/tools/applications.md#get_app) — Get one App and verify it belongs to the resolved context.
 - [`wait_for_app`](../capabilities/tools/applications.md#wait_for_app) — Wait a bounded time for an App to reach a terminal health state.
-- [`get_app_logs`](../capabilities/tools/applications.md#get_app_logs) — Read bounded UTF-8 logs with credential redaction and truncation metadata. Redaction covers ordinary credential assignments, quoted APOLO_PASSED_CONFIG/APOLO_*TOKEN keys, and JSON or Python-repr environment entries shaped as {name: <sensitive Apolo key>, value: <credential>}.
+- [`get_app_logs`](../capabilities/tools/applications.md#get_app_logs) — Read bounded UTF-8 logs with credential redaction and truncation metadata. Redaction covers ordinary credential assignments, quoted APOLO_PASSED_CONFIG/APOLO_*TOKEN and dockerconfigjson keys, and JSON or Python-repr environment entries shaped as {name: <sensitive Apolo key>, value: <credential>}.
 - [`get_app_events`](../capabilities/tools/applications.md#get_app_events) — Return bounded, credential-redacted App status events.
 - [`get_app_output`](../capabilities/tools/applications.md#get_app_output) — Return bounded, credential-redacted output for one App.
 - [`get_app_input`](../capabilities/tools/applications.md#get_app_input) — Return bounded App input with likely credential values redacted.
@@ -169,13 +169,13 @@ Tools used by the `apolo-applications` skill.
 - [`plan_app_configure`](../capabilities/tools/applications.md#plan_app_configure) — **Local planning; does not mutate Apolo resources.** Seed exact YAML with SDK get_input, patch it, and write a review plan.
 - [`plan_app_rollback`](../capabilities/tools/applications.md#plan_app_rollback) — **Local planning; does not mutate Apolo resources.** Write a no-YAML rollback plan bound to current and target revisions.
 - [`plan_app_uninstall`](../capabilities/tools/applications.md#plan_app_uninstall) — **Local planning; does not mutate Apolo resources.** Write a no-YAML uninstall plan bound to exact App/current revision.
-- [`install_app`](../capabilities/tools/applications.md#install_app) — Apply one unexpired, unchanged install plan exactly once.
-- [`configure_app`](../capabilities/tools/applications.md#configure_app) — Apply one unchanged configure plan after revision drift check.
+- [`install_app`](../capabilities/tools/applications.md#install_app) — Apply an install plan identified by ID and reviewed PLAN.md path.
+- [`configure_app`](../capabilities/tools/applications.md#configure_app) — Apply one configure plan identified by ID and reviewed PLAN.md path.
 
 ### Destructive operations
 
-- [`rollback_app`](../capabilities/tools/applications.md#rollback_app) — Apply one unchanged rollback plan under the server mutation policy.
-- [`uninstall_app`](../capabilities/tools/applications.md#uninstall_app) — Apply one unchanged uninstall plan under the server mutation policy.
+- [`rollback_app`](../capabilities/tools/applications.md#rollback_app) — Apply one rollback plan identified by ID and reviewed PLAN.md path.
+- [`uninstall_app`](../capabilities/tools/applications.md#uninstall_app) — Apply one uninstall plan identified by ID and reviewed PLAN.md path.
 
 ## [Apolo Resource Management](../capabilities/skills.md#apolo-resource-management)
 

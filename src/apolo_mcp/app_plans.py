@@ -206,6 +206,7 @@ def create_plan(
         "expires_at": (now + timedelta(seconds=ttl_seconds)).isoformat(),
         "target": target,
         "context": dict(context),
+        "plan_path": str(directory / "PLAN.md"),
         "inputs_path": str(inputs_path) if inputs_path else None,
         "inputs_sha256": inputs_sha256,
         "payload": stored_payload,
@@ -233,9 +234,21 @@ def find_plan(plan_id: str) -> tuple[Path, dict[str, Any]]:
 
 
 def validate_for_apply(
-    plan_id: str, *, kind: str, context: Mapping[str, str]
+    plan_id: str,
+    plan_path: str,
+    *,
+    kind: str,
+    context: Mapping[str, str],
 ) -> tuple[Path, dict[str, Any], dict[str, Any] | None]:
     path, plan = find_plan(plan_id)
+    root = plan_root()
+    reviewed_path = Path(plan_path).resolve()
+    ensure_path_beneath(reviewed_path, root=root, name="Apps reviewed plan path")
+    expected_path = (path.parent / "PLAN.md").resolve()
+    if reviewed_path != expected_path or plan.get("plan_path") != str(expected_path):
+        raise ValueError("Reviewed PLAN.md path does not match this Apps plan")
+    if not reviewed_path.is_file():
+        raise ValueError("Reviewed PLAN.md file no longer exists")
     if plan.get("kind") != kind:
         raise ValueError(f"Plan {plan_id} is for {plan.get('kind')}, not {kind}")
     if plan.get("status") != "planned":
@@ -247,7 +260,6 @@ def validate_for_apply(
     payload: dict[str, Any] | None = None
     if plan.get("inputs_path"):
         inputs = Path(plan["inputs_path"])
-        root = plan_root()
         ensure_path_beneath(inputs.resolve(), root=root, name="Apps plan inputs path")
         actual_checksum = sha256_bytes(inputs.read_bytes())
         if actual_checksum != plan.get("inputs_sha256"):
@@ -260,10 +272,16 @@ def validate_for_apply(
 
 
 def claim_for_apply(
-    plan_id: str, *, kind: str, context: Mapping[str, str]
+    plan_id: str,
+    plan_path: str,
+    *,
+    kind: str,
+    context: Mapping[str, str],
 ) -> tuple[Path, dict[str, Any], dict[str, Any] | None]:
     """Atomically and permanently claim a validated single-use plan."""
-    path, initial_plan, _ = validate_for_apply(plan_id, kind=kind, context=context)
+    path, initial_plan, _ = validate_for_apply(
+        plan_id, plan_path, kind=kind, context=context
+    )
     claim_path = path.with_suffix(".claim")
     try:
         descriptor = os.open(
@@ -279,7 +297,9 @@ def claim_for_apply(
             stream.flush()
             os.fsync(stream.fileno())
         # Revalidate after winning the claim to close the check/claim race.
-        path, plan, payload = validate_for_apply(plan_id, kind=kind, context=context)
+        path, plan, payload = validate_for_apply(
+            plan_id, plan_path, kind=kind, context=context
+        )
         claimed = {
             **plan,
             "status": "applying",

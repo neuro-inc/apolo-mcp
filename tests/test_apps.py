@@ -160,8 +160,9 @@ async def test_install_plan_and_apply_exact_yaml_once(tools) -> None:
         app_name="web",
     )
     assert Path(planned["inputs_path"]).exists()
+    assert Path(planned["plan_path"]).name == "PLAN.md"
     assert any("discovered schema fields" in item for item in planned["validation"])
-    result = await fn(mcp, "install_app")(planned["plan_id"])
+    result = await fn(mcp, "install_app")(planned["plan_id"], planned["plan_path"])
     assert result["plan_status"] == "applied"
     exact = app_plans.load_yaml_exact(Path(planned["inputs_path"]))
     sdk.apps.install.assert_awaited_once_with(
@@ -171,7 +172,7 @@ async def test_install_plan_and_apply_exact_yaml_once(tools) -> None:
     assert '"resource_id":"app-1"' in ledger
     assert '"action":"created"' in ledger
     with pytest.raises(ValueError, match="consumed"):
-        await fn(mcp, "install_app")(planned["plan_id"])
+        await fn(mcp, "install_app")(planned["plan_id"], planned["plan_path"])
 
 
 async def test_configure_rejects_edited_file_and_revision_drift(tools) -> None:
@@ -180,16 +181,16 @@ async def test_configure_rejects_edited_file_and_revision_drift(tools) -> None:
     assert sdk.apps.get_input.await_count == 1
     Path(planned["inputs_path"]).write_text("input: {}\n")
     with pytest.raises(ValueError, match="edited"):
-        await fn(mcp, "configure_app")(planned["plan_id"])
+        await fn(mcp, "configure_app")(planned["plan_id"], planned["plan_path"])
     sdk.apps.configure.assert_not_awaited()
 
     planned = await fn(mcp, "plan_app_configure")("app-1", {"preset": "cpu-large"})
     sdk.apps.get_revisions.return_value = [revision(4)]
     with pytest.raises(RuntimeError, match="revision changed"):
-        await fn(mcp, "configure_app")(planned["plan_id"])
+        await fn(mcp, "configure_app")(planned["plan_id"], planned["plan_path"])
     sdk.apps.configure.assert_not_awaited()
     with pytest.raises(ValueError, match="consumed"):
-        await fn(mcp, "configure_app")(planned["plan_id"])
+        await fn(mcp, "configure_app")(planned["plan_id"], planned["plan_path"])
 
 
 async def test_configure_success_preserves_exact_seeded_payload(tools) -> None:
@@ -197,7 +198,7 @@ async def test_configure_success_preserves_exact_seeded_payload(tools) -> None:
     planned = await fn(mcp, "plan_app_configure")(
         "app-1", {"replicas": 2}, comment="scale"
     )
-    result = await fn(mcp, "configure_app")(planned["plan_id"])
+    result = await fn(mcp, "configure_app")(planned["plan_id"], planned["plan_path"])
     assert result["plan_status"] == "applied"
     exact = app_plans.load_yaml_exact(Path(planned["inputs_path"]))
     sdk.apps.configure.assert_awaited_once_with(
@@ -243,14 +244,14 @@ async def test_rollback_and_uninstall_plan_apply_require_policy(
         ("uninstall_app", uninstall),
     ):
         with pytest.raises(PermissionError, match="server policy"):
-            await fn(mcp, operation)(planned["plan_id"])
+            await fn(mcp, operation)(planned["plan_id"], planned["plan_path"])
     monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "full")
     from apolo_mcp.policy import _reset_policy_for_tests
 
     _reset_policy_for_tests()
-    await fn(mcp, "rollback_app")(rollback["plan_id"])
+    await fn(mcp, "rollback_app")(rollback["plan_id"], rollback["plan_path"])
     sdk.apps.rollback.assert_awaited_once()
-    await fn(mcp, "uninstall_app")(uninstall["plan_id"])
+    await fn(mcp, "uninstall_app")(uninstall["plan_id"], uninstall["plan_path"])
     sdk.apps.uninstall.assert_awaited_once_with(
         app_id="app-1",
         cluster_name="c",
@@ -310,6 +311,22 @@ async def test_logs_redact_apolo_credentials_in_json_and_python_repr(tools) -> N
     assert result["text"].count("<redacted>") == 4
 
 
+async def test_logs_redact_docker_config_json_in_json_and_python_repr(tools) -> None:
+    mcp, sdk = tools
+    sdk.apps.logs = lambda **kwargs: iterator(
+        [
+            b'Helm input: {"dockerconfigjson":"json-registry-auth"}'
+            b"\nHelm outputs: {'dockerconfigjson': 'repr-registry-auth'}"
+        ]
+    )
+
+    result = await fn(mcp, "get_app_logs")("app-1", max_bytes=1000, max_lines=10)
+
+    assert "json-registry-auth" not in result["text"]
+    assert "repr-registry-auth" not in result["text"]
+    assert result["text"].count("<redacted>") == 2
+
+
 async def test_logs_redact_structured_credential_cut_by_byte_bound(tools) -> None:
     mcp, sdk = tools
     sdk.apps.logs = lambda **kwargs: iterator(
@@ -332,11 +349,11 @@ async def test_failed_sdk_apply_is_redacted_and_permanently_consumed(tools) -> N
         "token=credential-value"
     )
     with pytest.raises(RuntimeError) as error:
-        await fn(mcp, "install_app")(planned["plan_id"])
+        await fn(mcp, "install_app")(planned["plan_id"], planned["plan_path"])
     assert "credential-value" not in str(error.value)
     _, audit = app_plans.find_plan(planned["plan_id"])
     assert audit["status"] == "failed"
     assert "credential-value" not in audit["failure"]
     with pytest.raises(ValueError, match="consumed"):
-        await fn(mcp, "install_app")(planned["plan_id"])
+        await fn(mcp, "install_app")(planned["plan_id"], planned["plan_path"])
     assert sdk.apps.install.await_count == 1

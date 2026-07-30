@@ -77,12 +77,15 @@ def test_edited_file_and_context_are_rejected() -> None:
     )
     Path(plan["inputs_path"]).write_text("input:\n  replicas: 2\n")
     with pytest.raises(ValueError, match="edited"):
-        app_plans.validate_for_apply(plan["id"], kind="configure", context=context)
+        app_plans.validate_for_apply(
+            plan["id"], plan["plan_path"], kind="configure", context=context
+        )
 
     Path(plan["inputs_path"]).write_text("input:\n  replicas: 1\n")
     with pytest.raises(ValueError, match="context"):
         app_plans.validate_for_apply(
             plan["id"],
+            plan["plan_path"],
             kind="configure",
             context={**context, "project": "other"},
         )
@@ -99,11 +102,13 @@ def test_expired_and_consumed_plans_are_rejected() -> None:
         details={},
     )
     path, stored, _ = app_plans.validate_for_apply(
-        plan["id"], kind="uninstall", context=context
+        plan["id"], plan["plan_path"], kind="uninstall", context=context
     )
     app_plans.record_success(path, stored, {"status": "uninstalling"})
     with pytest.raises(ValueError, match="consumed"):
-        app_plans.validate_for_apply(plan["id"], kind="uninstall", context=context)
+        app_plans.validate_for_apply(
+            plan["id"], plan["plan_path"], kind="uninstall", context=context
+        )
 
     other = app_plans.create_plan(
         kind="rollback",
@@ -117,7 +122,9 @@ def test_expired_and_consumed_plans_are_rejected() -> None:
     document["expires_at"] = (app_plans.utc_now() - timedelta(seconds=1)).isoformat()
     other_path.write_text(json.dumps(document))
     with pytest.raises(ValueError, match="expired"):
-        app_plans.validate_for_apply(other["id"], kind="rollback", context=context)
+        app_plans.validate_for_apply(
+            other["id"], other["plan_path"], kind="rollback", context=context
+        )
 
 
 def test_atomic_claim_allows_only_one_executor() -> None:
@@ -133,7 +140,9 @@ def test_atomic_claim_allows_only_one_executor() -> None:
 
     def claim() -> bool:
         try:
-            app_plans.claim_for_apply(plan["id"], kind="install", context=context)
+            app_plans.claim_for_apply(
+                plan["id"], plan["plan_path"], kind="install", context=context
+            )
             return True
         except ValueError:
             return False

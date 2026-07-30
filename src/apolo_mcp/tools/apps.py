@@ -77,16 +77,22 @@ TERMINAL_STATES = {
     apolo_sdk.AppState.UNINSTALLED,
 }
 _SENSITIVE = re.compile(
-    r"(?i)(password|passwd|token|secret(?:_?value)?|api[-_]?key|private[-_]?key)"
+    r"(?i)(password|passwd|token|secret(?:_?value)?|api[-_]?key|private[-_]?key|"
+    r"\.?docker[-_]?config(?:[-_]?json)?)"
+)
+_LOG_SENSITIVE_KEY = (
+    r"(?:APOLO_PASSED_CONFIG|APOLO_[A-Z0-9_]*TOKEN|"
+    r"\.?docker[-_]?config(?:[-_]?json)?)"
 )
 _LOG_CREDENTIAL = re.compile(
     r"(?i)\b(authorization|cookie|token|password|secret|api[-_]?key|"
-    r"APOLO_PASSED_CONFIG|APOLO_[A-Z0-9_]*TOKEN)"
+    + _LOG_SENSITIVE_KEY
+    + r")"
     r"(\s*[:=]\s*|\s+)([^\s,;]+)"
 )
 _LOG_URL_CREDENTIAL = re.compile(r"(://)[^/@\s]+@")
 _LOG_QUOTED_CREDENTIAL = re.compile(
-    r"(?i)(?P<prefix>[\"'](?:APOLO_PASSED_CONFIG|APOLO_[A-Z0-9_]*TOKEN)"
+    r"(?i)(?P<prefix>[\"']" + _LOG_SENSITIVE_KEY + r""
     r"[\"']\s*:\s*[\"'])[^\"'\r\n]*(?P<suffix>[\"']|(?=\r?\n|\Z))"
 )
 _LOG_NAMED_ENV_CREDENTIAL = re.compile(
@@ -405,6 +411,7 @@ async def _revision(sdk: Any, app_id: str) -> int | None:
 def _plan_result(plan: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "plan_id": plan["id"],
+        "plan_path": plan["plan_path"],
         "kind": plan["kind"],
         "status": plan["status"],
         "context": plan["context"],
@@ -654,8 +661,9 @@ def register(mcp: FastMCP) -> None:
         """Read bounded UTF-8 logs with credential redaction and truncation metadata.
 
         Redaction covers ordinary credential assignments, quoted
-        APOLO_PASSED_CONFIG/APOLO_*TOKEN keys, and JSON or Python-repr environment
-        entries shaped as {name: <sensitive Apolo key>, value: <credential>}.
+        APOLO_PASSED_CONFIG/APOLO_*TOKEN and dockerconfigjson keys, and JSON or
+        Python-repr environment entries shaped as
+        {name: <sensitive Apolo key>, value: <credential>}.
         """
         if not 1 <= max_bytes <= MAX_LOG_BYTES or not 1 <= max_lines <= MAX_LOG_LINES:
             raise ValueError("max_bytes/max_lines exceed Apps log safety bounds")
@@ -1078,18 +1086,19 @@ def register(mcp: FastMCP) -> None:
     @mcp.tool(annotations=WRITE)
     async def install_app(
         plan_id: str,
+        plan_path: str,
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
-        """Apply one unexpired, unchanged install plan exactly once."""
+        """Apply an install plan identified by ID and reviewed PLAN.md path."""
         authorize_mutation(operation="install_app", effect=MutationEffect.CREATE)
         async with client() as sdk:
             context = resolve_context(
                 sdk.config, cluster=cluster, org=org, project=project
             )
             path, plan, payload = claim_for_apply(
-                plan_id, kind="install", context=context.as_dict()
+                plan_id, plan_path, kind="install", context=context.as_dict()
             )
             try:
                 assert payload is not None
@@ -1136,18 +1145,19 @@ def register(mcp: FastMCP) -> None:
     @mcp.tool(annotations=WRITE)
     async def configure_app(
         plan_id: str,
+        plan_path: str,
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
-        """Apply one unchanged configure plan after revision drift check."""
+        """Apply one configure plan identified by ID and reviewed PLAN.md path."""
         _deny_read_only_before_claim("configure_app", MutationEffect.UPDATE)
         async with client() as sdk:
             context = resolve_context(
                 sdk.config, cluster=cluster, org=org, project=project
             )
             path, plan, payload = claim_for_apply(
-                plan_id, kind="configure", context=context.as_dict()
+                plan_id, plan_path, kind="configure", context=context.as_dict()
             )
             try:
                 assert payload is not None
@@ -1206,18 +1216,19 @@ def register(mcp: FastMCP) -> None:
     @mcp.tool(annotations=DESTRUCTIVE)
     async def rollback_app(
         plan_id: str,
+        plan_path: str,
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
-        """Apply one unchanged rollback plan under the server mutation policy."""
+        """Apply one rollback plan identified by ID and reviewed PLAN.md path."""
         _deny_read_only_before_claim("rollback_app", MutationEffect.UPDATE)
         async with client() as sdk:
             context = resolve_context(
                 sdk.config, cluster=cluster, org=org, project=project
             )
             path, plan, _ = claim_for_apply(
-                plan_id, kind="rollback", context=context.as_dict()
+                plan_id, plan_path, kind="rollback", context=context.as_dict()
             )
             try:
                 app = await sdk.apps.get(plan["app_id"])
@@ -1278,18 +1289,19 @@ def register(mcp: FastMCP) -> None:
     @mcp.tool(annotations=DESTRUCTIVE)
     async def uninstall_app(
         plan_id: str,
+        plan_path: str,
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
-        """Apply one unchanged uninstall plan under the server mutation policy."""
+        """Apply one uninstall plan identified by ID and reviewed PLAN.md path."""
         _deny_read_only_before_claim("uninstall_app", MutationEffect.DELETE)
         async with client() as sdk:
             context = resolve_context(
                 sdk.config, cluster=cluster, org=org, project=project
             )
             path, plan, _ = claim_for_apply(
-                plan_id, kind="uninstall", context=context.as_dict()
+                plan_id, plan_path, kind="uninstall", context=context.as_dict()
             )
             try:
                 app = await sdk.apps.get(plan["app_id"])

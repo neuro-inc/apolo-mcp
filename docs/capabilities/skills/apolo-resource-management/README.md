@@ -9,6 +9,13 @@
    container layers, or large directory trees through model context.
 3. Use deterministic local CLI/scripts for bulk storage, image, or bucket transfer.
    Set explicit size, duration, overwrite, and write-approval controls.
+   For image creation, prefer Apolo's remote builder:
+   `apolo-extras image build LOCAL_CONTEXT image:UNIQUE_REPOSITORY:UNIQUE_TAG`.
+   Treat its Kaniko job as bounded build work, record its exact returned job and
+   uploaded context path, and deploy the resulting image through an App rather than a
+   long-running job. Preserve the `image:` URI in Service Deployment inputs so the
+   platform resolves the context and injects image pull credentials; do not substitute
+   a raw registry hostname.
 4. Require explicit user approval and `managed` or `full` policy for every write. Mark
    exact deletes destructive; reject project roots, ambiguous names, and unbounded
    recursion.
