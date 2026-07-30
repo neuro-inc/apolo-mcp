@@ -72,10 +72,7 @@ def flow_schema_url(config_type: FlowConfigType) -> str:
     """Return the immutable release-tag schema URL for the installed Flow version."""
     flow_version = _installed_flow_version()
     filename = _SCHEMA_FILE[config_type]
-    return (
-        f"{_FLOW_REPOSITORY}/refs/tags/v{flow_version}/"
-        f"src/apolo_flow/{filename}"
-    )
+    return f"{_FLOW_REPOSITORY}/refs/tags/v{flow_version}/src/apolo_flow/{filename}"
 
 
 class RemoteFlowSchemaProvider:
@@ -193,9 +190,7 @@ def _load_yaml(path: Path) -> dict[str, Any]:
         payload = yaml.safe_load(raw)
     except yaml.YAMLError as exc:
         mark = getattr(exc, "problem_mark", None)
-        location = (
-            f" at line {mark.line + 1}, column {mark.column + 1}" if mark else ""
-        )
+        location = f" at line {mark.line + 1}, column {mark.column + 1}" if mark else ""
         raise ValueError(f"Flow configuration is invalid YAML{location}") from None
     if not isinstance(payload, dict):
         raise ValueError("Flow configuration must contain a YAML mapping")
@@ -289,9 +284,7 @@ def register(mcp: FastMCP) -> None:
         batch_name: str | None = None,
     ) -> dict[str, Any]:
         """Validate and create one new canonical .apolo YAML file without overwrite."""
-        authorize_mutation(
-            operation="flow_config_write", effect=MutationEffect.CREATE
-        )
+        authorize_mutation(operation="flow_config_write", effect=MutationEffect.CREATE)
         workspace = _workspace(workspace_path)
         stem = _config_stem(config_type, batch_name)
         ensure_secret_references_only(config, "config")

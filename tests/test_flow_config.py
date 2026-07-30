@@ -125,9 +125,7 @@ async def test_write_creates_schema_annotated_validated_config(
 async def test_invalid_or_existing_config_is_never_overwritten(tools) -> None:
     _, workspace = tools
     with pytest.raises(ValueError, match="schema validation"):
-        await fn(tools, "flow_config_write")(
-            str(workspace), "live", {"kind": "live"}
-        )
+        await fn(tools, "flow_config_write")(str(workspace), "live", {"kind": "live"})
     assert not (workspace / ".apolo" / "live.yml").exists()
 
     await fn(tools, "flow_config_write")(
@@ -175,9 +173,7 @@ async def test_write_obeys_policy_and_rejects_unsafe_batch_names(
     monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "read-only")
     _reset_policy_for_tests()
     with pytest.raises(PermissionError, match="read-only"):
-        await fn(tools, "flow_config_write")(
-            str(workspace), "project", {"id": "demo"}
-        )
+        await fn(tools, "flow_config_write")(str(workspace), "project", {"id": "demo"})
 
 
 def test_schema_url_is_pinned_to_installed_release(monkeypatch) -> None:
