@@ -74,6 +74,26 @@ def blob(key="dir/item.txt", size=12):
     return item
 
 
+def persistent_credentials():
+    return SimpleNamespace(
+        id="bucket-credentials-1",
+        name="automation",
+        owner="user@example.test",
+        cluster_name="c",
+        read_only=True,
+        credentials=[
+            SimpleNamespace(
+                bucket_id="bucket-1",
+                provider=SimpleNamespace(value="aws"),
+                credentials={
+                    "access_key_id": "private-access",
+                    "secret_access_key": "private-secret",
+                },
+            )
+        ],
+    )
+
+
 @pytest.fixture
 def tools(monkeypatch, tmp_path: Path):
     monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "full")
@@ -93,6 +113,16 @@ def tools(monkeypatch, tmp_path: Path):
     buckets.make_signed_url = AsyncMock(
         return_value=URL("https://objects.invalid/x?temporary-signature=yes")
     )
+    buckets.persistent_credentials_list = lambda **kwargs: iterator(
+        [persistent_credentials()]
+    )
+    buckets.persistent_credentials_create = AsyncMock(
+        return_value=persistent_credentials()
+    )
+    buckets.persistent_credentials_get = AsyncMock(
+        return_value=persistent_credentials()
+    )
+    buckets.persistent_credentials_rm = AsyncMock()
 
     async def download_file(src, dst, **kwargs):
         Path(dst.path).write_bytes(b"x" * 12)
@@ -176,6 +206,9 @@ async def test_all_mutations_use_server_policy_without_approval_parameter(
         "create_bucket_signed_url",
         "upload_bucket_file",
         "download_bucket_file",
+        "create_bucket_credentials",
+        "export_bucket_credentials",
+        "delete_bucket_credentials",
         "delete_bucket_blob",
         "delete_bucket",
     ):
@@ -206,6 +239,69 @@ async def test_signed_url_is_short_lived_sink_only_and_preflighted(tools):
         await fn(mcp, "create_bucket_signed_url")(
             "bucket-1", "one", "too-long", expires_in_seconds=3601
         )
+
+
+async def test_bucket_credentials_metadata_and_secure_file_sinks(tools):
+    mcp, sdk, tmp_path = tools
+    listed = await fn(mcp, "list_bucket_credentials")()
+    assert listed["items"][0]["id"] == "bucket-credentials-1"
+    assert "private-access" not in repr(listed)
+    assert "private-secret" not in repr(listed)
+
+    created = await fn(mcp, "create_bucket_credentials")(
+        ["bucket-1"], "credentials/created.json", name="automation", read_only=True
+    )
+    created_path = tmp_path / "credentials/created.json"
+    assert created["destination"]["path"] == str(created_path)
+    assert "private-secret" not in repr(created)
+    assert "private-secret" in created_path.read_text()
+    assert stat.S_IMODE(created_path.stat().st_mode) == 0o600
+    sdk.buckets.persistent_credentials_create.assert_awaited_once_with(
+        bucket_ids=["bucket-1"],
+        name="automation",
+        cluster_name="c",
+        read_only=True,
+    )
+
+    exported = await fn(mcp, "export_bucket_credentials")(
+        "bucket-credentials-1", "credentials/exported.json"
+    )
+    exported_path = tmp_path / "credentials/exported.json"
+    assert exported["destination"]["path"] == str(exported_path)
+    assert "private-secret" not in repr(exported)
+    assert "private-secret" in exported_path.read_text()
+    assert stat.S_IMODE(exported_path.stat().st_mode) == 0o600
+
+    deleted = await fn(mcp, "delete_bucket_credentials")("bucket-credentials-1")
+    assert deleted["status"] == "deleted"
+    sdk.buckets.persistent_credentials_rm.assert_awaited_once_with(
+        "bucket-credentials-1", cluster_name="c"
+    )
+    ledger = (tmp_path / "ledger.jsonl").read_text()
+    assert '"resource_type":"bucket_credential"' in ledger
+    assert "private-secret" not in ledger
+
+
+async def test_bucket_credential_creation_rolls_back_when_sink_fails(
+    tools, monkeypatch
+):
+    mcp, sdk, tmp_path = tools
+
+    def fail_sink(*args, **kwargs):
+        raise OSError("disk full")
+
+    monkeypatch.setattr("apolo_mcp.tools.buckets._atomic_sink", fail_sink)
+    with pytest.raises(ApoloToolError, match="newly created credential was removed"):
+        await fn(mcp, "create_bucket_credentials")(
+            ["bucket-1"], "credentials/failed.json"
+        )
+    sdk.buckets.persistent_credentials_rm.assert_awaited_once_with(
+        "bucket-credentials-1", cluster_name="c"
+    )
+    assert not (tmp_path / "credentials/failed.json").exists()
+    ledger = (tmp_path / "ledger.jsonl").read_text()
+    assert '"action":"created"' in ledger
+    assert '"action":"deleted"' in ledger
 
 
 async def test_file_transfers_are_workspace_bounded_and_never_return_bytes(tools):

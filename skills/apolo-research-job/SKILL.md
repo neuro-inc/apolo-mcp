@@ -16,7 +16,7 @@ because it terminates after producing the image.
 2. Keep source, inputs, outputs, and evidence in approved local paths or an exact
    project storage URI. Use storage mounts or `apolo cp` for bulk/binary data instead
    of moving it through model context.
-3. Make the job bounded: pin an image tag/digest when available, set a lifespan and
+3. Make the job bounded: pin an image tag when available, set a lifespan and
    schedule timeout, choose restart/scheduler settings deliberately, and use explicit
    cluster/organization/project fields.
 4. Pass ordinary non-sensitive environment values directly. Pass credentials only as
@@ -28,10 +28,17 @@ because it terminates after producing the image.
 6. Record the returned exact job ID in the session ledger immediately. Monitor with
    bounded `wait_for_job`, `get_job_logs`, and `get_job_telemetry`; retain truncation
    markers and terminal reason/exit code.
+   Use `exec_job` for bounded, non-interactive commands in an MCP-owned running job;
+   pass an executable and argument list, never credentials or shell-interpolated
+   command text. For temporary network access, start a loopback listener with
+   `start_job_port_forward`, retain its opaque forwarding ID, inspect it with
+   `list_job_port_forwards`, and stop that exact ID with `stop_job_port_forward` when
+   finished. Forwarded bytes stay outside model results; listeners also close when
+   the MCP process exits. Keep interactive attach in the user's local CLI.
 7. Verify the expected storage artifact and record command/config checksum, image,
    preset, context, runtime, cost when reported, job ID, output URI, and failure path.
 8. Kill only the exact approved job when needed. Automatic cleanup may act only on an
    exact ledger-owned ID; never infer ownership from a name or prefix.
 
-Use the local CLI for interactive attach or port forwarding and impose explicit
-duration/output bounds. Do not wrap those streams as ordinary MCP results.
+Use the local CLI for interactive attach. Do not wrap its stream as an ordinary MCP
+result.

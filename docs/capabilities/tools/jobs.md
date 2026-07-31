@@ -620,6 +620,327 @@ Get one job and its resolved context.
 }
 ```
 
+## `exec_job`
+
+Execute one non-interactive command in an owned running job. The executable and argument list are shell-quoted separately; no stdin or TTY is exposed. Output is duration/byte bounded and credential-redacted. Use mounted secrets or secret environment references instead of command arguments for credentials.
+
+**Operation type:** write
+
+**Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
+
+**Input schema:**
+
+```json
+{
+  "properties": {
+    "arguments": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Arguments"
+    },
+    "cluster": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cluster"
+    },
+    "executable": {
+      "title": "Executable",
+      "type": "string"
+    },
+    "job_id": {
+      "title": "Job Id",
+      "type": "string"
+    },
+    "max_output_bytes": {
+      "default": 100000,
+      "title": "Max Output Bytes",
+      "type": "integer"
+    },
+    "org": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Org"
+    },
+    "project": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Project"
+    },
+    "timeout_seconds": {
+      "default": 60,
+      "title": "Timeout Seconds",
+      "type": "number"
+    }
+  },
+  "required": [
+    "job_id",
+    "executable"
+  ],
+  "title": "exec_jobArguments",
+  "type": "object"
+}
+```
+
+**Output schema:**
+
+```json
+{
+  "additionalProperties": true,
+  "title": "exec_jobDictOutput",
+  "type": "object"
+}
+```
+
+## `start_job_port_forward`
+
+Start a loopback-only background forward to one running owned job. Forwarded bytes never enter MCP results. The listener remains active until stop_job_port_forward is called or the MCP server exits.
+
+**Operation type:** write
+
+**Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
+
+**Input schema:**
+
+```json
+{
+  "properties": {
+    "cluster": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cluster"
+    },
+    "job_id": {
+      "title": "Job Id",
+      "type": "string"
+    },
+    "local_port": {
+      "title": "Local Port",
+      "type": "integer"
+    },
+    "org": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Org"
+    },
+    "project": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Project"
+    },
+    "remote_port": {
+      "title": "Remote Port",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "job_id",
+    "local_port",
+    "remote_port"
+  ],
+  "title": "start_job_port_forwardArguments",
+  "type": "object"
+}
+```
+
+**Output schema:**
+
+```json
+{
+  "additionalProperties": true,
+  "title": "start_job_port_forwardDictOutput",
+  "type": "object"
+}
+```
+
+## `list_job_port_forwards`
+
+List active forwards owned by this MCP process and exact context.
+
+**Operation type:** read-only
+
+**Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
+
+**Input schema:**
+
+```json
+{
+  "properties": {
+    "cluster": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cluster"
+    },
+    "org": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Org"
+    },
+    "project": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Project"
+    }
+  },
+  "title": "list_job_port_forwardsArguments",
+  "type": "object"
+}
+```
+
+**Output schema:**
+
+```json
+{
+  "additionalProperties": true,
+  "title": "list_job_port_forwardsDictOutput",
+  "type": "object"
+}
+```
+
+## `stop_job_port_forward`
+
+Stop one exact background forward owned by this MCP process.
+
+**Operation type:** write
+
+**Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
+
+**Input schema:**
+
+```json
+{
+  "properties": {
+    "cluster": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cluster"
+    },
+    "forwarding_id": {
+      "title": "Forwarding Id",
+      "type": "string"
+    },
+    "org": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Org"
+    },
+    "project": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Project"
+    }
+  },
+  "required": [
+    "forwarding_id"
+  ],
+  "title": "stop_job_port_forwardArguments",
+  "type": "object"
+}
+```
+
+**Output schema:**
+
+```json
+{
+  "additionalProperties": true,
+  "title": "stop_job_port_forwardDictOutput",
+  "type": "object"
+}
+```
+
 ## `wait_for_job`
 
 Poll until terminal state, always bounded by timeout_seconds.

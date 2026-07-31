@@ -53,6 +53,8 @@ MAX_LIST_RESULTS = 100
 MAX_USAGE_OBJECTS = 100_000
 MAX_WAIT_SECONDS = 300.0
 MAX_SIGNED_URL_SECONDS = 3600
+MAX_CREDENTIALS_SCAN = 1000
+MAX_CREDENTIAL_BUCKETS = 100
 
 
 def _exact(value: str, field: str) -> str:
@@ -166,6 +168,59 @@ async def _get_exact(sdk: Any, value: str, context: ApoloContext) -> Any:
     )
     _assert_context(item, context)
     return item
+
+
+async def _credential_bucket_metadata(
+    sdk: Any, item: Any, context: ApoloContext
+) -> list[dict[str, str]]:
+    buckets: list[dict[str, str]] = []
+    if not 1 <= len(item.credentials) <= MAX_CREDENTIAL_BUCKETS:
+        raise ValueError("bucket credential has an invalid number of bucket bindings")
+    for binding in item.credentials:
+        bucket = await _get_exact(sdk, binding.bucket_id, context)
+        if bucket.id != binding.bucket_id:
+            raise ValueError("bucket credential contains a non-exact bucket binding")
+        buckets.append(
+            {
+                "id": bucket.id,
+                "name": bucket.name,
+                "provider": binding.provider.value,
+                "uri": str(bucket.uri),
+            }
+        )
+    return buckets
+
+
+def _credential_metadata(
+    item: Any, buckets: list[dict[str, str]], context: ApoloContext
+) -> dict[str, Any]:
+    return {
+        "id": item.id,
+        "name": item.name,
+        "owner": item.owner,
+        "cluster": context.cluster,
+        "read_only": item.read_only,
+        "buckets": buckets,
+    }
+
+
+def _credential_payload(item: Any, context: ApoloContext) -> bytes:
+    payload = {
+        "id": item.id,
+        "name": item.name,
+        "owner": item.owner,
+        "cluster": context.cluster,
+        "read_only": item.read_only,
+        "credentials": [
+            {
+                "bucket_id": binding.bucket_id,
+                "provider": binding.provider.value,
+                "credentials": dict(binding.credentials),
+            }
+            for binding in item.credentials
+        ],
+    }
+    return (json.dumps(payload, indent=2, sort_keys=True) + "\n").encode()
 
 
 def _blob_uri(bucket: Any, key: str = "") -> URL:
@@ -559,6 +614,309 @@ def register(mcp: FastMCP) -> None:
             raise normalize_error(
                 exc,
                 operation="set_bucket_public_access",
+                context=resolved.as_dict() if resolved else None,
+                resource=value,
+            ) from None
+
+    @mcp.tool(annotations=READ_ONLY)
+    async def list_bucket_credentials(
+        limit: int = 50,
+        cluster: str | None = None,
+        org: str | None = None,
+        project: str | None = None,
+    ) -> dict[str, Any]:
+        """List safe persistent credential metadata for exact-context buckets.
+
+        Provider credential values returned internally by the SDK are discarded and
+        never serialized through MCP.
+        """
+        if not 1 <= limit <= MAX_LIST_RESULTS:
+            raise ValueError(f"limit must be between 1 and {MAX_LIST_RESULTS}")
+        resolved: ApoloContext | None = None
+        try:
+            async with client() as sdk:
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
+                items: list[dict[str, Any]] = []
+                scanned = 0
+                scan_limited = False
+                result_limited = False
+                async with sdk.buckets.persistent_credentials_list(
+                    cluster_name=resolved.cluster
+                ) as iterator:
+                    async for item in iterator:
+                        scanned += 1
+                        try:
+                            bucket_metadata = await _credential_bucket_metadata(
+                                sdk, item, resolved
+                            )
+                        except (ValueError, apolo_sdk.ResourceNotFound):
+                            if scanned >= MAX_CREDENTIALS_SCAN:
+                                scan_limited = True
+                                break
+                            continue
+                        items.append(
+                            _credential_metadata(item, bucket_metadata, resolved)
+                        )
+                        if len(items) > limit:
+                            result_limited = True
+                            break
+                        if scanned >= MAX_CREDENTIALS_SCAN:
+                            scan_limited = True
+                            break
+                return {
+                    "items": items[:limit],
+                    "limit": limit,
+                    "scanned": scanned,
+                    "scan_limit": MAX_CREDENTIALS_SCAN,
+                    "truncated": result_limited or scan_limited,
+                    "context": resolved.as_dict(),
+                }
+        except Exception as exc:
+            raise normalize_error(
+                exc,
+                operation="list_bucket_credentials",
+                context=resolved.as_dict() if resolved else None,
+            ) from None
+
+    @mcp.tool(annotations=WRITE)
+    async def create_bucket_credentials(
+        bucket_ids: list[str],
+        destination_file: str,
+        name: str | None = None,
+        read_only: bool = False,
+        cluster: str | None = None,
+        org: str | None = None,
+        project: str | None = None,
+    ) -> dict[str, Any]:
+        """Create persistent credentials and atomically sink them to a 0600 file.
+
+        Provider credential values are never returned through MCP.
+        """
+        authorize_mutation(
+            operation="create_bucket_credentials", effect=MutationEffect.CREATE
+        )
+        if not 1 <= len(bucket_ids) <= MAX_CREDENTIAL_BUCKETS:
+            raise ValueError(
+                f"bucket_ids must contain between 1 and {MAX_CREDENTIAL_BUCKETS} IDs"
+            )
+        values = [_exact(value, "bucket_ids item") for value in bucket_ids]
+        if len(values) != len(set(values)):
+            raise ValueError("bucket_ids must not contain duplicates")
+        if name is not None:
+            _exact(name, "name")
+        resolved: ApoloContext | None = None
+        reserved_fd: int | None = None
+        reserved_path: Path | None = None
+        completed = False
+        try:
+            reserved_fd, reserved_path = _reserve_file(destination_file)
+            async with client() as sdk:
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
+                ensure_ledger_writable()
+                for bucket_id in values:
+                    bucket = await _get_exact(sdk, bucket_id, resolved)
+                    if bucket.id != bucket_id:
+                        raise ValueError(
+                            "bucket_ids must contain exact immutable bucket IDs"
+                        )
+                item = await sdk.buckets.persistent_credentials_create(
+                    bucket_ids=values,
+                    name=name,
+                    cluster_name=resolved.cluster,
+                    read_only=read_only,
+                )
+                bucket_metadata = await _credential_bucket_metadata(sdk, item, resolved)
+                record_created_resource(
+                    resource_type="bucket_credential",
+                    resource_id=item.id,
+                    username=resolved.username,
+                    cluster=resolved.cluster,
+                    org=resolved.org,
+                    project=resolved.project,
+                    operation="create_bucket_credentials",
+                )
+                try:
+                    _atomic_sink(reserved_path, _credential_payload(item, resolved))
+                except Exception as sink_error:
+                    try:
+                        await sdk.buckets.persistent_credentials_rm(
+                            item.id, cluster_name=resolved.cluster
+                        )
+                    except Exception:
+                        raise RuntimeError(
+                            "credential sink failed and automatic removal also "
+                            f"failed; remove exact credential ID {item.id}"
+                        ) from None
+                    record_resource_action(
+                        resource_type="bucket_credential",
+                        resource_id=item.id,
+                        username=resolved.username,
+                        cluster=resolved.cluster,
+                        org=resolved.org,
+                        project=resolved.project,
+                        operation="create_bucket_credentials",
+                        action="deleted",
+                    )
+                    raise RuntimeError(
+                        "credential sink failed; the newly created credential was "
+                        "removed"
+                    ) from sink_error
+                completed = True
+                return {
+                    "credential": _credential_metadata(item, bucket_metadata, resolved),
+                    "destination": {
+                        "type": "file",
+                        "path": str(reserved_path),
+                        "mode": "0600",
+                    },
+                    "context": resolved.as_dict(),
+                }
+        except Exception as exc:
+            raise normalize_error(
+                exc,
+                operation="create_bucket_credentials",
+                context=resolved.as_dict() if resolved else None,
+            ) from None
+        finally:
+            if reserved_fd is not None:
+                os.close(reserved_fd)
+            if reserved_path is not None and not completed:
+                reserved_path.unlink(missing_ok=True)
+
+    @mcp.tool(annotations=WRITE)
+    async def export_bucket_credentials(
+        credential_id: str,
+        destination_file: str,
+        cluster: str | None = None,
+        org: str | None = None,
+        project: str | None = None,
+    ) -> dict[str, Any]:
+        """Write one exact persistent credential to a new protected local file.
+
+        Provider credential values are never returned through MCP.
+        """
+        value = _exact(credential_id, "credential_id")
+        resolved: ApoloContext | None = None
+        reserved_fd: int | None = None
+        reserved_path: Path | None = None
+        completed = False
+        try:
+            reserved_fd, reserved_path = _reserve_file(destination_file)
+            async with client() as sdk:
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
+                item = await sdk.buckets.persistent_credentials_get(
+                    value, cluster_name=resolved.cluster
+                )
+                if item.id != value:
+                    raise ValueError(
+                        "credential_id must be the exact immutable credential ID"
+                    )
+                bucket_metadata = await _credential_bucket_metadata(sdk, item, resolved)
+                authorize_mutation(
+                    operation="export_bucket_credentials",
+                    effect=MutationEffect.UPDATE,
+                    resource_type="bucket_credential",
+                    resource_id=item.id,
+                    username=resolved.username,
+                    cluster=resolved.cluster,
+                    org=resolved.org,
+                    project=resolved.project,
+                )
+                _atomic_sink(reserved_path, _credential_payload(item, resolved))
+                record_resource_action(
+                    resource_type="bucket_credential",
+                    resource_id=item.id,
+                    username=resolved.username,
+                    cluster=resolved.cluster,
+                    org=resolved.org,
+                    project=resolved.project,
+                    operation="export_bucket_credentials",
+                    action="updated",
+                )
+                completed = True
+                return {
+                    "credential": _credential_metadata(item, bucket_metadata, resolved),
+                    "destination": {
+                        "type": "file",
+                        "path": str(reserved_path),
+                        "mode": "0600",
+                    },
+                    "context": resolved.as_dict(),
+                }
+        except Exception as exc:
+            raise normalize_error(
+                exc,
+                operation="export_bucket_credentials",
+                context=resolved.as_dict() if resolved else None,
+                resource=value,
+            ) from None
+        finally:
+            if reserved_fd is not None:
+                os.close(reserved_fd)
+            if reserved_path is not None and not completed:
+                reserved_path.unlink(missing_ok=True)
+
+    @mcp.tool(annotations=DESTRUCTIVE)
+    async def delete_bucket_credentials(
+        credential_id: str,
+        cluster: str | None = None,
+        org: str | None = None,
+        project: str | None = None,
+    ) -> dict[str, Any]:
+        """Delete one exact persistent bucket credential under lifecycle policy."""
+        value = _exact(credential_id, "credential_id")
+        resolved: ApoloContext | None = None
+        try:
+            async with client() as sdk:
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
+                item = await sdk.buckets.persistent_credentials_get(
+                    value, cluster_name=resolved.cluster
+                )
+                if item.id != value:
+                    raise ValueError(
+                        "credential_id must be the exact immutable credential ID"
+                    )
+                await _credential_bucket_metadata(sdk, item, resolved)
+                authorize_mutation(
+                    operation="delete_bucket_credentials",
+                    effect=MutationEffect.DELETE,
+                    resource_type="bucket_credential",
+                    resource_id=item.id,
+                    username=resolved.username,
+                    cluster=resolved.cluster,
+                    org=resolved.org,
+                    project=resolved.project,
+                )
+                await sdk.buckets.persistent_credentials_rm(
+                    item.id, cluster_name=resolved.cluster
+                )
+                record_resource_action(
+                    resource_type="bucket_credential",
+                    resource_id=item.id,
+                    username=resolved.username,
+                    cluster=resolved.cluster,
+                    org=resolved.org,
+                    project=resolved.project,
+                    operation="delete_bucket_credentials",
+                    action="deleted",
+                )
+                return {
+                    "status": "deleted",
+                    "id": item.id,
+                    "context": resolved.as_dict(),
+                }
+        except Exception as exc:
+            raise normalize_error(
+                exc,
+                operation="delete_bucket_credentials",
                 context=resolved.as_dict() if resolved else None,
                 resource=value,
             ) from None

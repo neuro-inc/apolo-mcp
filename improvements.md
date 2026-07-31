@@ -63,23 +63,70 @@
   immediately afterward. This should remove the R&D setup skill's remaining ACL CLI
   fallback once the full family is implemented.
 
-## Job execution capabilities
+## Apolo CLI coverage audit
 
-- Add a typed, bounded operation equivalent to `apolo exec <JOB_ID> -- <COMMAND>`. It
-  must verify the exact job and context, accept an executable plus argument list without
-  shell interpolation, enforce timeout and output-byte limits, redact credentials, and
-  require managed ownership for mutations. Start without interactive TTY support;
-  retain the CLI as the explicit fallback for interactive sessions.
+Audited against every visible leaf command in Apolo CLI `26.7.1`. Root shortcuts such
+as `apolo run`, `ps`, `status`, `logs`, `kill`, `save`, `ls`, `mkdir`, `rm`, `images`,
+`push`, and `pull` are aliases of grouped commands and do not require separate MCP
+implementations. Commands not listed below are already mapped in the capabilities
+matrix to native MCP tools.
+
+### Planned native coverage
+
+- Complete ACL coverage described above:
+  `apolo acl add-role`, `grant`, `list-roles`, `ls`, `remove-role`, and `revoke`, plus
+  the `apolo share` alias.
+- Add true storage usage/quota metadata for `apolo storage df`; `stat_storage` describes
+  one path and is not an equivalent.
+- Add bounded metadata operations for `apolo storage glob` and `apolo storage tree`,
+  with explicit pattern/root, result limit, and truthful truncation.
+- Add an exact same-context move/rename operation for `apolo storage mv`. Managed mode
+  must authorize the source lifecycle and must not replace an unowned destination.
+- Add exact glob semantics for `apolo blob glob`; the current prefix/recursive blob
+  listing is not a complete glob equivalent.
+- Consider a typed rerun plan for `apolo job generate-run-command`. Return a structured,
+  credential-safe job specification suitable for review rather than shell command text.
+- Consider native recursive/multi-source modes for `apolo storage cp` and
+  `apolo blob cp` only after defining file-count, overwrite, symlink, partial-cleanup,
+  and progress semantics. Single-file transfer is already native.
+
+### Deliberately manual or local-client-only
+
+- Interactive/local streams stay in the user's terminal:
+  `apolo job attach` / `apolo attach` and `apolo job browse`.
+- Local client customization and documentation remain outside MCP:
+  `apolo config aliases`, `apolo config docker`, `apolo completion generate`,
+  `apolo completion patch`, and `apolo help`.
+- Authentication and saved-context mutation remain operator-owned:
+  `apolo config login`, `login-headless`, `login-with-token`, `logout`, `show-token`,
+  `switch-cluster`, `switch-org`, `switch-project`, plus the root `apolo login` and
+  `apolo logout` aliases. `show-token` and token-taking login commands must never be
+  exposed as model-visible MCP operations.
+### Administrative surface
+
+- Promote the experimental Apolo SDK `_admin` facade used by both `apolo-cli` and the
+  MCP read-only admin tools to a stable public typed API, then migrate both callers.
+- Administrative mutations remain outside the workload MCP: `add-cluster`,
+  `add-cluster-user`, `add-org`, `add-org-cluster`, `add-org-credits`, `add-org-user`,
+  `add-project`, `add-project-user`, `add-resource-preset`, `add-user-credits`,
+  `remove-cluster`, `remove-cluster-user`, `remove-org`, `remove-org-cluster`,
+  `remove-org-user`, `remove-project`, `remove-project-user`,
+  `remove-resource-preset`, `set-org-cluster-defaults`, `set-org-cluster-quota`,
+  `set-org-credits`, `set-org-defaults`, `set-user-credits`, `set-user-quota`,
+  `update-cluster`, `update-cluster-user`, `update-org-cluster`, `update-project`,
+  `update-project-user`, and `update-resource-preset`.
+- Virtual-cluster credential administration remains excluded:
+  `apolo vcluster activate-service-account`, `create-service-account`,
+  `delete-service-account`, `list-service-accounts`, and
+  `regenerate-service-account`.
 
 ## Skills knowledge
 
-- Teach the packaged workload skills an Apolo-native container build workflow. When
-  an agent needs a new image, prefer
-  `apolo-extras image build <context> <image-uri>` (remote Kaniko build) or an
-  `apolo-flow` live build over host-local Docker. Local Docker should be used only
-  when the user explicitly requests it.
-- Document how the skill should select a unique image URI, inspect and record the
-  remote builder job and produced tag, monitor the build separately, and clean only
-  the exact build job and tag created by the workflow.
-- Once the Flow programmatic API exposes a suitable typed image-build operation,
-  prefer an MCP-backed skill path instead of invoking a CLI fallback.
+- Add a typed MCP binding over the public `apolo-extras` image-build API for the
+  non-Flow fallback, replacing the skill's documented `apolo-extras image build` CLI
+  command without shelling out. Preserve its remote Kaniko semantics, exact `image:`
+  target, build-context confinement, build-argument safety, returned builder-job
+  identity, asynchronous monitoring, and lifecycle journal ownership.
+- Add a typed Apolo Flow image-build facade when the public Flow API supports it, then
+  replace the skill's `apolo-flow build <component>` CLI call without changing its
+  dedicated component repositories or `${{ hash_files(...) }}` tags.

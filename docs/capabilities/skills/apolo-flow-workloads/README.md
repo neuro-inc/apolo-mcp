@@ -17,6 +17,10 @@
    expressions. Validate project, live job or batch name, parameters, tags, executor,
    images, volumes, dependencies, and persistent output paths. Do not parse colored
    human tables for machine state.
+   When a custom image is needed, follow the
+   [Flow-first image-build workflow](references/image-builds.md): declare a dedicated,
+   content-addressed image for each component and build it through the Flow project.
+   Fall back to `apolo-extras image build` only when no Flow project is available.
 3. Run live jobs asynchronously by default. Ensure the selected job has `detach: true`
    before `flow_live_run`; do not keep the MCP start call attached to the workload.
    After start returns, monitor separately with get, bounded logs, and bounded wait.

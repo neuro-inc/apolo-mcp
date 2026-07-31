@@ -9,21 +9,21 @@ description: Inspect and safely manage Apolo storage, disks, images, buckets/blo
    Fully qualify short resource references and reject cross-context targets.
 2. Prefer metadata and bounded text operations. Cap every model-visible list, wait,
    log, byte count, and duration; return a truthful truncation marker. Single-file
-   transfers stream outside model context and retain a duration bound. Never move
+   transfers stream outside model context and may use a caller-selected timeout. Never move
    binary objects, container layers, or large directory trees through model context.
 3. Use native bounded MCP operations for single-file storage and bucket transfers.
    Use deterministic local CLI/scripts only for recursive or bulk storage, image, or
    bucket transfer. Set explicit duration, overwrite, and write controls.
-   For image creation, prefer Apolo's remote builder:
-   `apolo-extras image build LOCAL_CONTEXT image:UNIQUE_REPOSITORY:UNIQUE_TAG`.
-   Treat its Kaniko job as bounded build work, record its exact returned job and
-   uploaded context path, and deploy the resulting image through an App rather than a
-   long-running job. Preserve the `image:` URI in Service Deployment inputs so the
-   platform resolves the context and injects image pull credentials; do not substitute
-   a raw registry hostname.
-4. Require explicit user approval and `managed` or `full` policy for every write. Mark
-   exact deletes destructive; reject project roots, ambiguous names, and unbounded
-   recursion.
+   For image creation, follow the
+   [Flow-first image-build workflow](../apolo-flow-workloads/references/image-builds.md).
+   Use the Flow project's image definitions when available; otherwise use the
+   documented `apolo-extras image build` fallback. Treat its remote builder as bounded
+   build work and deploy the resulting service through an App rather than a
+   long-running job.
+4. Before every write, state the exact operation, target, context, and effect, then
+   invoke it so the MCP host can apply its approval UI. Require `managed` or `full`
+   policy. Mark exact deletes destructive; reject project roots, ambiguous names, and
+   unbounded recursion.
 5. Preflight the protected ledger before creation and append the exact returned type,
    ID, context, and operation immediately afterward. Automatic cleanup requires an
    exact ledger match and never a naming convention.
@@ -35,7 +35,12 @@ description: Inspect and safely manage Apolo storage, disks, images, buckets/blo
    account metadata and destination. Never return a token even on failure.
 8. Treat signed bucket URLs as temporary credentials. Require explicit scope/expiry,
    write them only to a new protected `0600` file, and return only sink
-   metadata. Do not create or return bucket credential material to the model.
+   metadata. List persistent bucket credentials with `list_bucket_credentials`, which
+   discards provider values. Create them with `create_bucket_credentials` and export
+   an exact existing credential with `export_bucket_credentials`; both write directly
+   to a new protected `0600` file and never return values. Delete only an exact
+   `delete_bucket_credentials` ID permitted by policy and lifecycle ownership. Never
+   read the sink back into model context.
 
 When a safe public SDK contract is absent, state the precise CLI fallback or
 future-scoped limitation instead of inventing a tool.

@@ -33,11 +33,12 @@ protected sinks.
 | `apolo config logout`, `apolo logout` | Out of scope | `apolo logout` | Local session administration could disrupt the agent host. |
 | `apolo config show-token` | Prohibited | none | Direct credential disclosure. |
 | `apolo config switch-cluster`, `apolo config switch-org`, `apolo config switch-project` | Prohibited | explicit context fields | Tools never persistently switch user context. |
-| `apolo acl add-role`, `apolo acl grant`, `apolo acl list-roles`, `apolo acl ls`, `apolo acl remove-role`, `apolo acl revoke` | Out of scope | none | Identity/RBAC administration is not part of the least-privilege workload surface. |
-| `apolo admin <command>` | Out of scope | none | Autonomous cluster, organization, project, user, preset, and quota administration is unavailable. |
+| `apolo acl add-role`, `apolo acl grant`, `apolo acl list-roles`, `apolo acl ls`, `apolo acl remove-role`, `apolo acl revoke` | Skill/CLI; planned native | exact reviewed CLI commands | The complete typed ACL family is tracked in `improvements.md`; managed mode will journal newly created roles/grants and remove/revoke only those exact lifecycles. |
+| `apolo admin get-clusters`, `get-cluster-orgs`, `get-cluster-users`, `get-org-cluster-quota`, `get-org-users`, `get-orgs`, `get-project-users`, `get-projects`, `get-user-quota` | Native | `list_admin_*`, `get_admin_*` | Bounded, credential-free, RBAC-gated discovery through the same SDK `_admin` facade used by `apolo-cli`. |
+| Other `apolo admin <command>` operations | Out of scope | none | Autonomous cluster, organization, project, user, preset, and quota mutation remains unavailable. |
 | `apolo completion generate`, `apolo completion patch` | Out of scope | client setup docs | Shell integration, not a platform workload operation. |
 | `apolo help` | Skill/CLI | generated CLI/SDK/Flow docs | Exact syntax is routed to authoritative generated references. |
-| `apolo share` | Out of scope | none | ACL mutation is not part of the least-privilege workload surface. |
+| `apolo share` | Skill/CLI; planned native | `apolo acl grant` | Alias of ACL grant; same reviewed RBAC workflow and planned native coverage. |
 
 ## Jobs
 
@@ -52,9 +53,9 @@ protected sinks.
 | Apolo SDK job signal operation | Native | `send_job_signal` | Policy-governed bounded SDK operation. |
 | `apolo job save`, `apolo save` | Native | `save_job_image` | Exact target image, policy, journal, and bounded progress summary. |
 | `apolo job kill`, `apolo kill` | Native | `kill_job` | Destructive annotation, policy, journal, and exact job ID. |
-| `apolo job exec`, `apolo exec` | Skill/CLI | bounded local CLI | The SDK stream lacks the bounded exit and output semantics required for a native tool. |
+| `apolo job exec`, `apolo exec` | Native | `exec_job` | Non-interactive executable plus argument list, exact running job/context, managed ownership, duration/output bounds, exit status, and credential redaction. No stdin or TTY is exposed. |
 | `apolo job attach`, `apolo attach` | Manual CLI | `apolo job attach` | Interactive bidirectional bytes stay in the user's terminal and outside MCP/model results. This package does not wrap or automate the command. |
-| `apolo job port-forward`, `apolo port-forward` | Manual CLI | `apolo job port-forward` | The local stream stays outside MCP/model results. The user owns target/port selection and termination. |
+| `apolo job port-forward`, `apolo port-forward` | Native | `start_job_port_forward`, `list_job_port_forwards`, `stop_job_port_forward` | Process-owned loopback listener for one exact running job; managed ownership applies, forwarded bytes never enter model results, and shutdown closes all listeners. |
 | `apolo job browse` | Skill/CLI | `apolo job browse` | Host browser/UI operation. |
 | Apolo SDK capacity operation | Native | `get_job_capacity` | Bounded read-only cluster capacity metadata. |
 | MCP bounded job polling | Native | `wait_for_job` | MCP-added deadline/poll interval and terminal summary. |
@@ -85,13 +86,15 @@ protected sinks.
 | Public capability | Classification | MCP/fallback | Current behavior |
 |---|---|---|---|
 | `apolo storage ls`, `apolo ls` | Native | `list_storage` | Bounded entries under canonical `storage:` URI. |
-| `apolo storage df` | Native | `stat_storage`/usage metadata | Structured size/usage. |
+| Exact storage-path metadata | Native | `stat_storage` | Structured metadata for one exact path; this is not project quota/usage. |
+| `apolo storage df` | Missing; planned native | `apolo storage df` | True storage usage/quota is tracked in `improvements.md`. |
 | `apolo storage mkdir`, `apolo mkdir` | Native | `make_directory` | Idempotent write, explicit resolved context. |
 | small UTF-8 reads/writes | Native | `read_text`, `write_text` | Strict byte bound; binary rejected. |
-| `apolo storage cp`, `apolo cp` (single file) | Native | `upload_storage_file`, `download_storage_file` | Timeout bound, confined local paths, exact same-context target, verified size, and no local overwrite. File bytes never cross model context. |
+| `apolo storage cp`, `apolo cp` (single file) | Native | `upload_storage_file`, `download_storage_file` | Confined local paths, exact same-context target, verified size, no local overwrite, and an optional caller-selected timeout. File bytes never cross model context. |
 | `apolo storage rm`, `apolo rm` | Native | `delete_storage_path` | Exact path; recursive mode destructive, with policy and lifecycle-journal rules. |
-| `apolo storage cp`, `apolo cp` (recursive); `apolo storage glob`; `apolo storage tree` | Manual CLI | the listed CLI commands | High-volume/recursive traversal stays outside MCP/model context. This package does not wrap those commands. |
-| `apolo storage mv`, `apolo mv` | Manual CLI | `apolo storage mv` | Moving across local and remote boundaries stays a user-reviewed CLI operation. |
+| `apolo storage cp`, `apolo cp` (recursive) | Manual CLI; possible native expansion | the listed CLI commands | High-volume recursive transfer stays outside model context; complete native semantics are tracked in `improvements.md`. |
+| `apolo storage glob`; `apolo storage tree` | Missing; planned native | the listed CLI commands | Bounded metadata equivalents are tracked in `improvements.md`. |
+| `apolo storage mv`, `apolo mv` | Missing; planned exact mode | `apolo storage mv` | Exact same-context rename/move semantics are tracked in `improvements.md`; cross-boundary moves remain manual. |
 | `apolo disk ls` | Native | `list_disks` | Bounded explicit context. |
 | `apolo disk get` | Native | `get_disk` | Exact ID/name and context. |
 | `apolo disk create` | Native | `create_disk` | Size/context bounds, unused timeout up to 10 years, policy, and journal. |
@@ -112,13 +115,14 @@ protected sinks.
 | Public capability | Classification | MCP/fallback | Current behavior |
 |---|---|---|---|
 | `apolo blob lsbucket`, `apolo blob statbucket`, `apolo blob mkbucket`, `apolo blob importbucket`, `apolo blob du`, `apolo blob set-bucket-publicity` | Native | bucket list/get/create/import/usage/publicity tools | Metadata-oriented; writes use policy, journal, and resolved context. |
-| `apolo blob ls`, `apolo blob glob`; Apolo SDK blob stat operation | Native | `list_bucket_blobs`, `stat_bucket_blob` | Bounded object metadata. |
+| `apolo blob ls`; Apolo SDK blob stat operation | Native | `list_bucket_blobs`, `stat_bucket_blob` | Bounded prefix/recursive object metadata and exact stat. |
+| `apolo blob glob` | Missing; planned native | `apolo blob glob` | Exact bounded glob semantics are tracked in `improvements.md`. |
 | `apolo blob sign-url` | Native secure-sink only | `create_bucket_signed_url` | Bounded expiry; the temporary access grant is written only to a protected file and never returned. |
-| `apolo blob cp` | Native single-file / Manual CLI for recursive | `upload_bucket_file`, `download_bucket_file`; local `apolo blob cp` for recursive work | Native single-file transfers enforce byte, duration, exact-key, and no-overwrite bounds. Recursive CLI transfer stays outside MCP/model results and is not automated by this package. |
+| `apolo blob cp` | Native single-file / Manual CLI for recursive | `upload_bucket_file`, `download_bucket_file`; local `apolo blob cp` for recursive work | Native single-file transfers enforce exact-key, workspace, verified-size, and no-overwrite rules, with an optional caller-selected timeout. Bytes stay outside model results. |
 | `apolo blob rm`, `apolo blob rmbucket --force` | Native | exact blob/bucket delete tools | Destructive exact targets with policy and journal checks; bucket deletion recursively removes its contained blobs before deleting the bucket. |
-| `apolo blob lscredentials`, `apolo blob statcredentials` | Prohibited | none | The supported SDK surface can expose persistent bucket credentials. |
-| `apolo blob mkcredentials` | Prohibited | none | Persistent credential generation is omitted; temporary signed URLs use a protected short-lived sink instead. |
-| `apolo blob rmcredentials` | Prohibited | none | Credential-record mutation is unavailable. |
+| `apolo blob lscredentials` | Native metadata only | `list_bucket_credentials` | Discards SDK-returned provider values and returns bounded identifiers, names, bucket metadata, ownership, and read-only status. |
+| `apolo blob statcredentials`, `apolo blob mkcredentials` | Native secure-sink only | `export_bucket_credentials`, `create_bucket_credentials` | Atomically stores provider credentials in a new workspace-confined `0600` JSON file and returns only safe metadata and the destination path. Credential values never enter model-visible results or logs. |
+| `apolo blob rmcredentials` | Native | `delete_bucket_credentials` | Exact immutable ID, destructive policy, and lifecycle journal; managed mode removes only credentials created by the same MCP lifecycle. |
 
 ## Secrets and service accounts
 
@@ -151,13 +155,14 @@ discoverable shapes needed to select a configured job or batch.
 | `apolo-flow bake`, `apolo-flow bakes`, `apolo-flow show`, `apolo-flow inspect`, `apolo-flow logs` | Native | `flow_bake_start`, `flow_bake_list`, `flow_bake_get`, `flow_bake_logs` | Start uses supported Flow orchestration and returns structured bake state; the upstream runner may keep the bounded call open until its remote executor exits, so monitor later state through separate get/log/wait calls. |
 | `apolo-flow cancel`, `apolo-flow restart` | Native | `flow_bake_cancel`, `flow_bake_restart` | Policy-governed writes with exact bake/attempt state and journaled lifecycle. |
 | live/bake terminal polling | Native | `flow_live_wait`, `flow_bake_wait` | MCP-added deadline and machine result. |
-| `apolo-flow build`, `apolo-flow upload`, `apolo-flow download`, `apolo-flow mkvolumes`, `apolo-flow clean`, `apolo-flow clear-cache`, `apolo-flow delete-flow` | Skill/CLI | bounded local CLI | Build/data/cache/project-maintenance operations are local/high-bandwidth or destructive; allowed-root/duration/write controls. |
+| `apolo-flow build` | Skill/CLI; planned native | [Flow-first image-build reference](skills/apolo-flow-workloads/references/image-builds.md) | Define dedicated component images with `${{ flow.project_id }}` repositories and `${{ hash_files(...) }}` tags, then run `apolo-flow build <component>`; fall back to documented `apolo-extras image build` only without Flow context. Typed bindings are tracked in `improvements.md`. |
+| `apolo-flow upload`, `apolo-flow download`, `apolo-flow mkvolumes`, `apolo-flow clean`, `apolo-flow clear-cache`, `apolo-flow delete-flow` | Skill/CLI | bounded local CLI | Data/cache/project-maintenance operations are local/high-bandwidth or destructive; allowed-root/duration/write controls. |
 | `apolo-flow init` | Skill/CLI | local scaffolding workflow | Repository authoring, not a platform API. |
 | `apolo-flow completion generate`, `apolo-flow completion patch` | Out of scope | client setup | Shell integration. |
 
 ## Deliberately absent generic capabilities
 
 Apolo MCP does not expose an arbitrary shell tool, arbitrary HTTP request tool, generic
-Kubernetes tool, model-visible credential retrieval, interactive attach or port-forward
-stream, or unbounded binary transfer. It supports local stdio only and does not provide
-a shared-credential remote service.
+Kubernetes tool, model-visible credential retrieval, interactive attach stream,
+model-visible port-forward stream, or model-visible binary transfer. It supports local
+stdio only and does not provide a shared-credential remote service.

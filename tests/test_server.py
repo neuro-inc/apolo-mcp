@@ -35,6 +35,11 @@ async def test_registered_tools_have_write_and_destructive_annotations() -> None
     tools = {item.name: item for item in await mcp.list_tools()}
     assert tools["run_job"].annotations.readOnlyHint is False
     assert tools["run_job"].annotations.destructiveHint is False
+    assert tools["exec_job"].annotations.readOnlyHint is False
+    assert tools["exec_job"].annotations.destructiveHint is False
+    assert tools["start_job_port_forward"].annotations.readOnlyHint is False
+    assert tools["list_job_port_forwards"].annotations.readOnlyHint is True
+    assert tools["stop_job_port_forward"].annotations.readOnlyHint is False
     assert tools["kill_job"].annotations.readOnlyHint is False
     assert tools["kill_job"].annotations.destructiveHint is True
     assert tools["kill_job"].annotations.idempotentHint is True
@@ -49,6 +54,10 @@ async def test_reviewed_resource_tools_are_registered() -> None:
         "list_buckets",
         "list_secrets",
         "list_service_accounts",
+        "list_bucket_credentials",
+        "create_bucket_credentials",
+        "export_bucket_credentials",
+        "delete_bucket_credentials",
         "create_bucket_signed_url",
         "create_secret_from_source",
         "create_service_account",
@@ -57,6 +66,25 @@ async def test_reviewed_resource_tools_are_registered() -> None:
     assert tools["list_buckets"].annotations.readOnlyHint is True
     assert tools["delete_bucket"].annotations.destructiveHint is True
     assert tools["create_service_account"].annotations.readOnlyHint is False
+
+
+async def test_admin_discovery_tools_are_registered_read_only() -> None:
+    tools = {item.name: item for item in await mcp.list_tools()}
+    expected = {
+        "list_admin_clusters",
+        "list_admin_cluster_users",
+        "list_admin_orgs",
+        "list_admin_org_users",
+        "list_admin_cluster_orgs",
+        "get_admin_org_cluster_quota",
+        "list_admin_projects",
+        "list_admin_project_users",
+        "get_admin_user_quota",
+    }
+    assert expected <= tools.keys()
+    for name in expected:
+        assert tools[name].annotations.readOnlyHint is True
+        assert tools[name].annotations.destructiveHint is False
 
 
 def test_essential_safety_instruction_is_early() -> None:

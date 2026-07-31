@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from mcp.server.fastmcp import FastMCP
 
 from .tools import (
+    admin,
     apps,
     buckets,
     context,
@@ -76,9 +77,18 @@ CAPABILITY_SPECS: tuple[CapabilitySpec, ...] = (
         PLATFORM_CONTEXT,
     ),
     CapabilitySpec(
+        "Administration discovery",
+        "admin",
+        "Read-only RBAC-gated cluster, organization, project, user, and quota "
+        "discovery using the same SDK admin facade as apolo-cli.",
+        admin.register,
+        PLATFORM_CONTEXT,
+    ),
+    CapabilitySpec(
         "Jobs",
         "jobs",
-        "Job lifecycle, logs, telemetry, signals, and image snapshots.",
+        "Job lifecycle, non-interactive execution, logs, telemetry, signals, image "
+        "snapshots, and process-owned loopback port forwarding.",
         jobs.register,
         RESEARCH_JOB,
     ),
@@ -121,7 +131,8 @@ CAPABILITY_SPECS: tuple[CapabilitySpec, ...] = (
     CapabilitySpec(
         "Buckets",
         "buckets",
-        "Bucket and blob metadata, transfer, access, and lifecycle operations.",
+        "Bucket, blob, and persistent-credential metadata, secure sinks, transfer, "
+        "access, and lifecycle operations.",
         buckets.register,
         RESOURCE_MANAGEMENT,
     ),

@@ -1,5 +1,6 @@
 # mypy: disable-error-code="no-untyped-def"
 
+import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from types import SimpleNamespace
@@ -29,6 +30,17 @@ class FakeProvider:
         yield self.sdk
 
 
+class FakeExecStream:
+    def __init__(self, messages, exit_code):
+        self.messages = list(messages)
+        self.exit_code = exit_code
+
+    async def read_out(self):
+        if self.messages:
+            return self.messages.pop(0)
+        raise apolo_sdk.StdStreamError(self.exit_code)
+
+
 class FakeJobs:
     def __init__(self, job):
         self.job = job
@@ -41,6 +53,18 @@ class FakeJobs:
         self.kill = AsyncMock()
         self.list_kwargs = None
         self.log_chunks = [b"hello\n", b"token=unsafe\n", b"tail\n"]
+        self.exec_messages = [
+            SimpleNamespace(fileno=1, data=b"hello from exec\n"),
+            SimpleNamespace(
+                fileno=2,
+                data=b'{"APOLO_API_TOKEN":"exec-secret"}\n',
+            ),
+        ]
+        self.exec_exit_code = 7
+        self.exec_args = None
+        self.exec_kwargs = None
+        self.port_forward_args = None
+        self.port_forward_closed = 0
         self.samples = [
             apolo_sdk.JobTelemetry(0.25, 100, 1.0, 10, 20),
             apolo_sdk.JobTelemetry(0.75, 300, 2.0, 30, 40),
@@ -58,6 +82,20 @@ class FakeJobs:
     async def top(self, job_id, **kwargs):
         for sample in self.samples:
             yield sample
+
+    @asynccontextmanager
+    async def exec(self, job_id, command, **kwargs):
+        self.exec_args = (job_id, command)
+        self.exec_kwargs = kwargs
+        yield FakeExecStream(self.exec_messages, self.exec_exit_code)
+
+    @asynccontextmanager
+    async def port_forward(self, job_id, local_port, remote_port, **kwargs):
+        self.port_forward_args = (job_id, local_port, remote_port, kwargs)
+        try:
+            yield
+        finally:
+            self.port_forward_closed += 1
 
 
 def make_job(status=apolo_sdk.JobStatus.RUNNING):
@@ -211,6 +249,34 @@ async def test_run_job_serializes_every_safe_field_and_override(tools):
     assert "api-token" not in repr(result)
 
 
+async def test_background_port_forward_lifecycle(tools):
+    created = await fn(tools, "start_job_port_forward")("job-1", 28080, 8080)
+    forwarding_id = created["forward"]["forwarding_id"]
+    assert created["forward"]["local_host"] == "localhost"
+    assert tools[1].jobs.port_forward_args == (
+        "job-1",
+        28080,
+        8080,
+        {"cluster_name": "alpha"},
+    )
+
+    active = await fn(tools, "list_job_port_forwards")()
+    assert [item["forwarding_id"] for item in active["items"]] == [forwarding_id]
+
+    stopped = await fn(tools, "stop_job_port_forward")(forwarding_id)
+    assert stopped["status"] == "stopped"
+    assert tools[1].jobs.port_forward_closed == 1
+    assert (await fn(tools, "list_job_port_forwards")())["items"] == []
+
+
+async def test_port_forward_requires_running_job_and_valid_ports(tools):
+    tools[1].jobs.job.status = apolo_sdk.JobStatus.SUCCEEDED
+    with pytest.raises(ApoloToolError, match="running job"):
+        await fn(tools, "start_job_port_forward")("job-1", 28080, 8080)
+    with pytest.raises(ValueError, match="local_port"):
+        await fn(tools, "start_job_port_forward")("job-1", 0, 8080)
+
+
 async def test_run_job_rejects_secret_values_and_bounds_before_sdk(tools):
     with pytest.raises(ValueError, match="secret: references"):
         await fn(tools, "run_job")("image", "preset", secret_env={"TOKEN": "plaintext"})
@@ -316,6 +382,96 @@ async def test_get_and_wait_terminal(tools):
     assert waited["timed_out"] is False
 
 
+async def test_exec_job_is_typed_bounded_redacted_and_journaled(tools):
+    result = await fn(tools, "exec_job")(
+        "job-1",
+        "printf",
+        ["%s", "hello world"],
+        timeout_seconds=1,
+        max_output_bytes=1000,
+    )
+
+    assert tools[1].jobs.exec_args == ("job-1", "printf %s 'hello world'")
+    assert tools[1].jobs.exec_kwargs == {
+        "tty": False,
+        "stdin": False,
+        "stdout": True,
+        "stderr": True,
+        "cluster_name": "alpha",
+    }
+    assert result["exit_code"] == 7
+    assert result["stdout"] == "hello from exec\n"
+    assert "exec-secret" not in result["stderr"]
+    assert "<redacted>" in result["stderr"]
+    assert result["timed_out"] is False
+    assert result["truncated"] is False
+    assert '"operation":"exec_job"' in Ledger().path.read_text()
+
+
+async def test_exec_job_rejects_credential_arguments_and_bounds(tools):
+    with pytest.raises(ValueError, match="credential material"):
+        await fn(tools, "exec_job")("job-1", "env", ["APOLO_API_TOKEN=inline-secret"])
+    with pytest.raises(ValueError, match="max_output_bytes"):
+        await fn(tools, "exec_job")("job-1", "true", max_output_bytes=1_000_001)
+    assert tools[1].jobs.exec_args is None
+
+
+async def test_exec_job_requires_running_job(tools):
+    tools[1].jobs.status.return_value = make_job(apolo_sdk.JobStatus.SUCCEEDED)
+    with pytest.raises(ApoloToolError, match="requires a running job"):
+        await fn(tools, "exec_job")("job-1", "true")
+    assert tools[1].jobs.exec_args is None
+
+
+async def test_exec_job_truncates_model_visible_output(tools):
+    result = await fn(tools, "exec_job")(
+        "job-1", "true", timeout_seconds=1, max_output_bytes=5
+    )
+    assert result["stdout"] == "hello"
+    assert result["stderr"] == ""
+    assert result["output_bytes"] == 5
+    assert result["truncated"] is True
+    assert result["exit_code"] == 7
+
+
+async def test_exec_job_returns_bounded_timeout_result(tools):
+    class SlowStream:
+        async def read_out(self):
+            await asyncio.sleep(10)
+
+    @asynccontextmanager
+    async def slow_exec(*args, **kwargs):
+        yield SlowStream()
+
+    tools[1].jobs.exec = slow_exec
+    result = await fn(tools, "exec_job")(
+        "job-1", "sleep", ["10"], timeout_seconds=0.001
+    )
+    assert result["timed_out"] is True
+    assert result["truncated"] is True
+    assert result["exit_code"] is None
+
+
+async def test_exec_job_requires_managed_ownership(tools, monkeypatch):
+    monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "managed")
+    with pytest.raises(ApoloToolError, match="no active creation lifecycle"):
+        await fn(tools, "exec_job")("job-1", "true")
+    assert tools[1].jobs.exec_args is None
+
+    Ledger().append(
+        resource_type="job",
+        resource_id="job-1",
+        username="user@example.test",
+        cluster="alpha",
+        org="team",
+        project="default",
+        operation="run_job",
+        action="created",
+    )
+    result = await fn(tools, "exec_job")("job-1", "true")
+    assert result["exit_code"] == 7
+
+
 async def test_wait_returns_bounded_timeout_summary(tools):
     waited = await fn(tools, "wait_for_job")("job-1", 0.001, 0.001)
     assert waited["terminal"] is False
@@ -334,6 +490,7 @@ async def test_get_rejects_job_outside_explicit_context(tools):
     [
         ("get_job_logs", ("job-1",)),
         ("get_job_telemetry", ("job-1",)),
+        ("exec_job", ("job-1", "true")),
         ("bump_job_life_span", ("job-1", 60)),
         ("send_job_signal", ("job-1",)),
         ("save_job_image", ("job-1", "repo:saved")),
@@ -430,6 +587,7 @@ async def test_policy_blocks_writes_before_sdk(tools, monkeypatch):
 async def test_write_schemas_have_no_model_supplied_approval(tools):
     for name in (
         "run_job",
+        "exec_job",
         "bump_job_life_span",
         "send_job_signal",
         "save_job_image",
@@ -452,6 +610,6 @@ def test_inline_annotations_are_exact(tools):
     assert tools[0]["get_job"].annotations.readOnlyHint is True
     assert tools[0]["run_job"].annotations.destructiveHint is False
     assert tools[0]["run_job"].annotations.idempotentHint is False
+    assert tools[0]["exec_job"].annotations.readOnlyHint is False
     assert tools[0]["kill_job"].annotations.destructiveHint is True
     assert tools[0]["kill_job"].annotations.idempotentHint is True
-    assert "exec_job" not in tools[0]

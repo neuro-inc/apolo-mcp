@@ -69,7 +69,9 @@ mounts. Never add `--pass-config`; it forwards the launching user's credentials.
 
 ## Handoff
 
-Return commands with the exact job ID after launch:
+Use `exec_job` for bounded non-interactive bootstrap, inventory, and verification
+commands in the MCP-owned running job. Return local CLI commands with the exact job ID
+for interactive shell/tmux access and operator-controlled lifecycle actions:
 
 ```console
 apolo status <JOB_ID>

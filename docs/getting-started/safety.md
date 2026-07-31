@@ -87,6 +87,15 @@ Tools used by the `apolo-platform-user-context` skill.
 - [`list_projects`](../capabilities/tools/context.md#list_projects) — List projects for explicit context without changing saved selection.
 - [`list_presets`](../capabilities/tools/context.md#list_presets) — List bounded compute preset capabilities for a cluster.
 - [`resolve_resource_uri`](../capabilities/tools/context.md#resolve_resource_uri) — Resolve a short resource reference under explicit, non-persisted context.
+- [`list_admin_clusters`](../capabilities/tools/admin.md#list_admin_clusters) — List administrative cluster defaults and maintenance state.
+- [`list_admin_cluster_users`](../capabilities/tools/admin.md#list_admin_cluster_users) — List users and roles in one exact cluster and optional organization.
+- [`list_admin_orgs`](../capabilities/tools/admin.md#list_admin_orgs) — List administrative organization metadata.
+- [`list_admin_org_users`](../capabilities/tools/admin.md#list_admin_org_users) — List users, roles, balances, and safe profile fields in one org.
+- [`list_admin_cluster_orgs`](../capabilities/tools/admin.md#list_admin_cluster_orgs) — List organizations and quotas configured in one exact cluster.
+- [`get_admin_org_cluster_quota`](../capabilities/tools/admin.md#get_admin_org_cluster_quota) — Get quota and balance for one organization in one cluster.
+- [`list_admin_projects`](../capabilities/tools/admin.md#list_admin_projects) — List projects in one exact cluster and optional organization.
+- [`list_admin_project_users`](../capabilities/tools/admin.md#list_admin_project_users) — List users and roles in one exact project.
+- [`get_admin_user_quota`](../capabilities/tools/admin.md#get_admin_user_quota) — Get the same user quota and org balance data as apolo admin.
 
 ### Write operations
 
@@ -104,6 +113,7 @@ Tools used by the `apolo-research-job` skill.
 
 - [`list_jobs`](../capabilities/tools/jobs.md#list_jobs) — List jobs using context and bounded status/name/tag/owner/time filters.
 - [`get_job`](../capabilities/tools/jobs.md#get_job) — Get one job and its resolved context.
+- [`list_job_port_forwards`](../capabilities/tools/jobs.md#list_job_port_forwards) — List active forwards owned by this MCP process and exact context.
 - [`wait_for_job`](../capabilities/tools/jobs.md#wait_for_job) — Poll until terminal state, always bounded by timeout_seconds.
 - [`get_job_logs`](../capabilities/tools/jobs.md#get_job_logs) — Read a bounded log prefix with explicit timeout and truncation metadata.
 - [`get_job_telemetry`](../capabilities/tools/jobs.md#get_job_telemetry) — Collect a bounded telemetry summary and optionally bounded raw samples.
@@ -111,6 +121,9 @@ Tools used by the `apolo-research-job` skill.
 ### Write operations
 
 - [`run_job`](../capabilities/tools/jobs.md#run_job) — Start a policy-authorized job; direct secret values are forbidden. Mount item schemas, included here for MCP clients that do not expand JSON Schema references: - storage_volumes: {storage, container_path, read_only=false} - disk_volumes: {disk, container_path, read_only=false} - secret_files: {secret, container_path} storage and disk accept short references or exact same-context URIs. secret must be a secret: reference. secret_env maps an environment variable name to a secret: reference; env accepts non-sensitive literal values only.
+- [`exec_job`](../capabilities/tools/jobs.md#exec_job) — Execute one non-interactive command in an owned running job. The executable and argument list are shell-quoted separately; no stdin or TTY is exposed. Output is duration/byte bounded and credential-redacted. Use mounted secrets or secret environment references instead of command arguments for credentials.
+- [`start_job_port_forward`](../capabilities/tools/jobs.md#start_job_port_forward) — Start a loopback-only background forward to one running owned job. Forwarded bytes never enter MCP results. The listener remains active until stop_job_port_forward is called or the MCP server exits.
+- [`stop_job_port_forward`](../capabilities/tools/jobs.md#stop_job_port_forward) — Stop one exact background forward owned by this MCP process.
 - [`bump_job_life_span`](../capabilities/tools/jobs.md#bump_job_life_span) — Extend a job lifespan under full or owned managed policy.
 - [`send_job_signal`](../capabilities/tools/jobs.md#send_job_signal) — Send the SDK's graceful signal under full or owned managed policy.
 - [`save_job_image`](../capabilities/tools/jobs.md#save_job_image) — Save an owned job filesystem to a policy-authorized image target.
@@ -199,6 +212,7 @@ Tools used by the `apolo-resource-management` skill.
 - [`get_bucket_disk_usage`](../capabilities/tools/buckets.md#get_bucket_disk_usage) — Scan bounded usage; complete=false means the object cap was reached.
 - [`stat_bucket_blob`](../capabilities/tools/buckets.md#stat_bucket_blob) — Return metadata only for one exact blob key.
 - [`list_bucket_blobs`](../capabilities/tools/buckets.md#list_bucket_blobs) — List blob metadata under an SDK-enforced and result-enforced bound.
+- [`list_bucket_credentials`](../capabilities/tools/buckets.md#list_bucket_credentials) — List safe persistent credential metadata for exact-context buckets. Provider credential values returned internally by the SDK are discarded and never serialized through MCP.
 - [`list_secrets`](../capabilities/tools/secrets.md#list_secrets) — List names, owners, and context only; never retrieve secret values.
 - [`list_service_accounts`](../capabilities/tools/service-accounts.md#list_service_accounts) — List accounts whose defaults match one exact resolved context.
 - [`get_service_account`](../capabilities/tools/service-accounts.md#get_service_account) — Get safe service-account metadata in one exact default context.
@@ -215,6 +229,8 @@ Tools used by the `apolo-resource-management` skill.
 - [`create_bucket`](../capabilities/tools/buckets.md#create_bucket) — Create and journal a bucket when server policy permits writes.
 - [`import_external_bucket`](../capabilities/tools/buckets.md#import_external_bucket) — Import using bounded JSON credentials from a protected internal source.
 - [`set_bucket_public_access`](../capabilities/tools/buckets.md#set_bucket_public_access) — Set public state for one exact immutable bucket ID.
+- [`create_bucket_credentials`](../capabilities/tools/buckets.md#create_bucket_credentials) — Create persistent credentials and atomically sink them to a 0600 file. Provider credential values are never returned through MCP.
+- [`export_bucket_credentials`](../capabilities/tools/buckets.md#export_bucket_credentials) — Write one exact persistent credential to a new protected local file. Provider credential values are never returned through MCP.
 - [`create_bucket_signed_url`](../capabilities/tools/buckets.md#create_bucket_signed_url) — Create a short-lived blob URL and write it to a protected local file. The URL is never returned through MCP.
 - [`upload_bucket_file`](../capabilities/tools/buckets.md#upload_bucket_file) — Upload one local file. Object bytes are never serialized through MCP. An optional positive timeout can bound the transfer when requested by the caller.
 - [`download_bucket_file`](../capabilities/tools/buckets.md#download_bucket_file) — Download one blob to a new local file. Existing files are never overwritten. Blob bytes are never serialized through MCP. An optional positive timeout can bound the transfer when requested by the caller.
@@ -227,6 +243,7 @@ Tools used by the `apolo-resource-management` skill.
 - [`delete_storage_path`](../capabilities/tools/storage.md#delete_storage_path) — Delete one exact path; recursive deletion removes its entire subtree.
 - [`delete_disk`](../capabilities/tools/disks.md#delete_disk) — Delete one exact disk ID under full or ledger-owned managed policy.
 - [`remove_image_tag`](../capabilities/tools/images.md#remove_image_tag) — Remove one exact image tag without requesting digest deletion. The operation passes the tag reference to the registry. Tags that happen to share a manifest digest are not separate deletion targets.
+- [`delete_bucket_credentials`](../capabilities/tools/buckets.md#delete_bucket_credentials) — Delete one exact persistent bucket credential under lifecycle policy.
 - [`delete_bucket_blob`](../capabilities/tools/buckets.md#delete_bucket_blob) — Delete one exact blob key; recursive/prefix deletion is not exposed.
 - [`delete_bucket`](../capabilities/tools/buckets.md#delete_bucket) — Recursively delete one exact bucket under full or owned managed policy.
 - [`delete_secret`](../capabilities/tools/secrets.md#delete_secret) — Delete one exact secret under full or owned managed policy.

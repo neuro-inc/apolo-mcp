@@ -657,6 +657,322 @@ Set public state for one exact immutable bucket ID.
 }
 ```
 
+## `list_bucket_credentials`
+
+List safe persistent credential metadata for exact-context buckets. Provider credential values returned internally by the SDK are discarded and never serialized through MCP.
+
+**Operation type:** read-only
+
+**Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
+
+**Input schema:**
+
+```json
+{
+  "properties": {
+    "cluster": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cluster"
+    },
+    "limit": {
+      "default": 50,
+      "title": "Limit",
+      "type": "integer"
+    },
+    "org": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Org"
+    },
+    "project": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Project"
+    }
+  },
+  "title": "list_bucket_credentialsArguments",
+  "type": "object"
+}
+```
+
+**Output schema:**
+
+```json
+{
+  "additionalProperties": true,
+  "title": "list_bucket_credentialsDictOutput",
+  "type": "object"
+}
+```
+
+## `create_bucket_credentials`
+
+Create persistent credentials and atomically sink them to a 0600 file. Provider credential values are never returned through MCP.
+
+**Operation type:** write
+
+**Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
+
+**Input schema:**
+
+```json
+{
+  "properties": {
+    "bucket_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Bucket Ids",
+      "type": "array"
+    },
+    "cluster": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cluster"
+    },
+    "destination_file": {
+      "title": "Destination File",
+      "type": "string"
+    },
+    "name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Name"
+    },
+    "org": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Org"
+    },
+    "project": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Project"
+    },
+    "read_only": {
+      "default": false,
+      "title": "Read Only",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "bucket_ids",
+    "destination_file"
+  ],
+  "title": "create_bucket_credentialsArguments",
+  "type": "object"
+}
+```
+
+**Output schema:**
+
+```json
+{
+  "additionalProperties": true,
+  "title": "create_bucket_credentialsDictOutput",
+  "type": "object"
+}
+```
+
+## `export_bucket_credentials`
+
+Write one exact persistent credential to a new protected local file. Provider credential values are never returned through MCP.
+
+**Operation type:** write
+
+**Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
+
+**Input schema:**
+
+```json
+{
+  "properties": {
+    "cluster": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cluster"
+    },
+    "credential_id": {
+      "title": "Credential Id",
+      "type": "string"
+    },
+    "destination_file": {
+      "title": "Destination File",
+      "type": "string"
+    },
+    "org": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Org"
+    },
+    "project": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Project"
+    }
+  },
+  "required": [
+    "credential_id",
+    "destination_file"
+  ],
+  "title": "export_bucket_credentialsArguments",
+  "type": "object"
+}
+```
+
+**Output schema:**
+
+```json
+{
+  "additionalProperties": true,
+  "title": "export_bucket_credentialsDictOutput",
+  "type": "object"
+}
+```
+
+## `delete_bucket_credentials`
+
+Delete one exact persistent bucket credential under lifecycle policy.
+
+**Operation type:** destructive
+
+**Annotations:** read-only `false`, destructive `true`, idempotent `true`, open-world `true`
+
+**Input schema:**
+
+```json
+{
+  "properties": {
+    "cluster": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cluster"
+    },
+    "credential_id": {
+      "title": "Credential Id",
+      "type": "string"
+    },
+    "org": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Org"
+    },
+    "project": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Project"
+    }
+  },
+  "required": [
+    "credential_id"
+  ],
+  "title": "delete_bucket_credentialsArguments",
+  "type": "object"
+}
+```
+
+**Output schema:**
+
+```json
+{
+  "additionalProperties": true,
+  "title": "delete_bucket_credentialsDictOutput",
+  "type": "object"
+}
+```
+
 ## `create_bucket_signed_url`
 
 Create a short-lived blob URL and write it to a protected local file. The URL is never returned through MCP.

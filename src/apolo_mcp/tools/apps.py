@@ -34,6 +34,7 @@ from ..ledger import (
     record_resource_action,
 )
 from ..policy import MutationEffect, PolicyMode, authorize_mutation, current_policy
+from ..security import redact_log_credentials
 
 
 READ_ONLY = ToolAnnotations(
@@ -79,27 +80,6 @@ TERMINAL_STATES = {
 _SENSITIVE = re.compile(
     r"(?i)(password|passwd|token|secret(?:_?value)?|api[-_]?key|private[-_]?key|"
     r"\.?docker[-_]?config(?:[-_]?json)?)"
-)
-_LOG_SENSITIVE_KEY = (
-    r"(?:APOLO_PASSED_CONFIG|APOLO_[A-Z0-9_]*TOKEN|"
-    r"\.?docker[-_]?config(?:[-_]?json)?)"
-)
-_LOG_CREDENTIAL = re.compile(
-    r"(?i)\b(authorization|cookie|token|password|secret|api[-_]?key|"
-    + _LOG_SENSITIVE_KEY
-    + r")"
-    r"(\s*[:=]\s*|\s+)([^\s,;]+)"
-)
-_LOG_URL_CREDENTIAL = re.compile(r"(://)[^/@\s]+@")
-_LOG_QUOTED_CREDENTIAL = re.compile(
-    r"(?i)(?P<prefix>[\"']" + _LOG_SENSITIVE_KEY + r""
-    r"[\"']\s*:\s*[\"'])[^\"'\r\n]*(?P<suffix>[\"']|(?=\r?\n|\Z))"
-)
-_LOG_NAMED_ENV_CREDENTIAL = re.compile(
-    r"(?i)(?P<prefix>[\"']name[\"']\s*:\s*[\"']"
-    r"(?:APOLO_PASSED_CONFIG|APOLO_[A-Z0-9_]*TOKEN)[\"']\s*,\s*"
-    r"[\"']value[\"']\s*:\s*[\"'])[^\"'\r\n]*"
-    r"(?P<suffix>[\"']|(?=\r?\n|\Z))"
 )
 
 
@@ -154,13 +134,6 @@ def _redact(value: Any) -> Any:
     if isinstance(value, str):
         return sanitize_message(value, limit=2000)
     return value
-
-
-def _redact_log(value: str) -> str:
-    value = _LOG_URL_CREDENTIAL.sub(r"\1<redacted>@", value)
-    value = _LOG_NAMED_ENV_CREDENTIAL.sub(r"\g<prefix><redacted>\g<suffix>", value)
-    value = _LOG_QUOTED_CREDENTIAL.sub(r"\g<prefix><redacted>\g<suffix>", value)
-    return _LOG_CREDENTIAL.sub(r"\1\2<redacted>", value)
 
 
 _EXPECTED_SDK_ERRORS = (
@@ -712,7 +685,7 @@ def register(mcp: FastMCP) -> None:
         if len(encoded) > max_bytes:
             encoded = encoded[-max_bytes:]
             truncated = True
-        redacted_bytes = _redact_log(
+        redacted_bytes = redact_log_credentials(
             encoded.decode("utf-8", errors="replace")
         ).encode()[:max_bytes]
         redacted = redacted_bytes.decode("utf-8", errors="replace")

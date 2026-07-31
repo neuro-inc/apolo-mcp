@@ -38,10 +38,12 @@ tests; never keep a job alive to emulate a deployment.
 9. Record created app IDs in the ledger and automatically clean up only exact
    ledger-owned IDs. Preserve reviewed inputs and the sanitized execution result.
 
-When an App needs a custom image, build it remotely with
-`apolo-extras image build LOCAL_CONTEXT image:UNIQUE_REPOSITORY:UNIQUE_TAG` unless a
-typed MCP/Flow build operation is available. The Kaniko builder is a bounded job; the
-resulting service still belongs in an App. Record the exact builder job, build-context
+When an App needs a custom image, use the
+[Flow-first image-build workflow](../apolo-flow-workloads/references/image-builds.md).
+Prefer dedicated content-addressed component images in an existing Flow project and
+fall back to the documented `apolo-extras image build` command only without Flow
+context. The remote builder is a bounded job; the resulting service still belongs in
+an App. Record the exact builder job, build-context
 path, and image tag, then clean only those created targets.
 
 For the Service Deployment template, preserve Apolo image URI semantics in the

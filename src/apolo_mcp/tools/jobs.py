@@ -2,6 +2,10 @@
 
 import asyncio
 import re
+import shlex
+import uuid
+from contextlib import AsyncExitStack
+from dataclasses import dataclass
 from datetime import datetime
 from statistics import fmean
 from typing import Any, Literal
@@ -21,6 +25,7 @@ from ..ledger import (
     record_resource_action,
 )
 from ..policy import MutationEffect, authorize_mutation
+from ..security import redact_log_credentials
 
 
 READ_ONLY = ToolAnnotations(
@@ -39,18 +44,61 @@ MAX_LOG_LINES = 10_000
 MAX_WAIT_SECONDS = 86_400.0
 MAX_STREAM_SECONDS = 300.0
 MAX_TELEMETRY_SAMPLES = 100
+MAX_EXEC_SECONDS = 3_600.0
+MAX_EXEC_OUTPUT_BYTES = 1_000_000
+MAX_EXEC_ARGUMENTS = 256
+MAX_EXEC_COMMAND_CHARS = 32_768
+MAX_ACTIVE_PORT_FORWARDS = 16
 TERMINAL = {
     apolo_sdk.JobStatus.SUCCEEDED,
     apolo_sdk.JobStatus.FAILED,
     apolo_sdk.JobStatus.CANCELLED,
 }
-_CREDENTIAL = re.compile(
-    r"(?i)(authorization|cookie|token|password|secret|api[-_]?key)"
-    r"(\s*[:=]\s*|\s+)([^\s,;]+)"
-)
 _SENSITIVE_ENV_NAME = re.compile(
     r"(?i)(authorization|cookie|token|password|secret|api[-_]?key)"
 )
+
+
+@dataclass
+class _PortForward:
+    stack: AsyncExitStack
+    forwarding_id: str
+    job_id: str
+    local_port: int
+    remote_port: int
+    username: str
+    cluster: str
+    org: str
+    project: str
+
+    def metadata(self) -> dict[str, Any]:
+        return {
+            "forwarding_id": self.forwarding_id,
+            "job_id": self.job_id,
+            "local_host": "localhost",
+            "local_port": self.local_port,
+            "remote_port": self.remote_port,
+            "context": {
+                "username": self.username,
+                "cluster": self.cluster,
+                "org": self.org,
+                "project": self.project,
+            },
+        }
+
+
+_port_forwards: dict[str, _PortForward] = {}
+_port_forwards_lock = asyncio.Lock()
+
+
+async def close_all_port_forwards() -> None:
+    """Close every process-owned local listener during MCP shutdown."""
+    async with _port_forwards_lock:
+        entries = list(_port_forwards.values())
+        _port_forwards.clear()
+    await asyncio.gather(
+        *(entry.stack.aclose() for entry in entries), return_exceptions=True
+    )
 
 
 class StorageVolumeInput(BaseModel):
@@ -154,7 +202,83 @@ def _image_ref(value: str, resolved: ApoloContext) -> str:
 
 
 def _redact_logs(value: str) -> str:
-    return _CREDENTIAL.sub(r"\1\2<redacted>", value)
+    return redact_log_credentials(value)
+
+
+def _exec_command(executable: str, arguments: list[str] | None) -> str:
+    parts = [executable, *(arguments or [])]
+    if len(parts) > MAX_EXEC_ARGUMENTS + 1:
+        raise ValueError(f"arguments must contain at most {MAX_EXEC_ARGUMENTS} items")
+    for index, value in enumerate(parts):
+        name = "executable" if index == 0 else f"arguments[{index - 1}]"
+        if not isinstance(value, str) or not value:
+            raise ValueError(f"{name} must be a non-empty string")
+        if any(ord(char) < 32 or ord(char) == 127 for char in value):
+            raise ValueError(f"{name} must not contain control characters")
+        if redact_log_credentials(value) != value:
+            raise ValueError(
+                f"{name} appears to contain credential material; use a mounted "
+                "secret or secret environment reference"
+            )
+    command = shlex.join(parts)
+    if len(command) > MAX_EXEC_COMMAND_CHARS:
+        raise ValueError(
+            f"encoded command must contain at most {MAX_EXEC_COMMAND_CHARS} characters"
+        )
+    return command
+
+
+async def _collect_exec_output(
+    stream: Any,
+    max_output_bytes: int,
+    stdout: bytearray,
+    stderr: bytearray,
+) -> tuple[int | None, bool]:
+    exit_code: int | None = None
+    truncated = False
+    accepted = 0
+    while True:
+        try:
+            message = await stream.read_out()
+        except apolo_sdk.StdStreamError as exc:
+            exit_code = exc.exit_code
+            break
+        if message is None:
+            break
+        target = (
+            stdout if message.fileno == 1 else stderr if message.fileno == 2 else None
+        )
+        if target is None:
+            continue
+        remaining = max_output_bytes - accepted
+        if remaining > 0:
+            chunk = message.data[:remaining]
+            target.extend(chunk)
+            accepted += len(chunk)
+        if len(message.data) > remaining:
+            truncated = True
+    return exit_code, truncated
+
+
+def _exec_text(
+    stdout: bytearray, stderr: bytearray, max_output_bytes: int
+) -> tuple[str, str, int, bool]:
+    redacted_stdout = redact_log_credentials(
+        bytes(stdout).decode("utf-8", errors="replace")
+    ).encode()
+    redacted_stderr = redact_log_credentials(
+        bytes(stderr).decode("utf-8", errors="replace")
+    ).encode()
+    bounded_stdout = redacted_stdout[:max_output_bytes]
+    remaining = max_output_bytes - len(bounded_stdout)
+    bounded_stderr = redacted_stderr[:remaining]
+    truncated = len(redacted_stdout) + len(redacted_stderr) > max_output_bytes
+    return (
+        bounded_stdout.decode("utf-8", errors="ignore"),
+        bounded_stderr.decode("utf-8", errors="ignore"),
+        len(bounded_stdout) + len(bounded_stderr),
+        truncated,
+    )
 
 
 def _safe_env(value: dict[str, str] | None) -> dict[str, str]:
@@ -435,6 +559,296 @@ def register(mcp: FastMCP) -> None:
                 operation="get_job",
                 context=resolved.as_dict() if resolved else None,
                 resource=job_id,
+            ) from None
+
+    @mcp.tool(annotations=WRITE)
+    async def exec_job(
+        job_id: str,
+        executable: str,
+        arguments: list[str] | None = None,
+        timeout_seconds: float = 60,
+        max_output_bytes: int = 100_000,
+        cluster: str | None = None,
+        org: str | None = None,
+        project: str | None = None,
+    ) -> dict[str, Any]:
+        """Execute one non-interactive command in an owned running job.
+
+        The executable and argument list are shell-quoted separately; no stdin or TTY
+        is exposed. Output is duration/byte bounded and credential-redacted. Use
+        mounted secrets or secret environment references instead of command arguments
+        for credentials.
+        """
+        command = _exec_command(executable, arguments)
+        _positive(timeout_seconds, "timeout_seconds", MAX_EXEC_SECONDS)
+        if not 1 <= max_output_bytes <= MAX_EXEC_OUTPUT_BYTES:
+            raise ValueError(
+                f"max_output_bytes must be between 1 and {MAX_EXEC_OUTPUT_BYTES}"
+            )
+        resolved: ApoloContext | None = None
+        stdout = bytearray()
+        stderr = bytearray()
+        exit_code: int | None = None
+        truncated = False
+        timed_out = False
+        started = False
+        try:
+            async with client() as sdk:
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
+                status = await sdk.jobs.status(job_id)
+                _ensure_job_context(status, resolved)
+                if status.status is not apolo_sdk.JobStatus.RUNNING:
+                    raise ValueError("exec_job requires a running job")
+                authorize_mutation(
+                    operation="exec_job",
+                    effect=MutationEffect.UPDATE,
+                    resource_type="job",
+                    resource_id=status.id,
+                    username=resolved.username,
+                    cluster=resolved.cluster,
+                    org=resolved.org,
+                    project=resolved.project,
+                )
+                try:
+                    async with timeout(timeout_seconds):
+                        async with sdk.jobs.exec(
+                            job_id,
+                            command,
+                            tty=False,
+                            stdin=False,
+                            stdout=True,
+                            stderr=True,
+                            cluster_name=resolved.cluster,
+                        ) as stream:
+                            started = True
+                            exit_code, truncated = await _collect_exec_output(
+                                stream,
+                                max_output_bytes,
+                                stdout,
+                                stderr,
+                            )
+                except TimeoutError:
+                    timed_out = True
+                    truncated = True
+                if started:
+                    record_resource_action(
+                        resource_type="job",
+                        resource_id=status.id,
+                        username=resolved.username,
+                        cluster=resolved.cluster,
+                        org=resolved.org,
+                        project=resolved.project,
+                        operation="exec_job",
+                        action="updated",
+                    )
+                safe_stdout, safe_stderr, output_bytes, redaction_truncated = (
+                    _exec_text(stdout, stderr, max_output_bytes)
+                )
+                return {
+                    "id": status.id,
+                    "exit_code": exit_code,
+                    "stdout": safe_stdout,
+                    "stderr": safe_stderr,
+                    "output_bytes": output_bytes,
+                    "truncated": truncated or redaction_truncated,
+                    "timed_out": timed_out,
+                    "context": resolved.as_dict(),
+                }
+        except Exception as exc:
+            raise normalize_error(
+                exc,
+                operation="exec_job",
+                context=resolved.as_dict() if resolved else None,
+                resource=job_id,
+            ) from None
+
+    @mcp.tool(annotations=WRITE)
+    async def start_job_port_forward(
+        job_id: str,
+        local_port: int,
+        remote_port: int,
+        cluster: str | None = None,
+        org: str | None = None,
+        project: str | None = None,
+    ) -> dict[str, Any]:
+        """Start a loopback-only background forward to one running owned job.
+
+        Forwarded bytes never enter MCP results. The listener remains active until
+        stop_job_port_forward is called or the MCP server exits.
+        """
+        if not 1 <= local_port <= 65535:
+            raise ValueError("local_port must be between 1 and 65535")
+        if not 1 <= remote_port <= 65535:
+            raise ValueError("remote_port must be between 1 and 65535")
+        resolved: ApoloContext | None = None
+        stack = AsyncExitStack()
+        registered = False
+        try:
+            sdk = await stack.enter_async_context(client())
+            resolved = resolve_context(
+                sdk.config, cluster=cluster, org=org, project=project
+            )
+            status = await sdk.jobs.status(job_id)
+            _ensure_job_context(status, resolved)
+            if status.status is not apolo_sdk.JobStatus.RUNNING:
+                raise ValueError("port forwarding requires a running job")
+            authorize_mutation(
+                operation="start_job_port_forward",
+                effect=MutationEffect.UPDATE,
+                resource_type="job",
+                resource_id=status.id,
+                username=resolved.username,
+                cluster=resolved.cluster,
+                org=resolved.org,
+                project=resolved.project,
+            )
+            async with _port_forwards_lock:
+                if len(_port_forwards) >= MAX_ACTIVE_PORT_FORWARDS:
+                    raise ValueError(
+                        "maximum number of active MCP port forwards has been reached"
+                    )
+                if any(
+                    entry.local_port == local_port for entry in _port_forwards.values()
+                ):
+                    raise ValueError("local_port is already managed by this MCP server")
+                await stack.enter_async_context(
+                    sdk.jobs.port_forward(
+                        status.id,
+                        local_port,
+                        remote_port,
+                        cluster_name=resolved.cluster,
+                    )
+                )
+                forwarding_id = str(uuid.uuid4())
+                entry = _PortForward(
+                    stack=stack,
+                    forwarding_id=forwarding_id,
+                    job_id=status.id,
+                    local_port=local_port,
+                    remote_port=remote_port,
+                    username=resolved.username,
+                    cluster=resolved.cluster,
+                    org=resolved.org,
+                    project=resolved.project,
+                )
+                _port_forwards[forwarding_id] = entry
+                registered = True
+            return {"forward": entry.metadata(), "active": True}
+        except Exception as exc:
+            raise normalize_error(
+                exc,
+                operation="start_job_port_forward",
+                context=resolved.as_dict() if resolved else None,
+                resource=job_id,
+            ) from None
+        finally:
+            if not registered:
+                await stack.aclose()
+
+    @mcp.tool(annotations=READ_ONLY)
+    async def list_job_port_forwards(
+        cluster: str | None = None,
+        org: str | None = None,
+        project: str | None = None,
+    ) -> dict[str, Any]:
+        """List active forwards owned by this MCP process and exact context."""
+        resolved: ApoloContext | None = None
+        try:
+            async with client() as sdk:
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
+            async with _port_forwards_lock:
+                items = [
+                    entry.metadata()
+                    for entry in _port_forwards.values()
+                    if (
+                        entry.username,
+                        entry.cluster,
+                        entry.org,
+                        entry.project,
+                    )
+                    == (
+                        resolved.username,
+                        resolved.cluster,
+                        resolved.org,
+                        resolved.project,
+                    )
+                ]
+            return {"items": items, "count": len(items), "context": resolved.as_dict()}
+        except Exception as exc:
+            raise normalize_error(
+                exc,
+                operation="list_job_port_forwards",
+                context=resolved.as_dict() if resolved else None,
+            ) from None
+
+    @mcp.tool(annotations=WRITE)
+    async def stop_job_port_forward(
+        forwarding_id: str,
+        cluster: str | None = None,
+        org: str | None = None,
+        project: str | None = None,
+    ) -> dict[str, Any]:
+        """Stop one exact background forward owned by this MCP process."""
+        try:
+            if str(uuid.UUID(forwarding_id)) != forwarding_id:
+                raise ValueError
+        except (ValueError, AttributeError) as exc:
+            raise ValueError("forwarding_id must be one exact UUID") from exc
+        resolved: ApoloContext | None = None
+        entry: _PortForward | None = None
+        try:
+            async with client() as sdk:
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
+                async with _port_forwards_lock:
+                    entry = _port_forwards.get(forwarding_id)
+                if entry is None:
+                    raise ValueError("forwarding_id is not active in this MCP process")
+                if (
+                    entry.username,
+                    entry.cluster,
+                    entry.org,
+                    entry.project,
+                ) != (
+                    resolved.username,
+                    resolved.cluster,
+                    resolved.org,
+                    resolved.project,
+                ):
+                    raise ValueError(
+                        "port forward does not belong to the exact context"
+                    )
+                authorize_mutation(
+                    operation="stop_job_port_forward",
+                    effect=MutationEffect.UPDATE,
+                    resource_type="job",
+                    resource_id=entry.job_id,
+                    username=resolved.username,
+                    cluster=resolved.cluster,
+                    org=resolved.org,
+                    project=resolved.project,
+                )
+                async with _port_forwards_lock:
+                    removed = _port_forwards.pop(forwarding_id, None)
+                if removed is None:
+                    raise ValueError("forwarding_id is no longer active")
+            await removed.stack.aclose()
+            return {
+                "status": "stopped",
+                "forwarding_id": forwarding_id,
+                "context": resolved.as_dict(),
+            }
+        except Exception as exc:
+            raise normalize_error(
+                exc,
+                operation="stop_job_port_forward",
+                context=resolved.as_dict() if resolved else None,
+                resource=forwarding_id,
             ) from None
 
     @mcp.tool(annotations=READ_ONLY)

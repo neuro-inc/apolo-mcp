@@ -8,12 +8,13 @@ registry. Input and output schemas therefore describe the actual MCP tool contra
 Each page corresponds exactly to one entry in the declarative capability catalog.
 
 - [Context](context.md) — Platform context, discovery, presets, and resource resolution.
-- [Jobs](jobs.md) — Job lifecycle, logs, telemetry, signals, and image snapshots.
+- [Administration discovery](admin.md) — Read-only RBAC-gated cluster, organization, project, user, and quota discovery using the same SDK admin facade as apolo-cli.
+- [Jobs](jobs.md) — Job lifecycle, non-interactive execution, logs, telemetry, signals, image snapshots, and process-owned loopback port forwarding.
 - [Flow](flow.md) — Schema-guided Flow configuration plus live-job and batch-bake lifecycles.
 - [Applications](applications.md) — App discovery, inspection, planning, and lifecycle operations.
 - [Storage](storage.md) — Remote storage listing, metadata, single-file transfer, text, and directories.
 - [Disks](disks.md) — Persistent disk discovery, creation, and deletion.
 - [Images](images.md) — Container image discovery, inspection, transfer, and removal.
-- [Buckets](buckets.md) — Bucket and blob metadata, transfer, access, and lifecycle operations.
+- [Buckets](buckets.md) — Bucket, blob, and persistent-credential metadata, secure sinks, transfer, access, and lifecycle operations.
 - [Secrets](secrets.md) — Protected secret discovery, file retrieval, creation, and deletion.
 - [Service accounts](service-accounts.md) — Service-account metadata, protected creation, and deletion.

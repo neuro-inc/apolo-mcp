@@ -29,6 +29,12 @@
 7. Route exact SDK signatures to SDK references, CLI flags to generated CLI pages,
    Flow syntax to Flow references, app journeys to GitBook, and MCP contracts to the
    server capability matrix. State the source and tested version when exactness matters.
+8. For an authorized administrator's read-only discovery request, use the
+   `list_admin_*` and `get_admin_*` tools for cluster, organization, project, user,
+   quota, balance, and maintenance metadata. These call the same Apolo SDK admin
+   facade as `apolo admin get-*`; they do not grant access or perform administrative
+   mutations. Treat user profile data as operationally sensitive and return only what
+   the task needs.
 
 Never request, display, or persist passed configuration, tokens, cookies, secret
 values, or service-account credentials. Discovery results may include identity and
