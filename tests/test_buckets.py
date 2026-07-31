@@ -232,12 +232,14 @@ async def test_file_transfers_are_workspace_bounded_and_never_return_bytes(tools
         )
     assert uploaded["timeout_seconds"] is None
     assert downloaded["timeout_seconds"] is None
-    assert "max_bytes" not in mcp._tool_manager._tools[
-        "upload_bucket_file"
-    ].parameters["properties"]
-    assert "max_bytes" not in mcp._tool_manager._tools[
-        "download_bucket_file"
-    ].parameters["properties"]
+    assert (
+        "max_bytes"
+        not in mcp._tool_manager._tools["upload_bucket_file"].parameters["properties"]
+    )
+    assert (
+        "max_bytes"
+        not in mcp._tool_manager._tools["download_bucket_file"].parameters["properties"]
+    )
 
 
 async def test_exact_deletes_and_ledger_owned_cleanup(tools):
