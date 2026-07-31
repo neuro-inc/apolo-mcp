@@ -337,6 +337,7 @@ def register(mcp: FastMCP) -> None:
                 record_created_resource(
                     resource_type="job",
                     resource_id=started.id,
+                    username=resolved.username,
                     cluster=resolved.cluster,
                     org=resolved.org,
                     project=resolved.project,
@@ -640,6 +641,7 @@ def register(mcp: FastMCP) -> None:
                     effect=MutationEffect.UPDATE,
                     resource_type="job",
                     resource_id=status.id,
+                    username=resolved.username,
                     cluster=resolved.cluster,
                     org=resolved.org,
                     project=resolved.project,
@@ -665,6 +667,7 @@ def register(mcp: FastMCP) -> None:
                         ),
                         resource_type=resource_type,
                         resource_id=resource_id,
+                        username=resolved.username,
                         cluster=resolved.cluster,
                         org=resolved.org,
                         project=resolved.project,
@@ -673,6 +676,7 @@ def register(mcp: FastMCP) -> None:
                 record_resource_action(
                     resource_type="job",
                     resource_id=status.id,
+                    username=resolved.username,
                     cluster=resolved.cluster,
                     org=resolved.org,
                     project=resolved.project,
@@ -684,6 +688,7 @@ def register(mcp: FastMCP) -> None:
                     record_resource_action(
                         resource_type=resource_type,
                         resource_id=resource_id,
+                        username=resolved.username,
                         cluster=resolved.cluster,
                         org=resolved.org,
                         project=resolved.project,

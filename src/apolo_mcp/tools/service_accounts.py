@@ -271,6 +271,7 @@ def register(mcp: FastMCP) -> None:
                 record_created_resource(
                     resource_type="service_account",
                     resource_id=item.id,
+                    username=resolved.username,
                     cluster=resolved.cluster,
                     org=resolved.org,
                     project=resolved.project,
@@ -301,6 +302,7 @@ def register(mcp: FastMCP) -> None:
                     record_created_resource(
                         resource_type="secret",
                         resource_id=destination_name,
+                        username=resolved.username,
                         cluster=resolved.cluster,
                         org=resolved.org,
                         project=resolved.project,
@@ -355,6 +357,7 @@ def register(mcp: FastMCP) -> None:
                     effect=MutationEffect.DELETE,
                     resource_type="service_account",
                     resource_id=item.id,
+                    username=resolved.username,
                     cluster=resolved.cluster,
                     org=resolved.org,
                     project=resolved.project,
@@ -363,6 +366,7 @@ def register(mcp: FastMCP) -> None:
                 record_resource_action(
                     resource_type="service_account",
                     resource_id=item.id,
+                    username=resolved.username,
                     cluster=resolved.cluster,
                     org=resolved.org,
                     project=resolved.project,

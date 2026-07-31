@@ -82,7 +82,7 @@ The following self-contained runtime and job configuration is also packaged with
 
 ## 4. Launch a bounded R&D job
 
-Resolve `node:22-bookworm-slim` to a registry digest, or select another reviewed slim
+Select `node:22-bookworm-slim`, or another reviewed slim
 glibc-based image meeting the requirements above. Supply coding-agent provider
 credentials separately according to that provider's headless-operation guidance.
 Launch the bootstrap job with explicit context, a bounded lifetime, a clean Apolo

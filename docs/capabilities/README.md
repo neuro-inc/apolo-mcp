@@ -88,8 +88,9 @@ protected sinks.
 | `apolo storage df` | Native | `stat_storage`/usage metadata | Structured size/usage. |
 | `apolo storage mkdir`, `apolo mkdir` | Native | `make_directory` | Idempotent write, explicit resolved context. |
 | small UTF-8 reads/writes | Native | `read_text`, `write_text` | Strict byte bound; binary rejected. |
+| `apolo storage cp`, `apolo cp` (single file) | Native | `upload_storage_file`, `download_storage_file` | Timeout bound, confined local paths, exact same-context target, verified size, and no local overwrite. File bytes never cross model context. |
 | `apolo storage rm`, `apolo rm` | Native | `delete_storage_path` | Exact path; recursive mode destructive, with policy and lifecycle-journal rules. |
-| `apolo storage cp`, `apolo cp`; `apolo storage glob`; `apolo storage tree` | Manual CLI | the listed CLI commands | High-volume/recursive traversal stays outside MCP/model context. This package does not wrap those commands. |
+| `apolo storage cp`, `apolo cp` (recursive); `apolo storage glob`; `apolo storage tree` | Manual CLI | the listed CLI commands | High-volume/recursive traversal stays outside MCP/model context. This package does not wrap those commands. |
 | `apolo storage mv`, `apolo mv` | Manual CLI | `apolo storage mv` | Moving across local and remote boundaries stays a user-reviewed CLI operation. |
 | `apolo disk ls` | Native | `list_disks` | Bounded explicit context. |
 | `apolo disk get` | Native | `get_disk` | Exact ID/name and context. |

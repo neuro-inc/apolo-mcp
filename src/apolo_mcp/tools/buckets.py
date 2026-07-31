@@ -53,8 +53,6 @@ MAX_LIST_RESULTS = 100
 MAX_USAGE_OBJECTS = 100_000
 MAX_WAIT_SECONDS = 300.0
 MAX_SIGNED_URL_SECONDS = 3600
-MAX_TRANSFER_BYTES = 5 * 1024**3
-MAX_TRANSFER_SECONDS = 3600.0
 
 
 def _exact(value: str, field: str) -> str:
@@ -134,6 +132,7 @@ def _authorize_bucket(
         effect=effect,
         resource_type="bucket",
         resource_id=item.id,
+        username=context.username,
         cluster=context.cluster,
         org=context.org,
         project=context.project,
@@ -149,6 +148,7 @@ def _record_bucket_action(
     record_resource_action(
         resource_type="bucket",
         resource_id=item.id,
+        username=context.username,
         cluster=context.cluster,
         org=context.org,
         project=context.project,
@@ -173,11 +173,15 @@ def _blob_uri(bucket: Any, key: str = "") -> URL:
     return URL(str(bucket.uri) + suffix)
 
 
-def _transfer_bounds(max_bytes: int, timeout_seconds: float) -> None:
-    if isinstance(max_bytes, bool) or not 1 <= max_bytes <= MAX_TRANSFER_BYTES:
-        raise ValueError(f"max_bytes must be between 1 and {MAX_TRANSFER_BYTES}")
-    if not 0 < timeout_seconds <= MAX_TRANSFER_SECONDS:
-        raise ValueError(f"timeout_seconds must be > 0 and <= {MAX_TRANSFER_SECONDS}")
+def _transfer_timeout(timeout_seconds: float | None) -> None:
+    if timeout_seconds is not None and timeout_seconds <= 0:
+        raise ValueError("timeout_seconds must be positive when provided")
+
+
+async def _await_transfer(operation: Any, timeout_seconds: float | None) -> Any:
+    if timeout_seconds is None:
+        return await operation
+    return await asyncio.wait_for(operation, timeout=timeout_seconds)
 
 
 def _credential_mapping(payload: bytes) -> dict[str, str]:
@@ -291,6 +295,7 @@ def register(mcp: FastMCP) -> None:
                 record_created_resource(
                     resource_type="bucket",
                     resource_id=item.id,
+                    username=resolved.username,
                     cluster=resolved.cluster,
                     org=resolved.org,
                     project=resolved.project,
@@ -360,6 +365,7 @@ def register(mcp: FastMCP) -> None:
                 record_created_resource(
                     resource_type="bucket",
                     resource_id=item.id,
+                    username=resolved.username,
                     cluster=resolved.cluster,
                     org=resolved.org,
                     project=resolved.project,
@@ -638,23 +644,21 @@ def register(mcp: FastMCP) -> None:
         local_path: str,
         bucket_id: str,
         key: str,
-        max_bytes: int = 1024**3,
-        timeout_seconds: float = 300.0,
+        timeout_seconds: float | None = None,
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
-        """Upload one bounded local file.
+        """Upload one local file.
 
-        Object bytes are never serialized through MCP.
+        Object bytes are never serialized through MCP. An optional positive timeout
+        can bound the transfer when requested by the caller.
         """
         value = _exact(bucket_id, "bucket_id")
         exact_key = _key(key)
-        _transfer_bounds(max_bytes, timeout_seconds)
+        _transfer_timeout(timeout_seconds)
         source = resolve_workspace_path(local_path, name="local_path", directory=False)
         size = source.stat().st_size
-        if size > max_bytes:
-            raise ValueError("local file exceeds max_bytes")
         resolved: ApoloContext | None = None
         try:
             async with client() as sdk:
@@ -667,16 +671,17 @@ def register(mcp: FastMCP) -> None:
                 _authorize_bucket(
                     "upload_bucket_file", MutationEffect.UPDATE, item, resolved
                 )
-                await asyncio.wait_for(
+                await _await_transfer(
                     sdk.buckets.upload_file(
                         URL(source.as_uri()), _blob_uri(item, exact_key), update=False
                     ),
-                    timeout=timeout_seconds,
+                    timeout_seconds,
                 )
                 _record_bucket_action("upload_bucket_file", "updated", item, resolved)
                 record_resource_action(
                     resource_type="bucket_blob",
                     resource_id=f"{item.id}/{exact_key}",
+                    username=resolved.username,
                     cluster=resolved.cluster,
                     org=resolved.org,
                     project=resolved.project,
@@ -705,19 +710,20 @@ def register(mcp: FastMCP) -> None:
         bucket_id: str,
         key: str,
         local_path: str,
-        max_bytes: int = 1024**3,
-        timeout_seconds: float = 300.0,
+        timeout_seconds: float | None = None,
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
     ) -> dict[str, Any]:
-        """Download one bounded blob to a new local file.
+        """Download one blob to a new local file.
 
-        Existing files are never overwritten.
+        Existing files are never overwritten. Blob bytes are never serialized through
+        MCP. An optional positive timeout can bound the transfer when requested by the
+        caller.
         """
         value = _exact(bucket_id, "bucket_id")
         exact_key = _key(key)
-        _transfer_bounds(max_bytes, timeout_seconds)
+        _transfer_timeout(timeout_seconds)
         destination = resolve_new_workspace_file(
             local_path, name="local_path", create_parents=True
         )
@@ -741,19 +747,17 @@ def register(mcp: FastMCP) -> None:
                     org_name=resolved.org,
                     project_name=resolved.project,
                 )
-                if entry.size > max_bytes:
-                    raise ValueError("remote blob exceeds max_bytes")
-                await asyncio.wait_for(
+                await _await_transfer(
                     sdk.buckets.download_file(
                         _blob_uri(item, exact_key),
                         URL(destination.as_uri()),
                         update=False,
                         continue_=False,
                     ),
-                    timeout=timeout_seconds,
+                    timeout_seconds,
                 )
                 actual_size = destination.stat().st_size
-                if actual_size != entry.size or actual_size > max_bytes:
+                if actual_size != entry.size:
                     raise RuntimeError(
                         "downloaded file size does not match blob metadata"
                     )
@@ -820,6 +824,7 @@ def register(mcp: FastMCP) -> None:
                 record_resource_action(
                     resource_type="bucket_blob",
                     resource_id=f"{item.id}/{exact_key}",
+                    username=resolved.username,
                     cluster=resolved.cluster,
                     org=resolved.org,
                     project=resolved.project,

@@ -30,7 +30,7 @@ List names, owners, and context only; never retrieve secret values.
       "title": "Cluster"
     },
     "limit": {
-      "default": 50,
+      "default": 1000,
       "title": "Limit",
       "type": "integer"
     },

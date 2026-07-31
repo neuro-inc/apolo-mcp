@@ -1,17 +1,19 @@
 ---
 name: apolo-resource-management
-description: Inspect and safely manage Apolo storage, disks, images, buckets/blobs, secrets, and service accounts with explicit context, bounded transfers, protected credential sources/sinks, policy gates, and exact ownership. Use for platform resource inventory, metadata, creation, transfer, deletion, or cleanup.
+description: Inspect and safely manage Apolo storage, disks, images, buckets/blobs, secrets, and service accounts with explicit context, workspace-confined transfers, protected credential sources/sinks, policy gates, and exact ownership. Use for platform resource inventory, metadata, creation, transfer, deletion, or cleanup.
 ---
 
 # Apolo resource management
 
 1. Resolve and display cluster/organization/project with `$apolo-platform-user-context`.
    Fully qualify short resource references and reject cross-context targets.
-2. Prefer metadata and bounded text operations. Cap every list, wait, log, byte count,
-   and duration; return a truthful truncation marker. Never move binary objects,
-   container layers, or large directory trees through model context.
-3. Use deterministic local CLI/scripts for bulk storage, image, or bucket transfer.
-   Set explicit size, duration, overwrite, and write-approval controls.
+2. Prefer metadata and bounded text operations. Cap every model-visible list, wait,
+   log, byte count, and duration; return a truthful truncation marker. Single-file
+   transfers stream outside model context and retain a duration bound. Never move
+   binary objects, container layers, or large directory trees through model context.
+3. Use native bounded MCP operations for single-file storage and bucket transfers.
+   Use deterministic local CLI/scripts only for recursive or bulk storage, image, or
+   bucket transfer. Set explicit duration, overwrite, and write controls.
    For image creation, prefer Apolo's remote builder:
    `apolo-extras image build LOCAL_CONTEXT image:UNIQUE_REPOSITORY:UNIQUE_TAG`.
    Treat its Kaniko job as bounded build work, record its exact returned job and

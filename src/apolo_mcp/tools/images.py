@@ -148,6 +148,7 @@ def register(mcp: FastMCP) -> None:
                     effect=effect,
                     resource_type="image",
                     resource_id=str(remote),
+                    username=resolved.username,
                     cluster=resolved.cluster,
                     org=resolved.org,
                     project=resolved.project,
@@ -160,6 +161,7 @@ def register(mcp: FastMCP) -> None:
                 record_resource_action(
                     resource_type="image",
                     resource_id=str(pushed),
+                    username=resolved.username,
                     cluster=resolved.cluster,
                     org=resolved.org,
                     project=resolved.project,
@@ -208,6 +210,7 @@ def register(mcp: FastMCP) -> None:
                 record_resource_action(
                     resource_type="local_image",
                     resource_id=str(pulled),
+                    username=resolved.username,
                     cluster=resolved.cluster,
                     org=resolved.org,
                     project=resolved.project,
@@ -356,6 +359,7 @@ def register(mcp: FastMCP) -> None:
                     effect=MutationEffect.DELETE,
                     resource_type="image",
                     resource_id=str(remote),
+                    username=resolved.username,
                     cluster=resolved.cluster,
                     org=resolved.org,
                     project=resolved.project,
@@ -364,6 +368,7 @@ def register(mcp: FastMCP) -> None:
                 record_resource_action(
                     resource_type="image",
                     resource_id=str(remote),
+                    username=resolved.username,
                     cluster=resolved.cluster,
                     org=resolved.org,
                     project=resolved.project,

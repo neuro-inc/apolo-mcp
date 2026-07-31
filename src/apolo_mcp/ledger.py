@@ -17,6 +17,7 @@ LEDGER_ENV = "APOLO_MCP_LEDGER_PATH"
 _SAFE_FIELDS = {
     "resource_type",
     "resource_id",
+    "username",
     "cluster",
     "org",
     "project",
@@ -68,6 +69,7 @@ class LedgerEntry:
 
     resource_type: str
     resource_id: str
+    username: str
     cluster: str
     org: str
     project: str
@@ -137,6 +139,7 @@ class Ledger:
         *,
         resource_type: str,
         resource_id: str,
+        username: str,
         cluster: str,
         org: str,
         project: str,
@@ -152,6 +155,7 @@ class Ledger:
             {
                 "resource_type": resource_type,
                 "resource_id": resource_id,
+                "username": username,
                 "cluster": cluster,
                 "org": org,
                 "project": project,
@@ -198,6 +202,7 @@ class Ledger:
         *,
         resource_type: str,
         resource_id: str,
+        username: str,
         cluster: str,
         org: str,
         project: str,
@@ -206,6 +211,7 @@ class Ledger:
         expected = (
             resource_type,
             resource_id,
+            username,
             cluster,
             org,
             project,
@@ -215,6 +221,7 @@ class Ledger:
             actual = (
                 entry.resource_type,
                 entry.resource_id,
+                entry.username,
                 entry.cluster,
                 entry.org,
                 entry.project,
@@ -228,6 +235,7 @@ class Ledger:
         *,
         resource_type: str,
         resource_id: str,
+        username: str,
         cluster: str,
         org: str,
         project: str,
@@ -236,6 +244,7 @@ class Ledger:
         history = self.history(
             resource_type=resource_type,
             resource_id=resource_id,
+            username=username,
             cluster=cluster,
             org=org,
             project=project,
@@ -247,6 +256,7 @@ class Ledger:
         *,
         resource_type: str,
         resource_id: str,
+        username: str,
         cluster: str,
         org: str,
         project: str,
@@ -255,6 +265,7 @@ class Ledger:
         history = self.history(
             resource_type=resource_type,
             resource_id=resource_id,
+            username=username,
             cluster=cluster,
             org=org,
             project=project,
@@ -278,6 +289,7 @@ def record_created_resource(
     *,
     resource_type: str,
     resource_id: str,
+    username: str,
     cluster: str,
     org: str,
     project: str,
@@ -287,6 +299,7 @@ def record_created_resource(
     return Ledger().append(
         resource_type=resource_type,
         resource_id=resource_id,
+        username=username,
         cluster=cluster,
         org=org,
         project=project,
@@ -299,6 +312,7 @@ def record_resource_action(
     *,
     resource_type: str,
     resource_id: str,
+    username: str,
     cluster: str,
     org: str,
     project: str,
@@ -309,6 +323,7 @@ def record_resource_action(
     return Ledger().append(
         resource_type=resource_type,
         resource_id=resource_id,
+        username=username,
         cluster=cluster,
         org=org,
         project=project,
@@ -326,6 +341,7 @@ def authorize_owned_resource(
     *,
     resource_type: str,
     resource_id: str,
+    username: str,
     cluster: str,
     org: str,
     project: str,
@@ -334,6 +350,7 @@ def authorize_owned_resource(
     return Ledger().authorize_owned_resource(
         resource_type=resource_type,
         resource_id=resource_id,
+        username=username,
         cluster=cluster,
         org=org,
         project=project,

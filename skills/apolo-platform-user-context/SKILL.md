@@ -6,7 +6,8 @@ description: Discover and explain a user's Apolo cluster, organization, project,
 # Apolo platform user context
 
 1. Call `get_apolo_context` before an operational workflow. Display the resolved
-   cluster, organization, and project. Never change the user's persisted context.
+   authenticated username, cluster, organization, and project. Never change the
+   user's persisted context.
 2. If any target is ambiguous, call `list_clusters`, `list_organizations`, and
    `list_projects` in hierarchy order. Pass explicit context to every later tool.
 3. Call `list_presets` before selecting compute. Compare CPU, memory, accelerator,

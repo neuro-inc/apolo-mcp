@@ -746,7 +746,7 @@ Create a short-lived blob URL and write it to a protected local file. The URL is
 
 ## `upload_bucket_file`
 
-Upload one bounded local file. Object bytes are never serialized through MCP.
+Upload one local file. Object bytes are never serialized through MCP. An optional positive timeout can bound the transfer when requested by the caller.
 
 **Operation type:** write
 
@@ -781,11 +781,6 @@ Upload one bounded local file. Object bytes are never serialized through MCP.
       "title": "Local Path",
       "type": "string"
     },
-    "max_bytes": {
-      "default": 1073741824,
-      "title": "Max Bytes",
-      "type": "integer"
-    },
     "org": {
       "anyOf": [
         {
@@ -811,9 +806,16 @@ Upload one bounded local file. Object bytes are never serialized through MCP.
       "title": "Project"
     },
     "timeout_seconds": {
-      "default": 300.0,
-      "title": "Timeout Seconds",
-      "type": "number"
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Timeout Seconds"
     }
   },
   "required": [
@@ -838,7 +840,7 @@ Upload one bounded local file. Object bytes are never serialized through MCP.
 
 ## `download_bucket_file`
 
-Download one bounded blob to a new local file. Existing files are never overwritten.
+Download one blob to a new local file. Existing files are never overwritten. Blob bytes are never serialized through MCP. An optional positive timeout can bound the transfer when requested by the caller.
 
 **Operation type:** write
 
@@ -873,11 +875,6 @@ Download one bounded blob to a new local file. Existing files are never overwrit
       "title": "Local Path",
       "type": "string"
     },
-    "max_bytes": {
-      "default": 1073741824,
-      "title": "Max Bytes",
-      "type": "integer"
-    },
     "org": {
       "anyOf": [
         {
@@ -903,9 +900,16 @@ Download one bounded blob to a new local file. Existing files are never overwrit
       "title": "Project"
     },
     "timeout_seconds": {
-      "default": 300.0,
-      "title": "Timeout Seconds",
-      "type": "number"
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Timeout Seconds"
     }
   },
   "required": [

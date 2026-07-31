@@ -35,6 +35,7 @@ class Provider:
 
 def config():
     return SimpleNamespace(
+        username="user@example.test",
         cluster_name="c",
         org_name="o",
         project_name="p",
@@ -120,7 +121,12 @@ async def test_bounded_lists_context_and_safe_metadata(tools):
     mcp, sdk, _ = tools
     result = await fn(mcp, "list_buckets")(limit=1)
     assert result["truncated"] is True
-    assert result["context"] == {"cluster": "c", "org": "o", "project": "p"}
+    assert result["context"] == {
+        "username": "user@example.test",
+        "cluster": "c",
+        "org": "o",
+        "project": "p",
+    }
     blob_result = await fn(mcp, "list_bucket_blobs")("bucket-1", limit=1)
     assert blob_result["truncated"] is True
     assert blob_result["items"][0]["size_bytes"] == 12
@@ -207,23 +213,31 @@ async def test_file_transfers_are_workspace_bounded_and_never_return_bytes(tools
     source = tmp_path / "source.bin"
     source.write_bytes(b"x" * 12)
     uploaded = await fn(mcp, "upload_bucket_file")(
-        str(source), "bucket-1", "dir/item.txt", max_bytes=12
+        str(source), "bucket-1", "dir/item.txt"
     )
     assert uploaded["size_bytes"] == 12
     assert "b'" not in repr(uploaded)
     sdk.buckets.upload_file.assert_awaited_once()
     downloaded = await fn(mcp, "download_bucket_file")(
-        "bucket-1", "dir/item.txt", "download.bin", max_bytes=12
+        "bucket-1", "dir/item.txt", "download.bin"
     )
     assert downloaded["size_bytes"] == 12
     assert (tmp_path / "download.bin").read_bytes() == b"x" * 12
     assert "b'" not in repr(downloaded)
     with pytest.raises(PermissionError, match="must be beneath"):
         await fn(mcp, "upload_bucket_file")("/etc/hosts", "bucket-1", "hosts")
-    with pytest.raises(ValueError, match="max_bytes"):
+    with pytest.raises(ValueError, match="timeout_seconds"):
         await fn(mcp, "upload_bucket_file")(
-            str(source), "bucket-1", "large", max_bytes=1
+            str(source), "bucket-1", "large", timeout_seconds=0
         )
+    assert uploaded["timeout_seconds"] is None
+    assert downloaded["timeout_seconds"] is None
+    assert "max_bytes" not in mcp._tool_manager._tools[
+        "upload_bucket_file"
+    ].parameters["properties"]
+    assert "max_bytes" not in mcp._tool_manager._tools[
+        "download_bucket_file"
+    ].parameters["properties"]
 
 
 async def test_exact_deletes_and_ledger_owned_cleanup(tools):

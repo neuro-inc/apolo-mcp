@@ -21,6 +21,7 @@ def append_job(ledger: Ledger, resource_id: str, **overrides):
     values: dict[str, Any] = {
         "resource_type": "job",
         "resource_id": resource_id,
+        "username": "user@example.test",
         "cluster": "alpha",
         "org": "team",
         "project": "default",
@@ -40,6 +41,7 @@ def test_exact_ownership_never_infers_from_name(tmp_path):
         ledger.lookup(
             resource_type="job",
             resource_id="job-exact",
+            username="user@example.test",
             cluster="alpha",
             org="team",
             project="default",
@@ -50,6 +52,7 @@ def test_exact_ownership_never_infers_from_name(tmp_path):
         ledger.authorize_owned_resource(
             resource_type="job",
             resource_id="job-exact",
+            username="user@example.test",
             cluster="alpha",
             org="team",
             project="default",
@@ -60,19 +63,23 @@ def test_exact_ownership_never_infers_from_name(tmp_path):
         ledger.authorize_owned_resource(
             resource_type="job",
             resource_id="job-exact-copy",
+            username="user@example.test",
             cluster="alpha",
             org="team",
             project="default",
         )
 
 
-@pytest.mark.parametrize("field", ["resource_type", "cluster", "org", "project"])
+@pytest.mark.parametrize(
+    "field", ["resource_type", "username", "cluster", "org", "project"]
+)
 def test_lookup_rejects_type_or_context_mismatch(tmp_path, field):
     ledger = Ledger(tmp_path / "private" / "ledger.jsonl")
     append_job(ledger, "job-1")
     query = {
         "resource_type": "job",
         "resource_id": "job-1",
+        "username": "user@example.test",
         "cluster": "alpha",
         "org": "team",
         "project": "default",
@@ -86,6 +93,7 @@ def test_append_only_lifecycle_requires_creation_after_latest_delete(tmp_path):
     exact = {
         "resource_type": "job",
         "resource_id": "job-1",
+        "username": "user@example.test",
         "cluster": "alpha",
         "org": "team",
         "project": "default",
@@ -113,6 +121,7 @@ def test_update_record_alone_never_establishes_managed_ownership(tmp_path):
     exact = {
         "resource_type": "app",
         "resource_id": "app-existing",
+        "username": "user@example.test",
         "cluster": "alpha",
         "org": "team",
         "project": "default",
@@ -204,6 +213,7 @@ async def test_run_job_records_exact_created_id_and_resolved_context(
             return started
 
     config = SimpleNamespace(
+        username="user@example.test",
         cluster_name="alpha",
         org_name="team",
         project_name="default",
@@ -261,6 +271,7 @@ async def test_run_job_preflight_rejects_symlink_before_sdk_creation(
 
     jobs = Jobs()
     config = SimpleNamespace(
+        username="user@example.test",
         cluster_name="alpha",
         org_name="team",
         project_name="default",

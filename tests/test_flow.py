@@ -2,10 +2,12 @@
 
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from types import SimpleNamespace
 
 import pytest
 from mcp.server.fastmcp import FastMCP
 
+from apolo_mcp._client import reset_client_provider, set_client_provider
 from apolo_mcp.errors import ApoloToolError
 from apolo_mcp.tools.flow import (
     MAX_LIST,
@@ -139,6 +141,12 @@ class Provider:
         yield self.value
 
 
+class ClientProvider:
+    @asynccontextmanager
+    async def client(self):
+        yield SimpleNamespace(config=SimpleNamespace(username="user@example.test"))
+
+
 @pytest.fixture()
 def tools(tmp_path, monkeypatch):
     monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "full")
@@ -160,11 +168,13 @@ def tools(tmp_path, monkeypatch):
     fake = FakeAPI()
     provider = Provider(fake)
     token = set_flow_api_provider(provider)
+    client_token = set_client_provider(ClientProvider())
     mcp = FastMCP("flow-test")
     register(mcp)
     try:
         yield mcp._tool_manager._tools, fake, provider, scope, tmp_path
     finally:
+        reset_client_provider(client_token)
         reset_flow_api_provider(token)
 
 
@@ -217,6 +227,7 @@ async def test_reads_are_structured_bounded_and_redacted(tools):
     listed = await fn(tools, "flow_live_list")(**scope, limit=1)
     assert listed["items"][0]["raw_id"] == "job-1"
     assert listed["context"] == {
+        "username": "user@example.test",
         "cluster": "alpha",
         "org": "team",
         "project": "default",
@@ -375,6 +386,7 @@ async def test_default_provider_uses_released_explicit_context_factory(
     sdk_config = tmp_path / "sdk-config"
     sdk_config.mkdir()
     scope = FlowScope(
+        username="user@example.test",
         cluster="cluster-a",
         org="org-a",
         project="project-a",

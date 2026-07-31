@@ -6,6 +6,7 @@ from typing import Any
 
 @dataclass(frozen=True)
 class ApoloContext:
+    username: str
     cluster: str
     org: str
     project: str
@@ -46,4 +47,6 @@ def resolve_context(
             f"Project {resolved_project!r} is unavailable in "
             f"{resolved_cluster!r}/{resolved_org!r}"
         )
-    return ApoloContext(resolved_cluster, resolved_org, resolved_project)
+    return ApoloContext(
+        config.username, resolved_cluster, resolved_org, resolved_project
+    )

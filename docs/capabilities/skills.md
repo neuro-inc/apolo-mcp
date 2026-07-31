@@ -44,7 +44,7 @@ Discover and compare Apolo App templates; inspect status, logs, events, and outp
 
 **Client summary:** Manage Apolo resources with bounded safe operations
 
-Inspect and safely manage Apolo storage, disks, images, buckets/blobs, secrets, and service accounts with explicit context, bounded transfers, protected credential sources/sinks, policy gates, and exact ownership. Use for platform resource inventory, metadata, creation, transfer, deletion, or cleanup.
+Inspect and safely manage Apolo storage, disks, images, buckets/blobs, secrets, and service accounts with explicit context, workspace-confined transfers, protected credential sources/sinks, policy gates, and exact ownership. Use for platform resource inventory, metadata, creation, transfer, deletion, or cleanup.
 
 ## [Apolo R&D Session Setup](skills/apolo-rnd-session-setup/README.md)
 

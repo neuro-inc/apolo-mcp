@@ -34,6 +34,7 @@ class Provider:
 
 def config():
     return SimpleNamespace(
+        username="user@example.test",
         cluster_name="c",
         org_name="o",
         project_name="p",
@@ -151,7 +152,12 @@ async def test_create_sinks_token_directly_to_named_secret(tools):
     assert result["destination"] == {
         "type": "secret",
         "key": "robot-token",
-        "context": {"cluster": "c", "org": "o", "project": "p"},
+        "context": {
+            "username": "user@example.test",
+            "cluster": "c",
+            "org": "o",
+            "project": "p",
+        },
     }
     sdk.secrets.add.assert_awaited_once_with(
         "robot-token",
@@ -178,7 +184,12 @@ async def test_list_get_context_and_exact_delete(tools):
     mcp, sdk, _ = tools
     listed = await fn(mcp, "list_service_accounts")(limit=1)
     assert listed["truncated"] is True
-    assert listed["context"] == {"cluster": "c", "org": "o", "project": "p"}
+    assert listed["context"] == {
+        "username": "user@example.test",
+        "cluster": "c",
+        "org": "o",
+        "project": "p",
+    }
     got = await fn(mcp, "get_service_account")("sa-1")
     assert got["account"]["id"] == "sa-1"
     deleted = await fn(mcp, "delete_service_account")("sa-1")

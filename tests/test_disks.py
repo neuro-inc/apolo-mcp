@@ -53,6 +53,7 @@ def tools(monkeypatch, tmp_path):
     monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "full")
     monkeypatch.setenv("APOLO_MCP_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
     cfg = SimpleNamespace(
+        username="user@example.test",
         cluster_name="alpha",
         org_name="team",
         project_name="default",

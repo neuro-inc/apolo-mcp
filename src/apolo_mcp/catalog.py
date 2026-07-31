@@ -99,7 +99,8 @@ CAPABILITY_SPECS: tuple[CapabilitySpec, ...] = (
     CapabilitySpec(
         "Storage",
         "storage",
-        "Remote storage listing, metadata, text files, and directories.",
+        "Remote storage listing, metadata, single-file transfer, text, and "
+        "directories.",
         storage.register,
         RESOURCE_MANAGEMENT,
     ),

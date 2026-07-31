@@ -305,6 +305,184 @@ Create or update a small UTF-8 object under server policy.
 }
 ```
 
+## `upload_storage_file`
+
+Upload one local file to an exact storage path. File bytes are never serialized through MCP. Existing remote files may be overwritten only under full or exact ledger-owned managed policy. An optional positive timeout can bound the transfer when requested by the caller.
+
+**Operation type:** write
+
+**Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
+
+**Input schema:**
+
+```json
+{
+  "properties": {
+    "cluster": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cluster"
+    },
+    "local_path": {
+      "title": "Local Path",
+      "type": "string"
+    },
+    "org": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Org"
+    },
+    "path": {
+      "title": "Path",
+      "type": "string"
+    },
+    "project": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Project"
+    },
+    "timeout_seconds": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Timeout Seconds"
+    }
+  },
+  "required": [
+    "local_path",
+    "path"
+  ],
+  "title": "upload_storage_fileArguments",
+  "type": "object"
+}
+```
+
+**Output schema:**
+
+```json
+{
+  "additionalProperties": true,
+  "title": "upload_storage_fileDictOutput",
+  "type": "object"
+}
+```
+
+## `download_storage_file`
+
+Download one storage file to a new confined local file. Existing local files are never overwritten and file bytes are never serialized through MCP. An optional positive timeout can bound the transfer when requested by the caller.
+
+**Operation type:** write
+
+**Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
+
+**Input schema:**
+
+```json
+{
+  "properties": {
+    "cluster": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cluster"
+    },
+    "local_path": {
+      "title": "Local Path",
+      "type": "string"
+    },
+    "org": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Org"
+    },
+    "path": {
+      "title": "Path",
+      "type": "string"
+    },
+    "project": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Project"
+    },
+    "timeout_seconds": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Timeout Seconds"
+    }
+  },
+  "required": [
+    "path",
+    "local_path"
+  ],
+  "title": "download_storage_fileArguments",
+  "type": "object"
+}
+```
+
+**Output schema:**
+
+```json
+{
+  "additionalProperties": true,
+  "title": "download_storage_fileDictOutput",
+  "type": "object"
+}
+```
+
 ## `make_directory`
 
 Create an exact directory under server policy.

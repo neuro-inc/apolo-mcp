@@ -51,6 +51,7 @@ class Policy:
         effect: MutationEffect,
         resource_type: str | None = None,
         resource_id: str | None = None,
+        username: str | None = None,
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
@@ -63,7 +64,7 @@ class Policy:
             )
         if self.mode is PolicyMode.FULL or effect is MutationEffect.CREATE:
             return None
-        values = (resource_type, resource_id, cluster, org, project)
+        values = (resource_type, resource_id, username, cluster, org, project)
         if any(value is None for value in values):
             raise PermissionError(
                 f"Operation {operation!r} requires an exact ledger-owned resource "
@@ -72,6 +73,7 @@ class Policy:
         return authorize_owned_resource(
             resource_type=resource_type,  # type: ignore[arg-type]
             resource_id=resource_id,  # type: ignore[arg-type]
+            username=username,  # type: ignore[arg-type]
             cluster=cluster,  # type: ignore[arg-type]
             org=org,  # type: ignore[arg-type]
             project=project,  # type: ignore[arg-type]
@@ -106,6 +108,7 @@ def authorize_mutation(
     effect: MutationEffect,
     resource_type: str | None = None,
     resource_id: str | None = None,
+    username: str | None = None,
     cluster: str | None = None,
     org: str | None = None,
     project: str | None = None,
@@ -116,6 +119,7 @@ def authorize_mutation(
         effect=effect,
         resource_type=resource_type,
         resource_id=resource_id,
+        username=username,
         cluster=cluster,
         org=org,
         project=project,

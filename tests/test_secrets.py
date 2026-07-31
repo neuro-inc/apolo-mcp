@@ -33,6 +33,7 @@ class Provider:
 
 def config():
     return SimpleNamespace(
+        username="user@example.test",
         cluster_name="c",
         org_name="o",
         project_name="p",
@@ -80,7 +81,12 @@ async def test_list_is_bounded_metadata_only_and_context_explicit(tools):
     mcp, sdk = tools
     result = await fn(mcp, "list_secrets")(limit=1)
     assert result["truncated"] is True
-    assert result["context"] == {"cluster": "c", "org": "o", "project": "p"}
+    assert result["context"] == {
+        "username": "user@example.test",
+        "cluster": "c",
+        "org": "o",
+        "project": "p",
+    }
     assert set(result["items"][0]) == {
         "key",
         "owner",
@@ -90,6 +96,9 @@ async def test_list_is_bounded_metadata_only_and_context_explicit(tools):
         "uri",
     }
     sdk.secrets.get.assert_not_awaited()
+    assert (await fn(mcp, "list_secrets")())["limit"] == 1000
+    with pytest.raises(ValueError, match="limit"):
+        await fn(mcp, "list_secrets")(limit=1001)
 
 
 async def test_create_from_env_never_serializes_value(tools, monkeypatch):

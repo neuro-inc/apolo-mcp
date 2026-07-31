@@ -214,6 +214,20 @@ def test_rnd_runtime_fragment_is_shared_by_advanced_guide_and_skill() -> None:
     assert "../../apolo-rnd-session-setup/SKILL.md" in packaged
 
 
+def test_installation_forwards_complete_apolo_environment_contract() -> None:
+    installation = (ROOT / "docs" / "getting-started" / "installation.md").read_text()
+    for variable in (
+        "APOLO_CONFIG",
+        "APOLO_PASSED_CONFIG",
+        "APOLO_MCP_POLICY_MODE",
+        "APOLO_MCP_LEDGER_PATH",
+        "APOLO_MCP_PLAN_ROOT",
+    ):
+        assert variable in installation
+    assert "APOLO_API_TOKEN" in installation
+    assert "must not" in installation
+
+
 def test_gitbook_navigation_excludes_generator_sources() -> None:
     summary = (ROOT / "docs" / "SUMMARY.md").read_text(encoding="utf-8")
     assert "_templates" not in summary

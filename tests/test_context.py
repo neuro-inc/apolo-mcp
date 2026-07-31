@@ -8,6 +8,7 @@ from apolo_mcp.context import resolve_context
 
 def make_config():
     return SimpleNamespace(
+        username="user@example.test",
         cluster_name="alpha",
         org_name="team",
         project_name="default",
@@ -33,6 +34,7 @@ def test_resolve_defaults_without_persisting() -> None:
     config = make_config()
     result = resolve_context(config)
     assert result.as_dict() == {
+        "username": "user@example.test",
         "cluster": "alpha",
         "org": "team",
         "project": "default",
@@ -47,6 +49,7 @@ def test_resolve_explicit_context() -> None:
         make_config(), cluster="beta", org="other", project="explicit"
     )
     assert result.as_dict() == {
+        "username": "user@example.test",
         "cluster": "beta",
         "org": "other",
         "project": "explicit",

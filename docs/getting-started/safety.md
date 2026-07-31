@@ -13,8 +13,8 @@ exactly three values:
 - `read-only` is the default. Platform mutations are denied; reads and local Apps
   planning remain available.
 - `managed` allows creation of new resources. Updates and deletions are allowed only
-  for the exact resource type, immutable identifier, cluster, organization, and
-  project with an active creation lifecycle in the MCP journal.
+  for the exact resource type, immutable identifier, authenticated username, cluster,
+  organization, and project with an active creation lifecycle in the MCP journal.
 - `full` allows mutations of any exact-context resource, subject to the authenticated
   identity's Apolo RBAC. It must not be used with a personal owner, administrator, or
   otherwise broadly privileged account. Use a dedicated, least-privileged service
@@ -32,8 +32,9 @@ installation, and per-launch policy commands.
 Successful mutations are written to an append-only lifecycle journal as `created`,
 `updated`, or `deleted` actions. By default it is stored at
 `~/.local/state/apolo-mcp/ledger.jsonl`; `APOLO_MCP_LEDGER_PATH` overrides the path. The journal
-contains only resource identity, exact Apolo context, operation, action, and timestamp,
-never credentials. A `deleted` action closes that ownership lifecycle; only a later
+contains only resource identity, authenticated username, exact cluster/organization/
+project context, operation, action, and timestamp, never credentials. A `deleted`
+action closes that ownership lifecycle; only a later
 MCP-recorded `created` action establishes a new managed lifecycle for the same identity.
 An unknown or malformed row causes journal reads to fail closed.
 
@@ -205,6 +206,8 @@ Tools used by the `apolo-resource-management` skill.
 ### Write operations
 
 - [`write_text`](../capabilities/tools/storage.md#write_text) — Create or update a small UTF-8 object under server policy.
+- [`upload_storage_file`](../capabilities/tools/storage.md#upload_storage_file) — Upload one local file to an exact storage path. File bytes are never serialized through MCP. Existing remote files may be overwritten only under full or exact ledger-owned managed policy. An optional positive timeout can bound the transfer when requested by the caller.
+- [`download_storage_file`](../capabilities/tools/storage.md#download_storage_file) — Download one storage file to a new confined local file. Existing local files are never overwritten and file bytes are never serialized through MCP. An optional positive timeout can bound the transfer when requested by the caller.
 - [`make_directory`](../capabilities/tools/storage.md#make_directory) — Create an exact directory under server policy.
 - [`create_disk`](../capabilities/tools/disks.md#create_disk) — Create and journal a bounded disk when server policy permits writes.
 - [`push_image`](../capabilities/tools/images.md#push_image) — Push a local Docker image to one exact Apolo repository and tag.
@@ -213,8 +216,8 @@ Tools used by the `apolo-resource-management` skill.
 - [`import_external_bucket`](../capabilities/tools/buckets.md#import_external_bucket) — Import using bounded JSON credentials from a protected internal source.
 - [`set_bucket_public_access`](../capabilities/tools/buckets.md#set_bucket_public_access) — Set public state for one exact immutable bucket ID.
 - [`create_bucket_signed_url`](../capabilities/tools/buckets.md#create_bucket_signed_url) — Create a short-lived blob URL and write it to a protected local file. The URL is never returned through MCP.
-- [`upload_bucket_file`](../capabilities/tools/buckets.md#upload_bucket_file) — Upload one bounded local file. Object bytes are never serialized through MCP.
-- [`download_bucket_file`](../capabilities/tools/buckets.md#download_bucket_file) — Download one bounded blob to a new local file. Existing files are never overwritten.
+- [`upload_bucket_file`](../capabilities/tools/buckets.md#upload_bucket_file) — Upload one local file. Object bytes are never serialized through MCP. An optional positive timeout can bound the transfer when requested by the caller.
+- [`download_bucket_file`](../capabilities/tools/buckets.md#download_bucket_file) — Download one blob to a new local file. Existing files are never overwritten. Blob bytes are never serialized through MCP. An optional positive timeout can bound the transfer when requested by the caller.
 - [`get_secret_to_file`](../capabilities/tools/secrets.md#get_secret_to_file) — Write a secret to a new mode-0600 local file. The destination must be new, and the secret value is never returned.
 - [`create_secret_from_source`](../capabilities/tools/secrets.md#create_secret_from_source) — Create a secret without accepting or returning its value. File sources must be private regular files.
 - [`create_service_account`](../capabilities/tools/service-accounts.md#create_service_account) — Create an account and sink its token without returning token material. File sinks are protected local files. Secret sinks do not use the local filesystem.

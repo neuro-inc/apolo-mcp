@@ -110,7 +110,10 @@ def register(mcp: FastMCP) -> None:
                     raise ValueError(f"Unknown cluster: {selected_cluster}")
                 orgs = sorted(sdk.config.clusters[selected_cluster].orgs)
                 return {
-                    "context": {"cluster": selected_cluster},
+                    "context": {
+                        "username": sdk.config.username,
+                        "cluster": selected_cluster,
+                    },
                     "items": orgs[:bounded],
                     "limit": bounded,
                     "truncated": len(orgs) > bounded,
@@ -144,7 +147,11 @@ def register(mcp: FastMCP) -> None:
                     key=lambda item: item.name,
                 )
                 return {
-                    "context": {"cluster": selected_cluster, "org": selected_org},
+                    "context": {
+                        "username": sdk.config.username,
+                        "cluster": selected_cluster,
+                        "org": selected_org,
+                    },
                     "items": [
                         {"name": item.name, "role": item.role}
                         for item in projects[:bounded]
@@ -182,7 +189,10 @@ def register(mcp: FastMCP) -> None:
                         }
                     )
                 return {
-                    "context": {"cluster": selected_cluster},
+                    "context": {
+                        "username": sdk.config.username,
+                        "cluster": selected_cluster,
+                    },
                     "items": items,
                     "limit": bounded,
                     "truncated": len(presets) > bounded,

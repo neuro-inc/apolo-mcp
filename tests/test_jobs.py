@@ -101,6 +101,7 @@ def tools(monkeypatch, tmp_path):
     monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "full")
     monkeypatch.setenv("APOLO_MCP_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
     config = SimpleNamespace(
+        username="user@example.test",
         cluster_name="alpha",
         org_name="team",
         project_name="default",
@@ -202,6 +203,7 @@ async def test_run_job_serializes_every_safe_field_and_override(tools):
     )
     assert kwargs["disk_volumes"][0].container_path == "/cache"
     assert result["context"] == {
+        "username": "user@example.test",
         "cluster": "beta",
         "org": "other",
         "project": "research",
@@ -387,7 +389,12 @@ async def test_managed_save_rejects_preexisting_unowned_image_target(
     tools, monkeypatch
 ):
     monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "managed")
-    exact_context = {"cluster": "alpha", "org": "team", "project": "default"}
+    exact_context = {
+        "username": "user@example.test",
+        "cluster": "alpha",
+        "org": "team",
+        "project": "default",
+    }
     Ledger().append(
         resource_type="job",
         resource_id="job-1",

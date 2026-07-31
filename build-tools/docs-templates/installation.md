@@ -46,14 +46,27 @@ codex mcp add apolo -- apolo-mcp
 codex mcp list
 ```
 
-To select policy per Codex launch, keep only the environment-variable forwarding rules
-in Codex's `config.toml`:
+Keep only environment-variable forwarding rules in Codex's `config.toml`; do not copy
+their values into the file:
 
 ```toml
 [mcp_servers.apolo]
 command = "apolo-mcp"
-env_vars = ["APOLO_MCP_POLICY_MODE"]
+env_vars = [
+  "APOLO_CONFIG",
+  "APOLO_PASSED_CONFIG",
+  "APOLO_MCP_POLICY_MODE",
+  "APOLO_MCP_LEDGER_PATH",
+  "APOLO_MCP_PLAN_ROOT",
+]
 ```
+
+Codex forwards a listed variable only when it exists in the launch environment. The
+first two entries preserve the Apolo identity selected by `apolo-sdk` and therefore by
+the programmatic `apolo-flow` API. `APOLO_CONFIG` selects an on-disk configuration;
+`APOLO_PASSED_CONFIG` carries a sensitive complete configuration in isolated jobs and
+must never be copied into `config.toml`. The two path variables are optional MCP
+overrides for the lifecycle journal and App review plans.
 
 Choose the mode when starting Codex:
 
@@ -78,6 +91,7 @@ Register a dynamic environment expansion rather than a permanently elevated valu
 ```console
 claude mcp add apolo \
   --scope user \
+  -e 'APOLO_CONFIG=${APOLO_CONFIG:-~/.apolo}' \
   -e 'APOLO_MCP_POLICY_MODE=${APOLO_MCP_POLICY_MODE:-read-only}' \
   -- apolo-mcp
 claude mcp list
@@ -91,7 +105,11 @@ APOLO_MCP_POLICY_MODE=managed claude
 APOLO_MCP_POLICY_MODE=full claude
 ```
 
-Claude Code expands the policy variable when starting the MCP subprocess. Use
+Claude Code expands the variables when starting the MCP subprocess. The command above
+uses the standard Apolo configuration unless `APOLO_CONFIG` selects another directory.
+For an isolated job authenticated by `APOLO_PASSED_CONFIG`, use the complete
+configuration in the [full-mode service-account guide](../guides/full-mode-service-account.md);
+do not add a passed-config token as a literal user or project setting. Use
 `--scope local` for private current-project configuration, `--scope
 project` for a shared `.mcp.json`, or `--scope user` across projects. The equivalent
 project configuration is:
@@ -103,6 +121,7 @@ project configuration is:
       "command": "apolo-mcp",
       "args": [],
       "env": {
+        "APOLO_CONFIG": "${APOLO_CONFIG:-~/.apolo}",
         "APOLO_MCP_POLICY_MODE": "${APOLO_MCP_POLICY_MODE:-read-only}"
       }
     }
@@ -111,6 +130,33 @@ project configuration is:
 ```
 
 Restart Claude Code after changing MCP configuration or policy environment.
+
+## Forwarded environment contract
+
+`apolo-mcp` uses `apolo-sdk` directly, and its Flow tools use the programmatic
+`apolo-flow` API. Forward these Apolo-owned inputs when they are used by the parent
+client:
+
+| Variable | Purpose | Forwarding rule |
+|---|---|---|
+| `APOLO_CONFIG` | Select an on-disk Apolo configuration and identity. | Forward for local authenticated sessions. |
+| `APOLO_PASSED_CONFIG` | Supply a complete service-account configuration to an isolated job. | Forward only from an already protected job environment; never store its value in client configuration. |
+| `APOLO_MCP_POLICY_MODE` | Select `read-only`, `managed`, or `full`. | Forward dynamically; absence intentionally selects `read-only`. |
+| `APOLO_MCP_LEDGER_PATH` | Override the append-only lifecycle journal path. | Optional; forward only when customized. |
+| `APOLO_MCP_PLAN_ROOT` | Override the local App review-plan directory. | Optional; forward only when customized. |
+
+Do not forward `APOLO_API_TOKEN`, `APOLO_API_URL`, or similar credential fragments;
+the SDK authenticates from one of the two complete configuration mechanisms above.
+Legacy `NEUROMATION_CONFIG` and `NEURO_PASSED_CONFIG` aliases are not part of the MCP
+MVP contract. `NEURO_JOB_ID` is injected by Apolo into Flow executor jobs and must not
+be copied from the client. CLI completion, telemetry, and update-check variables do not
+affect this SDK-based MCP server.
+
+Tools that deliberately read a protected source from an environment variable, such as
+secret creation or external-bucket import, require that one exact source variable to
+be added to the client configuration. Forward such variables only for the operation
+that needs them and remove them afterward; never add a blanket credential-variable
+allowlist.
 
 ## Install the workflow skills
 

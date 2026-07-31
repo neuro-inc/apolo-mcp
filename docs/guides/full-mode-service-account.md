@@ -82,11 +82,11 @@ The following self-contained runtime and job configuration is also packaged with
 
 ### Runtime requirements inside an R&D job
 
-For the MVP, use `node:22-bookworm-slim` as an example bootstrap image. Resolve the
-tag to a registry digest before launch and record the exact image reference. This is an
-upstream convenience image, not an Apolo-supported R&D image; another glibc-based
-Debian or Ubuntu image is acceptable when it provides Node.js 22 and Python 3.11 or
-newer.
+For the MVP, use `node:22-bookworm-slim` as an example bootstrap image and record that
+exact mutable tag. Apolo job launch does not currently accept Docker image digest
+references. This is an upstream convenience image, not an Apolo-supported R&D image;
+another glibc-based Debian or Ubuntu image is acceptable when it provides Node.js 22
+and Python 3.11 or newer.
 
 Start the bounded job with `sleep infinity`, enter it with `apolo exec`, and install the
 runtime there. Before running package-manager or network commands, show the resolved
@@ -189,7 +189,7 @@ the user's global desktop default.
 
 ## 4. Launch a bounded R&D job
 
-Resolve `node:22-bookworm-slim` to a registry digest, or select another reviewed slim
+Select `node:22-bookworm-slim`, or another reviewed slim
 glibc-based image meeting the requirements above. Supply coding-agent provider
 credentials separately according to that provider's headless-operation guidance.
 Launch the bootstrap job with explicit context, a bounded lifetime, a clean Apolo

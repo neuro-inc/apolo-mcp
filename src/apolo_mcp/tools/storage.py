@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import re
 from typing import Any
 
@@ -15,6 +16,7 @@ from ..context import ApoloContext, resolve_context
 from ..errors import normalize_error
 from ..ledger import ensure_ledger_writable, record_resource_action
 from ..policy import MutationEffect, authorize_mutation
+from ..workspace import resolve_new_workspace_file, resolve_workspace_path
 
 
 READ_ONLY = ToolAnnotations(
@@ -105,6 +107,17 @@ async def _exists(sdk: Any, uri: URL) -> bool:
     except apolo_sdk.ResourceNotFound:
         return False
     return True
+
+
+def _transfer_timeout(timeout_seconds: float | None) -> None:
+    if timeout_seconds is not None and timeout_seconds <= 0:
+        raise ValueError("timeout_seconds must be positive when provided")
+
+
+async def _await_transfer(operation: Any, timeout_seconds: float | None) -> Any:
+    if timeout_seconds is None:
+        return await operation
+    return await asyncio.wait_for(operation, timeout=timeout_seconds)
 
 
 def register(mcp: FastMCP) -> None:
@@ -262,6 +275,7 @@ def register(mcp: FastMCP) -> None:
                     effect=effect,
                     resource_type="storage",
                     resource_id=str(uri),
+                    username=resolved.username,
                     cluster=resolved.cluster,
                     org=resolved.org,
                     project=resolved.project,
@@ -272,6 +286,7 @@ def register(mcp: FastMCP) -> None:
                 record_resource_action(
                     resource_type="storage",
                     resource_id=str(uri),
+                    username=resolved.username,
                     cluster=resolved.cluster,
                     org=resolved.org,
                     project=resolved.project,
@@ -291,6 +306,155 @@ def register(mcp: FastMCP) -> None:
                 context=resolved.as_dict() if resolved else None,
                 resource=path,
             ) from None
+
+    @mcp.tool(annotations=WRITE)
+    async def upload_storage_file(
+        local_path: str,
+        path: str,
+        timeout_seconds: float | None = None,
+        cluster: str | None = None,
+        org: str | None = None,
+        project: str | None = None,
+    ) -> dict[str, Any]:
+        """Upload one local file to an exact storage path.
+
+        File bytes are never serialized through MCP. Existing remote files may be
+        overwritten only under full or exact ledger-owned managed policy. An optional
+        positive timeout can bound the transfer when requested by the caller.
+        """
+        authorize_mutation(
+            operation="upload_storage_file", effect=MutationEffect.CREATE
+        )
+        _transfer_timeout(timeout_seconds)
+        source = resolve_workspace_path(local_path, name="local_path", directory=False)
+        size = source.stat().st_size
+        resolved: ApoloContext | None = None
+        try:
+            async with client() as sdk:
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
+                uri = _storage_uri(path, resolved, allow_root=False)
+                exists = await _exists(sdk, uri)
+                effect = MutationEffect.UPDATE if exists else MutationEffect.CREATE
+                authorize_mutation(
+                    operation="upload_storage_file",
+                    effect=effect,
+                    resource_type="storage",
+                    resource_id=str(uri),
+                    username=resolved.username,
+                    cluster=resolved.cluster,
+                    org=resolved.org,
+                    project=resolved.project,
+                )
+                if not exists:
+                    ensure_ledger_writable()
+                await _await_transfer(
+                    sdk.storage.upload_file(
+                        URL(source.as_uri()), uri, update=False, continue_=False
+                    ),
+                    timeout_seconds,
+                )
+                status = await sdk.storage.stat(uri)
+                if (
+                    status.type is not apolo_sdk.FileStatusType.FILE
+                    or status.size != size
+                ):
+                    raise RuntimeError(
+                        "uploaded file size does not match local file metadata"
+                    )
+                record_resource_action(
+                    resource_type="storage",
+                    resource_id=str(uri),
+                    username=resolved.username,
+                    cluster=resolved.cluster,
+                    org=resolved.org,
+                    project=resolved.project,
+                    operation="upload_storage_file",
+                    action="updated" if exists else "created",
+                )
+                return {
+                    "status": "uploaded",
+                    "local_path": str(source),
+                    "path": str(uri),
+                    "size_bytes": size,
+                    "timeout_seconds": timeout_seconds,
+                    "context": resolved.as_dict(),
+                }
+        except Exception as exc:
+            raise normalize_error(
+                exc,
+                operation="upload_storage_file",
+                context=resolved.as_dict() if resolved else None,
+                resource=path,
+            ) from None
+
+    @mcp.tool(annotations=WRITE)
+    async def download_storage_file(
+        path: str,
+        local_path: str,
+        timeout_seconds: float | None = None,
+        cluster: str | None = None,
+        org: str | None = None,
+        project: str | None = None,
+    ) -> dict[str, Any]:
+        """Download one storage file to a new confined local file.
+
+        Existing local files are never overwritten and file bytes are never serialized
+        through MCP. An optional positive timeout can bound the transfer when requested
+        by the caller.
+        """
+        authorize_mutation(
+            operation="download_storage_file", effect=MutationEffect.CREATE
+        )
+        _transfer_timeout(timeout_seconds)
+        destination = resolve_new_workspace_file(
+            local_path, name="local_path", create_parents=True
+        )
+        resolved: ApoloContext | None = None
+        completed = False
+        try:
+            async with client() as sdk:
+                resolved = resolve_context(
+                    sdk.config, cluster=cluster, org=org, project=project
+                )
+                uri = _storage_uri(path, resolved, allow_root=False)
+                status = await sdk.storage.stat(uri)
+                if status.type is not apolo_sdk.FileStatusType.FILE:
+                    raise ValueError("remote storage path must be a file")
+                await _await_transfer(
+                    sdk.storage.download_file(
+                        uri,
+                        URL(destination.as_uri()),
+                        update=False,
+                        continue_=False,
+                    ),
+                    timeout_seconds,
+                )
+                actual_size = destination.stat().st_size
+                if actual_size != status.size:
+                    raise RuntimeError(
+                        "downloaded file size does not match remote metadata"
+                    )
+                completed = True
+                return {
+                    "status": "downloaded",
+                    "path": str(uri),
+                    "local_path": str(destination),
+                    "size_bytes": actual_size,
+                    "timeout_seconds": timeout_seconds,
+                    "context": resolved.as_dict(),
+                }
+        except Exception as exc:
+            raise normalize_error(
+                exc,
+                operation="download_storage_file",
+                context=resolved.as_dict() if resolved else None,
+                resource=path,
+            ) from None
+        finally:
+            if not completed:
+                destination.unlink(missing_ok=True)
 
     @mcp.tool(annotations=WRITE)
     async def make_directory(
@@ -317,6 +481,7 @@ def register(mcp: FastMCP) -> None:
                     effect=effect,
                     resource_type="storage",
                     resource_id=str(uri),
+                    username=resolved.username,
                     cluster=resolved.cluster,
                     org=resolved.org,
                     project=resolved.project,
@@ -327,6 +492,7 @@ def register(mcp: FastMCP) -> None:
                 record_resource_action(
                     resource_type="storage",
                     resource_id=str(uri),
+                    username=resolved.username,
                     cluster=resolved.cluster,
                     org=resolved.org,
                     project=resolved.project,
@@ -367,6 +533,7 @@ def register(mcp: FastMCP) -> None:
                     effect=MutationEffect.DELETE,
                     resource_type="storage",
                     resource_id=str(uri),
+                    username=resolved.username,
                     cluster=resolved.cluster,
                     org=resolved.org,
                     project=resolved.project,
@@ -375,6 +542,7 @@ def register(mcp: FastMCP) -> None:
                 record_resource_action(
                     resource_type="storage",
                     resource_id=str(uri),
+                    username=resolved.username,
                     cluster=resolved.cluster,
                     org=resolved.org,
                     project=resolved.project,

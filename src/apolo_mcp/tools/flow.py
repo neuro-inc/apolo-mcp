@@ -19,6 +19,7 @@ from apolo_flow.api import open_flow_api
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 
+from .._client import client
 from ..errors import ApoloToolError, normalize_error
 from ..ledger import (
     ensure_ledger_writable,
@@ -81,6 +82,7 @@ def _document_flow_scope(function: Any) -> Any:
 
 @dataclasses.dataclass(frozen=True)
 class FlowScope:
+    username: str
     cluster: str
     org: str
     project: str
@@ -88,7 +90,12 @@ class FlowScope:
     workspace_path: Path
 
     def context(self) -> dict[str, str]:
-        return {"cluster": self.cluster, "org": self.org, "project": self.project}
+        return {
+            "username": self.username,
+            "cluster": self.cluster,
+            "org": self.org,
+            "project": self.project,
+        }
 
     def paths(self) -> dict[str, str | None]:
         return {
@@ -142,6 +149,7 @@ def _bound(value: float, name: str, maximum: float) -> None:
 
 
 def _scope(
+    username: str,
     cluster: str,
     org: str,
     project: str,
@@ -159,7 +167,7 @@ def _scope(
         raise ValueError(
             "workspace_path must be a Flow root containing a real .apolo directory"
         )
-    return FlowScope(cluster, org, project, root, workspace)
+    return FlowScope(username, cluster, org, project, root, workspace)
 
 
 def _authorize_flow_resource(
@@ -174,6 +182,7 @@ def _authorize_flow_resource(
         effect=effect,
         resource_type=resource_type,
         resource_id=resource_id,
+        username=scope.username,
         cluster=scope.cluster,
         org=scope.org,
         project=scope.project,
@@ -190,6 +199,7 @@ def _record_flow_action(
     record_resource_action(
         resource_type=resource_type,
         resource_id=resource_id,
+        username=scope.username,
         cluster=scope.cluster,
         org=scope.org,
         project=scope.project,
@@ -268,6 +278,7 @@ async def _journal_failed_bake_start(
         record_created_resource(
             resource_type="bake",
             resource_id=bake_id,
+            username=scope.username,
             cluster=scope.cluster,
             org=scope.org,
             project=scope.project,
@@ -301,6 +312,7 @@ async def _journal_failed_live_run(
         record_created_resource(
             resource_type="job",
             resource_id=raw_id,
+            username=scope.username,
             cluster=scope.cluster,
             org=scope.org,
             project=scope.project,
@@ -332,8 +344,10 @@ def _redacted_log(value: Any, max_bytes: int) -> dict[str, Any]:
 ScopeArgs = tuple[str, str, str, str]
 
 
-def _make_scope(args: ScopeArgs) -> FlowScope:
-    return _scope(*args)
+async def _make_scope(args: ScopeArgs) -> FlowScope:
+    async with client() as sdk:
+        username = sdk.config.username
+    return _scope(username, *args)
 
 
 def register(mcp: FastMCP) -> None:
@@ -350,7 +364,7 @@ def register(mcp: FastMCP) -> None:
     ) -> dict[str, Any]:
         """List Flow live jobs within explicit context and local path scope."""
         _bound(limit, "limit", MAX_LIST)
-        scope = _make_scope(
+        scope = await _make_scope(
             (
                 cluster,
                 org,
@@ -376,7 +390,7 @@ def register(mcp: FastMCP) -> None:
     ) -> dict[str, Any]:
         """Resolve one logical Flow job, with a bounded multi-job result."""
         _bound(limit, "limit", MAX_LIST)
-        scope = _make_scope(
+        scope = await _make_scope(
             (
                 cluster,
                 org,
@@ -410,7 +424,7 @@ def register(mcp: FastMCP) -> None:
         """
         authorize_mutation(operation="flow_live_run", effect=MutationEffect.CREATE)
         _bound(timeout_seconds, "timeout_seconds", MAX_WRITE_SECONDS)
-        scope = _make_scope(
+        scope = await _make_scope(
             (
                 cluster,
                 org,
@@ -444,6 +458,7 @@ def register(mcp: FastMCP) -> None:
                     record_created_resource(
                         resource_type="job",
                         resource_id=raw_id,
+                        username=scope.username,
                         cluster=cluster,
                         org=org,
                         project=project,
@@ -468,7 +483,7 @@ def register(mcp: FastMCP) -> None:
         _bound(timeout_seconds, "timeout_seconds", MAX_LOG_SECONDS)
         _bound(max_chunks, "max_chunks", MAX_LOG_CHUNKS)
         _bound(max_bytes, "max_bytes", MAX_LOG_BYTES)
-        scope = _make_scope(
+        scope = await _make_scope(
             (
                 cluster,
                 org,
@@ -503,7 +518,7 @@ def register(mcp: FastMCP) -> None:
         _bound(timeout_seconds, "timeout_seconds", MAX_WAIT_SECONDS)
         _bound(poll_interval_seconds, "poll_interval_seconds", MAX_POLL_SECONDS)
         _bound(limit, "limit", MAX_LIST)
-        scope = _make_scope(
+        scope = await _make_scope(
             (
                 cluster,
                 org,
@@ -536,7 +551,7 @@ def register(mcp: FastMCP) -> None:
         """Kill a Flow live job under the server mutation policy."""
         _bound(timeout_seconds, "timeout_seconds", MAX_WRITE_SECONDS)
         _bound(limit, "limit", MAX_LIST)
-        scope = _make_scope(
+        scope = await _make_scope(
             (
                 cluster,
                 org,
@@ -579,7 +594,7 @@ def register(mcp: FastMCP) -> None:
         """Kill all jobs in exactly one explicit Flow context."""
         _bound(timeout_seconds, "timeout_seconds", MAX_WRITE_SECONDS)
         _bound(limit, "limit", MAX_LIST)
-        scope = _make_scope(
+        scope = await _make_scope(
             (
                 cluster,
                 org,
@@ -640,7 +655,7 @@ def register(mcp: FastMCP) -> None:
         authorize_mutation(operation="flow_bake_start", effect=MutationEffect.CREATE)
         _bound(task_limit, "task_limit", MAX_TASKS)
         _bound(timeout_seconds, "timeout_seconds", MAX_WRITE_SECONDS)
-        scope = _make_scope(
+        scope = await _make_scope(
             (
                 cluster,
                 org,
@@ -677,6 +692,7 @@ def register(mcp: FastMCP) -> None:
             record_created_resource(
                 resource_type="bake",
                 resource_id=bake_id,
+                username=scope.username,
                 cluster=cluster,
                 org=org,
                 project=project,
@@ -698,7 +714,7 @@ def register(mcp: FastMCP) -> None:
         """List bakes and bounded task state in one explicit context."""
         _bound(limit, "limit", MAX_LIST)
         _bound(task_limit, "task_limit", MAX_TASKS)
-        scope = _make_scope(
+        scope = await _make_scope(
             (
                 cluster,
                 org,
@@ -726,7 +742,7 @@ def register(mcp: FastMCP) -> None:
     ) -> dict[str, Any]:
         """Get structured bake, attempt, and bounded task state."""
         _bound(task_limit, "task_limit", MAX_TASKS)
-        scope = _make_scope(
+        scope = await _make_scope(
             (
                 cluster,
                 org,
@@ -758,7 +774,7 @@ def register(mcp: FastMCP) -> None:
         _bound(timeout_seconds, "timeout_seconds", MAX_LOG_SECONDS)
         _bound(max_chunks, "max_chunks", MAX_LOG_CHUNKS)
         _bound(max_bytes, "max_bytes", MAX_LOG_BYTES)
-        scope = _make_scope(
+        scope = await _make_scope(
             (
                 cluster,
                 org,
@@ -794,7 +810,7 @@ def register(mcp: FastMCP) -> None:
         _bound(timeout_seconds, "timeout_seconds", MAX_WAIT_SECONDS)
         _bound(poll_interval_seconds, "poll_interval_seconds", MAX_POLL_SECONDS)
         _bound(task_limit, "task_limit", MAX_TASKS)
-        scope = _make_scope(
+        scope = await _make_scope(
             (
                 cluster,
                 org,
@@ -827,7 +843,7 @@ def register(mcp: FastMCP) -> None:
         """Cancel a bake attempt under the server mutation policy."""
         _bound(task_limit, "task_limit", MAX_TASKS)
         _bound(timeout_seconds, "timeout_seconds", MAX_WRITE_SECONDS)
-        scope = _make_scope(
+        scope = await _make_scope(
             (
                 cluster,
                 org,
@@ -871,7 +887,7 @@ def register(mcp: FastMCP) -> None:
         """Restart a bake through BatchRunner under the server mutation policy."""
         _bound(task_limit, "task_limit", MAX_TASKS)
         _bound(timeout_seconds, "timeout_seconds", MAX_WRITE_SECONDS)
-        scope = _make_scope(
+        scope = await _make_scope(
             (
                 cluster,
                 org,

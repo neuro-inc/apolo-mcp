@@ -11,7 +11,7 @@ Each page corresponds exactly to one entry in the declarative capability catalog
 - [Jobs](jobs.md) — Job lifecycle, logs, telemetry, signals, and image snapshots.
 - [Flow](flow.md) — Schema-guided Flow configuration plus live-job and batch-bake lifecycles.
 - [Applications](applications.md) — App discovery, inspection, planning, and lifecycle operations.
-- [Storage](storage.md) — Remote storage listing, metadata, text files, and directories.
+- [Storage](storage.md) — Remote storage listing, metadata, single-file transfer, text, and directories.
 - [Disks](disks.md) — Persistent disk discovery, creation, and deletion.
 - [Images](images.md) — Container image discovery, inspection, transfer, and removal.
 - [Buckets](buckets.md) — Bucket and blob metadata, transfer, access, and lifecycle operations.

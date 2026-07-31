@@ -51,6 +51,7 @@ def test_managed_allows_create_but_requires_exact_active_lifecycle(
     exact = {
         "resource_type": "job",
         "resource_id": "job-1",
+        "username": "user@example.test",
         "cluster": "alpha",
         "org": "team",
         "project": "default",
@@ -64,6 +65,12 @@ def test_managed_allows_create_but_requires_exact_active_lifecycle(
             operation="kill_job",
             effect=MutationEffect.DELETE,
             **{**exact, "project": "other"},
+        )
+    with pytest.raises(PermissionError, match="no active creation lifecycle"):
+        policy.authorize(
+            operation="kill_job",
+            effect=MutationEffect.DELETE,
+            **{**exact, "username": "another-user@example.test"},
         )
 
 

@@ -15,21 +15,24 @@ security boundary; `full` is only the MCP operation mode.
 2. Without printing values, verify that `APOLO_PASSED_CONFIG` exists,
    `APOLO_MCP_POLICY_MODE` is `full`, and `APOLO_CONFIG` points to an isolated writable
    path. Confirm no personal `~/.apolo` configuration was mounted.
-3. Expect a slim bootstrap image. Record its exact digest, then inventory the selected
-   agent binary/version, `apolo-mcp`, `apolo`, the operate skill, writable workspace,
-   and network availability before installing anything. Check Git, language runtimes,
-   build tools, and `tmux` only when the task needs them.
+3. Expect a slim bootstrap image. Record its exact image reference and whether its tag
+   is mutable, then inventory the selected agent binary/version, `apolo-mcp`, `apolo`,
+   the operate skill, writable workspace, and network availability before installing
+   anything. Check Git, language runtimes, build tools, and `tmux` only when needed.
 4. If tooling is missing, read
    [references/runtime-bootstrap.md](references/runtime-bootstrap.md). Resolve or ask
-   for exact versions, then present the complete installation plan. Obtain user
-   confirmation before network downloads, package-manager changes, or root operations.
-   Verify versions afterward. Never execute an uninspected remote installer through a
-   pipe.
+   for exact versions, then state the complete installation plan. When the requested
+   workflow requires installation, rely on the client's normal approval for network
+   downloads, package-manager changes, or root operations; do not add a separate
+   model-level confirmation. Verify versions afterward. Never execute an uninspected
+   remote installer through a pipe.
 5. Use Apolo context/ACL reads to verify the service-account identity, exact context,
    and expected least-privilege grants as soon as `apolo` is available. Stop before
    starting the coding agent if the identity is personal/admin, context differs from
-   the handoff, grants are broader than approved, or authentication fails. Never repair
-   RBAC inside the job; return the required diff to the trusted local operator.
+   the handoff, principal-specific grants are broader than approved, or authentication
+   fails. Self-role read access and resources shared system-wide with all users are
+   expected baseline access; distinguish them from scenario-specific grants. Never
+   repair RBAC inside the job; return the required diff to the trusted local operator.
 6. Configure the selected client to start `apolo-mcp` with `APOLO_CONFIG`,
    `APOLO_PASSED_CONFIG`, and `APOLO_MCP_POLICY_MODE` forwarded from the job. Keep this
    configuration job-local; never write `full` into a user's global desktop config.

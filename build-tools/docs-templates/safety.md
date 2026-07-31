@@ -11,8 +11,8 @@ exactly three values:
 - `read-only` is the default. Platform mutations are denied; reads and local Apps
   planning remain available.
 - `managed` allows creation of new resources. Updates and deletions are allowed only
-  for the exact resource type, immutable identifier, cluster, organization, and
-  project with an active creation lifecycle in the MCP journal.
+  for the exact resource type, immutable identifier, authenticated username, cluster,
+  organization, and project with an active creation lifecycle in the MCP journal.
 - `full` allows mutations of any exact-context resource, subject to the authenticated
   identity's Apolo RBAC. It must not be used with a personal owner, administrator, or
   otherwise broadly privileged account. Use a dedicated, least-privileged service
@@ -30,8 +30,9 @@ installation, and per-launch policy commands.
 Successful mutations are written to an append-only lifecycle journal as `created`,
 `updated`, or `deleted` actions. By default it is stored at
 `~/.local/state/apolo-mcp/ledger.jsonl`; `{ledger_env}` overrides the path. The journal
-contains only resource identity, exact Apolo context, operation, action, and timestamp,
-never credentials. A `deleted` action closes that ownership lifecycle; only a later
+contains only resource identity, authenticated username, exact cluster/organization/
+project context, operation, action, and timestamp, never credentials. A `deleted`
+action closes that ownership lifecycle; only a later
 MCP-recorded `created` action establishes a new managed lifecycle for the same identity.
 An unknown or malformed row causes journal reads to fail closed.
 

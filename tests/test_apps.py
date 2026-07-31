@@ -26,6 +26,7 @@ def config() -> SimpleNamespace:
     project = SimpleNamespace(cluster_name="c", org_name="o", name="p")
     cluster = SimpleNamespace(orgs={"o": object()})
     return SimpleNamespace(
+        username="user@example.test",
         cluster_name="c",
         org_name="o",
         project_name="p",

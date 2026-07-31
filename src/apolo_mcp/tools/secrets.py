@@ -40,7 +40,7 @@ DESTRUCTIVE = ToolAnnotations(
     openWorldHint=True,
 )
 
-MAX_LIST_RESULTS = 100
+MAX_LIST_RESULTS = 1000
 MAX_SECRET_BYTES = 1024 * 1024
 
 
@@ -118,7 +118,7 @@ async def _secret_exists(sdk: Any, key: str, context: ApoloContext) -> bool:
 def register(mcp: FastMCP) -> None:
     @mcp.tool(annotations=READ_ONLY)
     async def list_secrets(
-        limit: int = 50,
+        limit: int = MAX_LIST_RESULTS,
         cluster: str | None = None,
         org: str | None = None,
         project: str | None = None,
@@ -183,6 +183,7 @@ def register(mcp: FastMCP) -> None:
                     effect=MutationEffect.UPDATE,
                     resource_type="secret",
                     resource_id=exact_key,
+                    username=resolved.username,
                     cluster=resolved.cluster,
                     org=resolved.org,
                     project=resolved.project,
@@ -209,6 +210,7 @@ def register(mcp: FastMCP) -> None:
                 record_resource_action(
                     resource_type="secret",
                     resource_id=exact_key,
+                    username=resolved.username,
                     cluster=resolved.cluster,
                     org=resolved.org,
                     project=resolved.project,
@@ -263,6 +265,7 @@ def register(mcp: FastMCP) -> None:
                     effect=effect,
                     resource_type="secret",
                     resource_id=exact_key,
+                    username=resolved.username,
                     cluster=resolved.cluster,
                     org=resolved.org,
                     project=resolved.project,
@@ -299,6 +302,7 @@ def register(mcp: FastMCP) -> None:
                 record_resource_action(
                     resource_type="secret",
                     resource_id=exact_key,
+                    username=resolved.username,
                     cluster=resolved.cluster,
                     org=resolved.org,
                     project=resolved.project,
@@ -339,6 +343,7 @@ def register(mcp: FastMCP) -> None:
                     effect=MutationEffect.DELETE,
                     resource_type="secret",
                     resource_id=exact_key,
+                    username=resolved.username,
                     cluster=resolved.cluster,
                     org=resolved.org,
                     project=resolved.project,
@@ -352,6 +357,7 @@ def register(mcp: FastMCP) -> None:
                 record_resource_action(
                     resource_type="secret",
                     resource_id=exact_key,
+                    username=resolved.username,
                     cluster=resolved.cluster,
                     org=resolved.org,
                     project=resolved.project,

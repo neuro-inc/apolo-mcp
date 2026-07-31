@@ -97,11 +97,14 @@ async def test_discovery_filters_and_bounds() -> None:
     assert clusters["items"] == [{"name": "alpha", "selected": True}]
     assert clusters["truncated"] is True
     orgs = await tool("list_organizations")("alpha", 1)
+    assert orgs["context"]["username"] == "user@example.test"
     assert len(orgs["items"]) == 1
     assert orgs["truncated"] is True
     projects = await tool("list_projects")("beta", "other", 10)
+    assert projects["context"]["username"] == "user@example.test"
     assert projects["items"] == [{"name": "research", "role": "viewer"}]
     presets = await tool("list_presets")("alpha", 10)
+    assert presets["context"]["username"] == "user@example.test"
     assert presets["items"][0]["accelerator"]["model"] == "A10"
     assert presets["items"][0]["credits_per_hour"] == "1.25"
 
@@ -117,7 +120,12 @@ async def test_resolve_uri_uses_explicit_context_without_switching() -> None:
     )
     assert result == {
         "uri": "storage://beta/other/research/reports/final.md",
-        "context": {"cluster": "beta", "org": "other", "project": "research"},
+        "context": {
+            "username": "user@example.test",
+            "cluster": "beta",
+            "org": "other",
+            "project": "research",
+        },
     }
 
 

@@ -62,6 +62,7 @@ async def test_reviewed_resource_tools_are_registered() -> None:
 def test_essential_safety_instruction_is_early() -> None:
     first = mcp.instructions[:512]
     assert "Before any write" in first
+    assert "authenticated username" in first
     assert "explicit context" in first
     assert "never change saved context" in first
     assert "Never request, return, or log tokens" in first

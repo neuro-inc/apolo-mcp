@@ -1121,6 +1121,7 @@ def register(mcp: FastMCP) -> None:
                 record_created_resource(
                     resource_type="app",
                     resource_id=app.id,
+                    username=context.username,
                     cluster=context.cluster,
                     org=context.org,
                     project=context.project,
@@ -1168,6 +1169,7 @@ def register(mcp: FastMCP) -> None:
                     effect=MutationEffect.UPDATE,
                     resource_type="app",
                     resource_id=app.id,
+                    username=context.username,
                     cluster=context.cluster,
                     org=context.org,
                     project=context.project,
@@ -1191,6 +1193,7 @@ def register(mcp: FastMCP) -> None:
                 record_resource_action(
                     resource_type="app",
                     resource_id=app.id,
+                    username=context.username,
                     cluster=context.cluster,
                     org=context.org,
                     project=context.project,
@@ -1238,6 +1241,7 @@ def register(mcp: FastMCP) -> None:
                     effect=MutationEffect.UPDATE,
                     resource_type="app",
                     resource_id=app.id,
+                    username=context.username,
                     cluster=context.cluster,
                     org=context.org,
                     project=context.project,
@@ -1264,6 +1268,7 @@ def register(mcp: FastMCP) -> None:
                 record_resource_action(
                     resource_type="app",
                     resource_id=app.id,
+                    username=context.username,
                     cluster=context.cluster,
                     org=context.org,
                     project=context.project,
@@ -1311,6 +1316,7 @@ def register(mcp: FastMCP) -> None:
                     effect=MutationEffect.DELETE,
                     resource_type="app",
                     resource_id=app.id,
+                    username=context.username,
                     cluster=context.cluster,
                     org=context.org,
                     project=context.project,
@@ -1336,6 +1342,7 @@ def register(mcp: FastMCP) -> None:
                 record_resource_action(
                     resource_type="app",
                     resource_id=app.id,
+                    username=context.username,
                     cluster=context.cluster,
                     org=context.org,
                     project=context.project,
