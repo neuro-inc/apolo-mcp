@@ -28,7 +28,7 @@ dependencies = [
     "apolo-sdk>=26.7.2",
     "async-timeout>=5",
     "jsonschema>=4.23,<5",
-    "mcp>=1.28,<2",
+    "mcp>=2.0.0,<3",
     "pyyaml>=6.0",
     "tomlkit>=0.13,<1",
 ]
@@ -44,11 +44,11 @@ Issues = "https://github.com/neuro-inc/apolo-mcp/issues"
 
 [dependency-groups]
 dev = [
-    "build>=1.2,<1.5",
+    "build>=1.5.0,<1.6",
     "mypy>=1.10",
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
-    "pre-commit>=3.0",
+    "pre-commit>=4.6.1",
     "towncrier==25.8.0",
     "types-jsonschema>=4.23",
     "types-PyYAML>=6.0",
