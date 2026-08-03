@@ -8,7 +8,7 @@ import tempfile
 from pathlib import Path
 from typing import Any, Literal
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 from mcp.types import ToolAnnotations
 
 from .._client import client
@@ -26,24 +26,24 @@ from .secrets import _key
 
 READ_ONLY = ToolAnnotations(
     title="Read Apolo service-account metadata",
-    readOnlyHint=True,
-    destructiveHint=False,
-    idempotentHint=True,
-    openWorldHint=True,
+    read_only_hint=True,
+    destructive_hint=False,
+    idempotent_hint=True,
+    open_world_hint=True,
 )
 WRITE = ToolAnnotations(
     title="Create an Apolo service account into a secure token sink",
-    readOnlyHint=False,
-    destructiveHint=False,
-    idempotentHint=False,
-    openWorldHint=True,
+    read_only_hint=False,
+    destructive_hint=False,
+    idempotent_hint=False,
+    open_world_hint=True,
 )
 DESTRUCTIVE = ToolAnnotations(
     title="Delete one exact Apolo service account",
-    readOnlyHint=False,
-    destructiveHint=True,
-    idempotentHint=True,
-    openWorldHint=True,
+    read_only_hint=False,
+    destructive_hint=True,
+    idempotent_hint=True,
+    open_world_hint=True,
 )
 
 MAX_LIST_RESULTS = 100
@@ -142,7 +142,7 @@ async def _secret_available(sdk: Any, key: str, context: ApoloContext) -> None:
                 raise FileExistsError("destination key already exists")
 
 
-def register(mcp: FastMCP) -> None:
+def register(mcp: MCPServer) -> None:
     @mcp.tool(annotations=READ_ONLY)
     async def list_service_accounts(
         limit: int = 50,

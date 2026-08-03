@@ -6,7 +6,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 
 from apolo_mcp._client import reset_client_provider, set_client_provider
 from apolo_mcp.errors import ApoloToolError
@@ -76,7 +76,7 @@ def tools(monkeypatch, tmp_path: Path):
         config=config(), service_accounts=service_accounts, secrets=secrets
     )
     token = set_client_provider(Provider(sdk))
-    mcp = FastMCP("service-accounts-test")
+    mcp = MCPServer("service-accounts-test")
     register(mcp)
     try:
         yield mcp, sdk, tmp_path
@@ -215,5 +215,5 @@ async def test_ledger_owned_cleanup_and_annotations(tools):
     result = await fn(mcp, "delete_service_account")("sa-1")
     assert result["id"] == "sa-1"
     registered = {item.name: item for item in await mcp.list_tools()}
-    assert registered["list_service_accounts"].annotations.readOnlyHint is True
-    assert registered["delete_service_account"].annotations.destructiveHint is True
+    assert registered["list_service_accounts"].annotations.read_only_hint is True
+    assert registered["delete_service_account"].annotations.destructive_hint is True

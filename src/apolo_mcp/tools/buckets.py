@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import apolo_sdk
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 from mcp.types import ToolAnnotations
 from yarl import URL
 
@@ -29,24 +29,24 @@ from .service_accounts import _atomic_sink, _reserve_file
 
 READ_ONLY = ToolAnnotations(
     title="Read Apolo bucket metadata",
-    readOnlyHint=True,
-    destructiveHint=False,
-    idempotentHint=True,
-    openWorldHint=True,
+    read_only_hint=True,
+    destructive_hint=False,
+    idempotent_hint=True,
+    open_world_hint=True,
 )
 WRITE = ToolAnnotations(
     title="Change an Apolo bucket",
-    readOnlyHint=False,
-    destructiveHint=False,
-    idempotentHint=False,
-    openWorldHint=True,
+    read_only_hint=False,
+    destructive_hint=False,
+    idempotent_hint=False,
+    open_world_hint=True,
 )
 DESTRUCTIVE = ToolAnnotations(
     title="Delete an exact Apolo bucket resource",
-    readOnlyHint=False,
-    destructiveHint=True,
-    idempotentHint=True,
-    openWorldHint=True,
+    read_only_hint=False,
+    destructive_hint=True,
+    idempotent_hint=True,
+    open_world_hint=True,
 )
 
 MAX_LIST_RESULTS = 100
@@ -256,7 +256,7 @@ def _credential_mapping(payload: bytes) -> dict[str, str]:
     return decoded
 
 
-def register(mcp: FastMCP) -> None:
+def register(mcp: MCPServer) -> None:
     @mcp.tool(annotations=READ_ONLY)
     async def list_buckets(
         limit: int = 50,

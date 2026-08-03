@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from types import SimpleNamespace
 
 import pytest
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 
 from apolo_mcp._client import reset_client_provider, set_client_provider
 from apolo_mcp.errors import ApoloToolError
@@ -169,7 +169,7 @@ def tools(tmp_path, monkeypatch):
     provider = Provider(fake)
     token = set_flow_api_provider(provider)
     client_token = set_client_provider(ClientProvider())
-    mcp = FastMCP("flow-test")
+    mcp = MCPServer("flow-test")
     register(mcp)
     try:
         yield mcp._tool_manager._tools, fake, provider, scope, tmp_path
@@ -207,9 +207,9 @@ def test_tools_and_destructive_annotations(tools):
         "flow_bake_cancel",
         "flow_bake_restart",
     ):
-        assert registered[name].annotations.destructiveHint is True
-    assert registered["flow_live_run"].annotations.destructiveHint is False
-    assert registered["flow_bake_start"].annotations.destructiveHint is False
+        assert registered[name].annotations.destructive_hint is True
+    assert registered["flow_live_run"].annotations.destructive_hint is False
+    assert registered["flow_bake_start"].annotations.destructive_hint is False
     for name in expected:
         parameters = registered[name].parameters["properties"]
         assert "allowed_workspace_root" not in parameters

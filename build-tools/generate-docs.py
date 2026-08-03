@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate committed documentation from FastMCP and skill metadata."""
+"""Generate committed documentation from MCPServer and skill metadata."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 from mcp.types import Tool
 
 
@@ -75,39 +75,39 @@ def _classification(tool: Tool) -> str:
     if annotations is None:
         raise ValueError(f"tool {tool.name!r} has no annotations")
     flags = (
-        annotations.readOnlyHint,
-        annotations.destructiveHint,
-        annotations.idempotentHint,
-        annotations.openWorldHint,
+        annotations.read_only_hint,
+        annotations.destructive_hint,
+        annotations.idempotent_hint,
+        annotations.open_world_hint,
     )
     if not all(isinstance(flag, bool) for flag in flags):
         raise ValueError(f"tool {tool.name!r} has incomplete annotations")
-    if annotations.readOnlyHint:
-        if annotations.destructiveHint:
+    if annotations.read_only_hint:
+        if annotations.destructive_hint:
             raise ValueError(f"tool {tool.name!r} is both read-only and destructive")
         return "read-only"
-    if annotations.destructiveHint:
+    if annotations.destructive_hint:
         return "destructive"
-    if tool.name.startswith("plan_") and annotations.openWorldHint is False:
+    if tool.name.startswith("plan_") and annotations.open_world_hint is False:
         return "planning"
     return "write"
 
 
 async def collect_tools() -> list[tuple[str, Tool, str]]:
-    """Collect public FastMCP metadata in canonical module/tool order."""
+    """Collect public MCPServer metadata in canonical module/tool order."""
     result: list[tuple[str, Tool, str]] = []
     seen: set[str] = set()
     for capability in CAPABILITY_SPECS:
         group = capability.title
-        registry = FastMCP(f"apolo-docs-{capability.slug}")
+        registry = MCPServer(f"apolo-docs-{capability.slug}")
         capability.register(registry)
         for tool in await registry.list_tools():
             if tool.name in seen:
                 raise ValueError(f"duplicate registered tool: {tool.name}")
             seen.add(tool.name)
             _description(tool.description, f"tool {tool.name!r}")
-            if not isinstance(tool.inputSchema, dict) or not isinstance(
-                tool.outputSchema, dict
+            if not isinstance(tool.input_schema, dict) or not isinstance(
+                tool.output_schema, dict
             ):
                 raise ValueError(f"tool {tool.name!r} has incomplete schemas")
             result.append((group, tool, _classification(tool)))
@@ -139,12 +139,12 @@ def render_tool_group(tools: list[tuple[str, Tool, str]], group: str) -> str:
                 _description(tool.description, tool.name),
                 f"**Operation type:** {OPERATION_LABELS[classification]}",
                 "**Annotations:** "
-                f"read-only `{str(annotations.readOnlyHint).lower()}`, "
-                f"destructive `{str(annotations.destructiveHint).lower()}`, "
-                f"idempotent `{str(annotations.idempotentHint).lower()}`, "
-                f"open-world `{str(annotations.openWorldHint).lower()}`",
-                f"**Input schema:**\n\n```json\n{_json(tool.inputSchema)}\n```",
-                f"**Output schema:**\n\n```json\n{_json(tool.outputSchema)}\n```",
+                f"read-only `{str(annotations.read_only_hint).lower()}`, "
+                f"destructive `{str(annotations.destructive_hint).lower()}`, "
+                f"idempotent `{str(annotations.idempotent_hint).lower()}`, "
+                f"open-world `{str(annotations.open_world_hint).lower()}`",
+                f"**Input schema:**\n\n```json\n{_json(tool.input_schema)}\n```",
+                f"**Output schema:**\n\n```json\n{_json(tool.output_schema)}\n```",
             ]
         )
     return "\n\n".join(sections)

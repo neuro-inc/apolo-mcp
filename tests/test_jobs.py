@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock
 
 import apolo_sdk
 import pytest
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 
 from apolo_mcp._client import reset_client_provider, set_client_provider
 from apolo_mcp.errors import ApoloToolError
@@ -175,7 +175,7 @@ def tools(monkeypatch, tmp_path):
     )
     sdk = SimpleNamespace(config=config, parse=parse, jobs=jobs, images=images)
     token = set_client_provider(FakeProvider(sdk))
-    mcp = FastMCP("jobs-test")
+    mcp = MCPServer("jobs-test")
     register(mcp)
     try:
         yield mcp._tool_manager._tools, sdk
@@ -607,9 +607,9 @@ async def test_sdk_errors_are_normalized_with_context(tools):
 
 
 def test_inline_annotations_are_exact(tools):
-    assert tools[0]["get_job"].annotations.readOnlyHint is True
-    assert tools[0]["run_job"].annotations.destructiveHint is False
-    assert tools[0]["run_job"].annotations.idempotentHint is False
-    assert tools[0]["exec_job"].annotations.readOnlyHint is False
-    assert tools[0]["kill_job"].annotations.destructiveHint is True
-    assert tools[0]["kill_job"].annotations.idempotentHint is True
+    assert tools[0]["get_job"].annotations.read_only_hint is True
+    assert tools[0]["run_job"].annotations.destructive_hint is False
+    assert tools[0]["run_job"].annotations.idempotent_hint is False
+    assert tools[0]["exec_job"].annotations.read_only_hint is False
+    assert tools[0]["kill_job"].annotations.destructive_hint is True
+    assert tools[0]["kill_job"].annotations.idempotent_hint is True

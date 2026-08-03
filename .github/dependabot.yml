@@ -3,11 +3,13 @@ updates:
   - package-ecosystem: uv
     directory: /
     schedule:
-      interval: weekly
-    groups:
-      python-dependencies:
-        patterns: ["*"]
+      interval: daily
+      time: "03:00"
+    open-pull-requests-limit: 10
+    insecure-external-code-execution: allow
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
+      interval: daily
+      time: "03:00"
+    open-pull-requests-limit: 10

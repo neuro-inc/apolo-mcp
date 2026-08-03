@@ -7,7 +7,7 @@ import re
 from typing import Any
 
 import apolo_sdk
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 from mcp.types import ToolAnnotations
 from yarl import URL
 
@@ -21,24 +21,24 @@ from ..workspace import resolve_new_workspace_file, resolve_workspace_path
 
 READ_ONLY = ToolAnnotations(
     title="Read Apolo storage metadata or bounded text",
-    readOnlyHint=True,
-    destructiveHint=False,
-    idempotentHint=True,
-    openWorldHint=True,
+    read_only_hint=True,
+    destructive_hint=False,
+    idempotent_hint=True,
+    open_world_hint=True,
 )
 WRITE = ToolAnnotations(
     title="Write an exact Apolo storage target",
-    readOnlyHint=False,
-    destructiveHint=False,
-    idempotentHint=False,
-    openWorldHint=True,
+    read_only_hint=False,
+    destructive_hint=False,
+    idempotent_hint=False,
+    open_world_hint=True,
 )
 DESTRUCTIVE = ToolAnnotations(
     title="Delete an exact Apolo storage target",
-    readOnlyHint=False,
-    destructiveHint=True,
-    idempotentHint=True,
-    openWorldHint=True,
+    read_only_hint=False,
+    destructive_hint=True,
+    idempotent_hint=True,
+    open_world_hint=True,
 )
 
 MAX_LIST_RESULTS = 100
@@ -120,7 +120,7 @@ async def _await_transfer(operation: Any, timeout_seconds: float | None) -> Any:
     return await asyncio.wait_for(operation, timeout=timeout_seconds)
 
 
-def register(mcp: FastMCP) -> None:
+def register(mcp: MCPServer) -> None:
     @mcp.tool(annotations=READ_ONLY)
     async def list_storage(
         path: str = "",

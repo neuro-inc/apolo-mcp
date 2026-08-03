@@ -5,7 +5,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 from mcp.types import ToolAnnotations
 
 from .._client import client
@@ -14,10 +14,10 @@ from ..errors import normalize_error
 
 READ_ONLY = ToolAnnotations(
     title="Read Apolo administration metadata",
-    readOnlyHint=True,
-    destructiveHint=False,
-    idempotentHint=True,
-    openWorldHint=True,
+    read_only_hint=True,
+    destructive_hint=False,
+    idempotent_hint=True,
+    open_world_hint=True,
 )
 
 MAX_LIST_RESULTS = 1000
@@ -163,7 +163,7 @@ def _project_user(item: Any) -> dict[str, Any]:
     }
 
 
-def register(mcp: FastMCP) -> None:
+def register(mcp: MCPServer) -> None:
     @mcp.tool(annotations=READ_ONLY)
     async def list_admin_clusters(limit: int = 100) -> dict[str, Any]:
         """List administrative cluster defaults and maintenance state."""

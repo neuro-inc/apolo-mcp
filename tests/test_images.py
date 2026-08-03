@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, Mock
 
 import apolo_sdk
 import pytest
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 
 from apolo_mcp._client import reset_client_provider, set_client_provider
 from apolo_mcp.errors import ApoloToolError
@@ -68,7 +68,7 @@ def tools(monkeypatch, tmp_path):
     )
     sdk = SimpleNamespace(config=cfg, parse=parser, images=images)
     token = set_client_provider(Provider(sdk))
-    mcp = FastMCP("image-test")
+    mcp = MCPServer("image-test")
     register(mcp)
     try:
         yield mcp._tool_manager._tools, sdk
@@ -118,8 +118,8 @@ async def test_remove_passes_tag_not_digest_and_annotations(tools):
     assert remote.tag == "v1"
     assert reference == "v1"
     tools[1].images.digest.assert_not_awaited()
-    assert tools[0]["inspect_image"].annotations.readOnlyHint is True
-    assert tools[0]["remove_image_tag"].annotations.destructiveHint is True
+    assert tools[0]["inspect_image"].annotations.read_only_hint is True
+    assert tools[0]["remove_image_tag"].annotations.destructive_hint is True
 
 
 async def test_push_and_pull_use_sdk_with_exact_context(tools, tmp_path, monkeypatch):

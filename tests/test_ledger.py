@@ -10,7 +10,7 @@ from typing import Any
 
 import apolo_sdk
 import pytest
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 
 from apolo_mcp._client import reset_client_provider, set_client_provider
 from apolo_mcp.ledger import Ledger, redact_credentials
@@ -235,7 +235,7 @@ async def test_run_job_records_exact_created_id_and_resolved_context(
         parse=SimpleNamespace(remote_image=lambda value, **kwargs: value),
     )
     token = set_client_provider(Provider(sdk))
-    mcp = FastMCP("ledger-job-test")
+    mcp = MCPServer("ledger-job-test")
     register(mcp)
     try:
         result = await mcp._tool_manager._tools["run_job"].fn(
@@ -293,7 +293,7 @@ async def test_run_job_preflight_rejects_symlink_before_sdk_creation(
         parse=SimpleNamespace(remote_image=lambda value, **kwargs: value),
     )
     token = set_client_provider(Provider(sdk))
-    mcp = FastMCP("ledger-preflight-test")
+    mcp = MCPServer("ledger-preflight-test")
     register(mcp)
     try:
         with pytest.raises(Exception, match="ledger parent"):

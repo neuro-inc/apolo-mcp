@@ -13,7 +13,7 @@ It is a thin adapter layer over `apolo-sdk`. It does **not** shell out to the `a
 - **Auth via Apolo configuration** — local use normally reads `~/.apolo/` after
   `apolo login`; isolated jobs may use `APOLO_PASSED_CONFIG`. No tool accepts a token.
 - **`apolo_sdk.get()`** is the entry point: an async context manager yielding `Client`.
-- **`fastmcp`** (the `mcp` package's high-level API) for tool registration and server lifecycle.
+- **`MCPServer`** from the `mcp` package for tool registration and server lifecycle.
 
 ## Workload boundary
 
@@ -27,7 +27,7 @@ It is a thin adapter layer over `apolo-sdk`. It does **not** shell out to the `a
 
 `src/apolo_mcp/catalog.py` is the canonical ordered catalog for capability groups,
 runtime registration, documentation descriptions, and owning skills. Registered
-FastMCP metadata remains canonical for individual tool schemas and operation types. It
+MCPServer metadata remains canonical for individual tool schemas and operation types. It
 generates the complete [tool reference](docs/capabilities/tools/README.md); do not
 maintain a duplicate tool table here.
 
@@ -37,7 +37,7 @@ maintain a duplicate tool table here.
 src/apolo_mcp/
   cli.py         — server and packaged-skill command-line interface
   catalog.py     — declarative capability and skill ownership catalog
-  server.py      — FastMCP app and stdio server lifecycle
+  server.py      — MCPServer app and stdio server lifecycle
   skill_installer.py — packaged skill installation implementation
   _client.py     — apolo_sdk.get() context manager helper
   workspace.py   — server-controlled local filesystem confinement
@@ -63,7 +63,7 @@ src/apolo_mcp/
   | Subject | Authoritative source | Published documentation |
   |---|---|---|
   | Capability order, descriptions, runtime registration, and skill ownership | `src/apolo_mcp/catalog.py` | generated tool navigation, skills catalog, and safety sections |
-  | MCP tool names, schemas, annotations, and operation types | registered FastMCP metadata in `src/apolo_mcp/tools/` | generated `docs/capabilities/tools/` and generated sections of the safety model |
+  | MCP tool names, schemas, annotations, and operation types | registered MCPServer metadata in `src/apolo_mcp/tools/` | generated `docs/capabilities/tools/` and generated sections of the safety model |
   | Policy modes and lifecycle journal behavior | `src/apolo_mcp/policy.py`, `src/apolo_mcp/ledger.py`, and `build-tools/docs-templates/safety.md` | generated `docs/getting-started/safety.md` |
   | Canonical skill names and summaries | `src/apolo_mcp/catalog.py`, skill frontmatter, and `agents/openai.yaml` | generated `docs/capabilities/skills.md` |
   | Complete skill instructions and supporting references | `skills/*/SKILL.md` and `skills/*/references/` | generated `docs/capabilities/skills/*/` |
@@ -128,6 +128,6 @@ Do not duplicate Codex or Claude Code setup here. Use the
 - Centralize all local path confinement in `src/apolo_mcp/workspace.py`; document its
   behavior only in `build-tools/docs-templates/safety.md`.
 - All tools return plain dicts or strings — no SDK objects cross the boundary.
-- Async tools throughout; FastMCP handles the event loop.
+- Async tools throughout; MCPServer handles the event loop.
 - Python ≥ 3.11 (matches `apolo-sdk` minimum).
 - Ruff owns formatting and import sorting; `apolo_mcp` is the configured first-party package.
