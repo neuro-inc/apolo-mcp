@@ -7,6 +7,7 @@ import pytest
 from yarl import URL
 
 from apolo_mcp._client import reset_client_provider, set_client_provider
+from apolo_mcp.policy import _reset_policy_for_tests
 from apolo_mcp.server import mcp
 
 
@@ -70,12 +71,15 @@ def fake_sdk(tmp_path: Path):
 
 
 @pytest.fixture(autouse=True)
-def provider(fake_sdk):
+def provider(fake_sdk, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "managed")
+    _reset_policy_for_tests()
     token = set_client_provider(FakeProvider(fake_sdk))
     try:
         yield
     finally:
         reset_client_provider(token)
+        _reset_policy_for_tests()
 
 
 def tool(name: str):
@@ -86,6 +90,7 @@ async def test_get_context_contains_metadata_but_no_credentials() -> None:
     result = await tool("get_apolo_context")()
     assert result["cluster"] == "alpha"
     assert result["username"] == "user@example.test"
+    assert result["policy_mode"] == "managed"
     assert result["versions"]["apolo_flow"] != "unknown"
     serialized = repr(result).lower()
     assert "token" not in serialized

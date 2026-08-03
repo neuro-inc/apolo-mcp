@@ -11,6 +11,7 @@ from .. import __version__
 from .._client import client
 from ..context import resolve_context
 from ..errors import normalize_error
+from ..policy import current_policy
 
 
 READ_ONLY = ToolAnnotations(
@@ -53,7 +54,10 @@ def _accelerator(preset: Any) -> dict[str, Any] | None:
 def register(mcp: FastMCP) -> None:
     @mcp.tool(annotations=READ_ONLY)
     async def get_apolo_context() -> dict[str, Any]:
-        """Return selected context and safe client versions; never credentials."""
+        """Return selected context, active policy, and safe client versions.
+
+        Credentials are never returned.
+        """
         try:
             async with client() as sdk:
                 config = sdk.config
@@ -62,6 +66,7 @@ def register(mcp: FastMCP) -> None:
                     "cluster": config.cluster_name,
                     "org": config.org_name,
                     "project": config.project_name,
+                    "policy_mode": current_policy().mode.value,
                     "config": {
                         "path": str(config.path),
                         "exists": config.path.exists(),

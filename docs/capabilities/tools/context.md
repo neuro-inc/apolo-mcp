@@ -6,7 +6,7 @@
 
 ## `get_apolo_context`
 
-Return selected context and safe client versions; never credentials.
+Return selected context, active policy, and safe client versions. Credentials are never returned.
 
 **Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
