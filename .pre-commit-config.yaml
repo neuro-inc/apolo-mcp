@@ -1,0 +1,34 @@
+# Adapted from neuro-inc/app-types at 44d287f4216b87e0aacd3913aa1a611845875412.
+ci:
+  # pre-commit.ci does not install the project's uv environment. The GitHub Actions
+  # lint job runs this hook after `make setup` and remains the docs-drift gate.
+  skip: [generate-mcp-docs]
+
+exclude: ^uv\.lock$
+repos:
+  - repo: local
+    hooks:
+      - id: generate-mcp-docs
+        name: Generate MCP docs
+        language: system
+        entry: make docs
+        pass_filenames: false
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.9
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+  - repo: https://github.com/twisted/towncrier
+    rev: 25.8.0
+    hooks:
+      - id: towncrier-check

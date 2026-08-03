@@ -1,0 +1,4 @@
+interface:
+  display_name: "Apolo Research Job"
+  short_description: "Run bounded research jobs with provenance"
+  default_prompt: "Use $apolo-research-job to stage and run this experiment safely on Apolo."

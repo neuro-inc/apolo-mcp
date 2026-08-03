@@ -1,0 +1,47 @@
+# Apolo MCP documentation
+
+Apolo MCP is a local [Model Context Protocol](https://modelcontextprotocol.io/)
+server that gives an AI client typed, bounded access to Apolo platform operations. It
+uses the configured Apolo identity and permissions: normally a local `apolo login`, or
+an isolated job's `APOLO_PASSED_CONFIG`. It does not shell out to the CLI, return
+credential values to the model, or grant additional permissions.
+It can create service accounts, but their one-time tokens are written directly to a
+protected file or Apolo secret instead of entering the model conversation.
+
+The server is intended for discovering platform context, running and observing
+workloads, operating Applications, and managing supported project resources. It does
+not provide arbitrary shell or HTTP access, Kubernetes administration, identity or RBAC
+administration, model-visible secrets, interactive terminal streams, or a shared remote
+service.
+
+## Components
+
+Apolo MCP ships two complementary capabilities:
+
+1. **Local MCP server.** A local stdio process exposes typed, bounded Apolo operations
+   to an MCP client. The server owns platform access, explicit context resolution,
+   output bounds, credential protection, mutation policy, and lifecycle journaling.
+   See the [capability matrix](capabilities/) and generated
+   [MCP tool reference](capabilities/tools/README.md).
+2. **Agent skills catalogue.** Packaged skills for Codex and Claude Code teach the
+   client how to combine MCP tools into task-oriented workflows such as context
+   discovery, research jobs, Flow workloads, Applications, resource management, and
+   isolated R&D sessions. See the generated [skills catalogue](capabilities/skills.md).
+
+The MCP server is the controlled execution layer. The skills catalogue is the workflow
+layer that guides an agent in using that execution layer safely and consistently.
+
+## Start here
+
+1. [Install and configure Apolo MCP](getting-started/installation.md) and check its
+   prerequisites.
+2. Read the generated [safety model](getting-started/safety.md) before enabling writes.
+3. Explore the [capability matrix](capabilities/) to understand what is supported.
+4. Use the generated [tool reference](capabilities/tools/README.md) and
+   [skills catalog](capabilities/skills.md) for exact interfaces and workflows.
+5. Follow a guide for [platform context](guides/platform-context.md),
+   [workloads](guides/workflows.md), [Applications](guides/applications.md), or
+   [isolated full-mode operation](guides/full-mode-service-account.md).
+
+The repository [README](../README.md) contains the short project summary. This
+documentation is the maintained usage and capability contract for the current release.

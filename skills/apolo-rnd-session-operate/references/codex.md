@@ -1,0 +1,47 @@
+# Codex inside the R&D job
+
+Check the selected Codex version and required components through the canonical process
+linked from [runtime-bootstrap.md](runtime-bootstrap.md). Install only what is missing.
+
+Create a private job-local home and follow the
+[isolated R&D job configuration](installation.md#isolated-rd-job-configuration)
+for `$CODEX_HOME/config.toml`. Keep `sandbox_mode="workspace-write"`,
+`approval_policy="on-request"`, and `approvals_reviewer="user"` unless the user
+explicitly approves a stricter or broader setting after review.
+
+For an interactive session, use Codex device authentication when available or an
+already provisioned job-local authentication store. For noninteractive execution,
+Codex supports `CODEX_API_KEY` for `codex exec`; keep it scoped to that process rather
+than exporting it into unrelated commands.
+
+Set `CODEX_HOME` to an ephemeral job-local path outside `/workspace` before launch so
+authentication state is not copied into persistent storage. Keep shell network disabled unless
+the task requires it; Apolo MCP's own server connection is separate. After reviewing
+the workspace, start Codex directly. If reconnectability is useful and `tmux` is
+already available or explicitly requested, start a named session instead:
+
+```console
+tmux new-session -d -s rnd-codex -c <WORKSPACE> -- codex
+tmux attach-session -t rnd-codex
+```
+
+When using `tmux`, use `Ctrl-b d` to detach. Inspect or stop the session without
+attaching:
+
+```console
+tmux has-session -t rnd-codex
+tmux list-panes -t rnd-codex -F '#{pane_current_command} #{pane_dead}'
+tmux kill-session -t rnd-codex
+```
+
+Do not enable `pipe-pane` or terminal transcript capture by default. Inspect expected
+outputs at their approved storage URI and use bounded Apolo job status/log operations
+for monitoring.
+
+Keep the repository, generated artifacts, and sanitized `/workspace/HANDOFF.md` on the
+mounted storage. A replacement job can mount the same path and continue from those
+files; it must authenticate Codex again rather than persisting its credential store.
+
+For a bounded noninteractive task, prefer `codex exec` as the job's main process; it
+does not need `tmux`. Do not use dangerous sandbox or approval bypass settings merely
+because Apolo MCP is in `full` mode.

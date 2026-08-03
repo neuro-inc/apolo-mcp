@@ -1,0 +1,4 @@
+interface:
+  display_name: "Apolo R&D Session Setup"
+  short_description: "Provision isolated full-mode R&D sessions"
+  default_prompt: "Use $apolo-rnd-session-setup to provision a least-privilege Apolo R&D agent session."

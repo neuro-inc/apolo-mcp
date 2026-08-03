@@ -1,0 +1,105 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "apolo-mcp"
+dynamic = ["version"]
+description = "MCP server for the Apolo platform"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "Apolo Team", email = "dev@apolo.us" }]
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Operating System :: OS Independent",
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "License :: OSI Approved :: Apache Software License",
+]
+dependencies = [
+    "apolo-flow>=26.7.2",
+    "apolo-sdk>=26.7.2",
+    "async-timeout>=5",
+    "jsonschema>=4.23,<5",
+    "mcp>=1.28,<2",
+    "pyyaml>=6.0",
+    "tomlkit>=0.13,<1",
+]
+
+[project.scripts]
+apolo-mcp = "apolo_mcp.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/neuro-inc/apolo-mcp"
+Documentation = "https://github.com/neuro-inc/apolo-mcp/tree/master/docs"
+Repository = "https://github.com/neuro-inc/apolo-mcp"
+Issues = "https://github.com/neuro-inc/apolo-mcp/issues"
+
+[dependency-groups]
+dev = [
+    "build>=1.2,<1.5",
+    "mypy>=1.10",
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "pre-commit>=3.0",
+    "towncrier==25.8.0",
+    "types-jsonschema>=4.23",
+    "types-PyYAML>=6.0",
+]
+
+[tool.uv]
+required-version = ">=0.7"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/apolo_mcp"]
+
+[tool.hatch.build.targets.wheel.force-include]
+skills = "apolo_mcp/skills"
+
+[tool.hatch.build.targets.sdist]
+exclude = ["/build-tools", "/docs"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+log_cli = false
+log_level = "INFO"
+testpaths = ["tests"]
+
+[tool.mypy]
+check_untyped_defs = true
+disallow_any_generics = true
+disallow_untyped_defs = true
+follow_imports = "silent"
+strict_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_unused_configs = true
+incremental = false
+
+[[tool.mypy.overrides]]
+module = "pytest"
+ignore_missing_imports = true
+
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+exclude = [".git", ".env", "__pycache__", ".eggs", ".venv", "venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+ignore = ["E203"]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+lines-after-imports = 2
+known-first-party = ["apolo_mcp"]

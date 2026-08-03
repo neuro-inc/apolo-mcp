@@ -1,0 +1,4 @@
+interface:
+  display_name: "Apolo Applications"
+  short_description: "Discover, operate, and debug Apolo Apps"
+  default_prompt: "Use $apolo-applications to select, operate, or debug the best App for my request."

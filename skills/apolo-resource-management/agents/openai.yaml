@@ -1,0 +1,4 @@
+interface:
+  display_name: "Apolo Resource Management"
+  short_description: "Manage Apolo resources with bounded safe operations"
+  default_prompt: "Use $apolo-resource-management to inspect and safely change these Apolo resources."

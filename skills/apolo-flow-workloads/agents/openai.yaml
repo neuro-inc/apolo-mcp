@@ -1,0 +1,4 @@
+interface:
+  display_name: "Apolo Flow Workloads"
+  short_description: "Operate Apolo live workflows and batch bakes"
+  default_prompt: "Use $apolo-flow-workloads to validate and run this Apolo Flow workload."

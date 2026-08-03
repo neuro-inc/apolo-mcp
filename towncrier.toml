@@ -1,0 +1,9 @@
+[tool.towncrier]
+package = "apolo_mcp"
+package_dir = "src"
+directory = "CHANGELOG.D"
+filename = "CHANGELOG.md"
+name = "Apolo MCP"
+issue_format = "[#{issue}](https://github.com/neuro-inc/apolo-mcp/issues/{issue})"
+start_string = "[comment]: # (towncrier release notes start)\n"
+title_format = "## {version} ({project_date})"

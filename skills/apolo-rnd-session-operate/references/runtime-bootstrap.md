@@ -1,0 +1,40 @@
+# Runtime bootstrap inside an R&D job
+
+Follow the
+[R&D runtime requirements](installation.md#runtime-requirements-inside-an-rd-job).
+Install only a missing required component after resolving its exact version and
+obtaining confirmation. Do not install workload tooling or optional `tmux` until the
+task requires it. This skill reference contains only the non-secret handoff contract
+below.
+
+## Required trusted handoff
+
+Before starting the coding client, require a non-secret handoff from the local setup
+phase with this shape:
+
+```json
+{
+  "job_id": "<EXACT_JOB_ID>",
+  "service_account_id": "<EXACT_ACCOUNT_ID>",
+  "service_account_role": "<EXACT_ROLE>",
+  "context": {"cluster": "<CLUSTER>", "org": "<ORG>", "project": "<PROJECT>"},
+  "grants": [{"uri": "<RESOURCE_URI>", "permission": "read-or-write"}],
+  "workspace": "<ABSOLUTE_WORKSPACE>",
+  "output_uri": "<EXACT_OUTPUT_URI>"
+}
+```
+
+Verify without displaying credentials:
+
+```console
+apolo config show
+apolo service-account get <SERVICE_ACCOUNT_ID>
+apolo acl ls -u <SERVICE_ACCOUNT_ROLE> --full-uri
+```
+
+`apolo acl ls -u` accepts a user or role. Querying `<SERVICE_ACCOUNT_ROLE>` here is
+intentional because Apolo grants service-account resource permissions to the exact role
+returned by the account metadata. First verify that `apolo service-account get` maps the
+handoff's account ID to that same role. Then compare identity, defaults, and every role
+grant to the handoff. Stop if the handoff is missing, the account-to-role mapping differs,
+or any grant is unexpectedly broad.
