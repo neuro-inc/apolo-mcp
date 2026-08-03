@@ -21,7 +21,8 @@ because it terminates after producing the image.
    secret value or place one in command text, evidence, or logs.
 5. Before `run_job`, show image, preset, command, mounts, secret reference names,
    HTTP exposure/auth, lifecycle limits, target context, and expected output URI.
-   Execute only after the user approves and the selected server policy permits it.
+   Invoke the write after that description so the MCP host can apply its approval UI;
+   the selected server policy must permit it.
 6. Record the returned exact job ID in the session ledger immediately. Monitor with
    bounded `wait_for_job`, `get_job_logs`, and `get_job_telemetry`; retain truncation
    markers and terminal reason/exit code.

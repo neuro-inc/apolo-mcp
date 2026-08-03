@@ -24,9 +24,10 @@ tests; never keep a job alive to emulate a deployment.
    `PLAN.md`. Show exact template version, context, app/current revision, dependencies,
    resources, endpoints, validation, destructive effects, expiry, and SHA-256.
    Permit secret references only; never resolve secret values.
-6. Apply only with explicit user approval, `managed` or `full` server policy, and the
-   exact unexpired single-use plan. Recheck checksum, parsed YAML, context, template,
-   and current revision. Reject edits or drift and create a fresh plan.
+6. Describe the exact reviewed operation, then invoke it so the MCP host can apply its
+   approval UI. Require `managed` or `full` server policy and the exact unexpired
+   single-use plan. Recheck checksum, parsed YAML, context, template, and current
+   revision. Reject edits or drift and create a fresh plan.
 7. Wait with a bound, then verify app state, rollout logs, events, output, and
    endpoints. For a service, verify public authenticated access when possible and a
    same-project in-cluster endpoint. If public exposure is unavailable, record the

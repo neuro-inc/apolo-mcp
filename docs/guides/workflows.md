@@ -31,9 +31,10 @@ the typed bake operations. On failure, preserve the failed state and logs, ident
 specific source or parameter correction, and use the supported restart operation only
 after that correction is reviewed.
 
-Interactive attach, port forwarding, Flow project scaffolding, bulk upload/download,
-and local cache or project maintenance remain local CLI activities. MCP does not wrap
-those streams as ordinary tool results.
+Interactive attach, Flow project scaffolding, bulk upload/download, and local cache or
+project maintenance remain local CLI activities. For a running MCP-owned job, use the
+native loopback-only port-forward start/list/stop lifecycle; forwarded bytes never
+enter ordinary tool results and every listener closes when stopped or when MCP exits.
 
 See the [research-job and Flow skills](../capabilities/skills.md) and the exact
 [tool reference](../capabilities/tools/README.md).
