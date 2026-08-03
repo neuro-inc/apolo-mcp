@@ -23,7 +23,7 @@ Never provision the headless agent with the local user's Apolo credentials.
    location. The job must mount a dedicated or approved storage path read-write at
    `/workspace` and use it as its working directory so source and artifacts survive a
    job restart. Use
-   `node:22-bookworm-slim` only as the documented MVP example, not as an
+   `node:22-bookworm-slim` only as the documented example, not as an
    Apolo-supported image. Reuse or modify an existing account, secret, grant, or job
    only when the user explicitly requests it.
 4. After confirmation, call `create_service_account` with `destination_type="secret"`

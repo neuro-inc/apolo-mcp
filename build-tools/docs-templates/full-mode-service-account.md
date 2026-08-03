@@ -107,7 +107,7 @@ apolo run \
   node:22-bookworm-slim -- sleep infinity
 ```
 
-This image reference is an MVP example, not an Apolo-supported R&D runtime. After the
+This image reference is an example, not an Apolo-supported R&D runtime. After the
 job starts, enter it with `apolo exec <JOB_ID> -- bash`, follow the runtime bootstrap
 above, and then start the selected coding client.
 

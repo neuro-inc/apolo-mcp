@@ -84,7 +84,7 @@ The following self-contained runtime and job configuration is also packaged with
 
 ### Runtime requirements inside an R&D job
 
-For the MVP, use `node:22-bookworm-slim` as an example bootstrap image and record that
+Use `node:22-bookworm-slim` as an example bootstrap image and record that
 exact mutable tag. Apolo job launch does not currently accept Docker image digest
 references. This is an upstream convenience image, not an Apolo-supported R&D image;
 another glibc-based Debian or Ubuntu image is acceptable when it provides Node.js 22
@@ -233,7 +233,7 @@ apolo run \
   node:22-bookworm-slim -- sleep infinity
 ```
 
-This image reference is an MVP example, not an Apolo-supported R&D runtime. After the
+This image reference is an example, not an Apolo-supported R&D runtime. After the
 job starts, enter it with `apolo exec <JOB_ID> -- bash`, follow the runtime bootstrap
 above, and then start the selected coding client.
 

@@ -33,7 +33,7 @@
 
 ## Transfer capabilities
 
-- Keep recursive storage and bucket transfers as explicit CLI fallbacks for the MVP.
+- Keep recursive storage and bucket transfers as explicit CLI fallbacks.
   Consider native MCP directory transfers only after defining enforceable file-count,
   total-byte, duration, symlink, overwrite, and partial-cleanup bounds that do not move
   object contents through model context.

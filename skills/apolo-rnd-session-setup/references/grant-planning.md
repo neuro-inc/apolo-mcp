@@ -42,7 +42,7 @@ to simplify setup.
 
 ## Bounded job template
 
-Suggest `node:22-bookworm-slim` as the MVP bootstrap base and record that exact mutable
+Suggest `node:22-bookworm-slim` as the example bootstrap base and record that exact mutable
 tag. Apolo job launch does not currently accept Docker image digest references. This is
 not an Apolo-supported R&D image; use another reviewed slim glibc-based image when
 needed. Start a long-running workspace job with `sleep infinity`, then follow the shared
