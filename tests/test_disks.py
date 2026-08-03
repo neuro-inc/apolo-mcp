@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock
 
 import apolo_sdk
 import pytest
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 
 from apolo_mcp._client import reset_client_provider, set_client_provider
 from apolo_mcp.errors import ApoloToolError
@@ -64,7 +64,7 @@ def tools(monkeypatch, tmp_path):
     )
     sdk = SimpleNamespace(config=cfg, disks=Disks())
     token = set_client_provider(Provider(sdk))
-    mcp = FastMCP("disk-test")
+    mcp = MCPServer("disk-test")
     register(mcp)
     try:
         yield mcp._tool_manager._tools, sdk, tmp_path
@@ -110,5 +110,5 @@ async def test_delete_rejects_alias_and_annotations(tools):
     tools[1].disks.get.return_value = disk("actual-id")
     with pytest.raises(ApoloToolError, match="name or alias"):
         await fn(tools, "delete_disk")("friendly")
-    assert tools[0]["list_disks"].annotations.readOnlyHint is True
-    assert tools[0]["delete_disk"].annotations.destructiveHint is True
+    assert tools[0]["list_disks"].annotations.read_only_hint is True
+    assert tools[0]["delete_disk"].annotations.destructive_hint is True

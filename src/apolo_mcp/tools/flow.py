@@ -16,7 +16,7 @@ from typing import Any, AsyncContextManager, Protocol
 
 import apolo_sdk
 from apolo_flow.api import open_flow_api
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 from mcp.types import ToolAnnotations
 
 from .._client import client
@@ -33,13 +33,22 @@ from . import flow_config
 
 
 READ_ONLY = ToolAnnotations(
-    readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=True
+    read_only_hint=True,
+    destructive_hint=False,
+    idempotent_hint=True,
+    open_world_hint=True,
 )
 WRITE = ToolAnnotations(
-    readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=True
+    read_only_hint=False,
+    destructive_hint=False,
+    idempotent_hint=False,
+    open_world_hint=True,
 )
 DESTRUCTIVE = ToolAnnotations(
-    readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=True
+    read_only_hint=False,
+    destructive_hint=True,
+    idempotent_hint=False,
+    open_world_hint=True,
 )
 
 MAX_LIST = 100
@@ -350,7 +359,7 @@ async def _make_scope(args: ScopeArgs) -> FlowScope:
     return _scope(username, *args)
 
 
-def register(mcp: FastMCP) -> None:
+def register(mcp: MCPServer) -> None:
     flow_config.register(mcp)
 
     @mcp.tool(annotations=READ_ONLY)

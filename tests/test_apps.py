@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock
 
 import apolo_sdk
 import pytest
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 
 from apolo_mcp import app_plans
 from apolo_mcp.tools.apps import register
@@ -116,12 +116,12 @@ def tools(mock_client, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     mock_client.apps.list_templates = lambda **kwargs: iterator([template()])
     mock_client.apps.list_template_versions = lambda **kwargs: iterator([template()])
     mock_client.apps.list = lambda **kwargs: iterator([app()])
-    mcp = FastMCP("apps-test")
+    mcp = MCPServer("apps-test")
     register(mcp)
     return mcp, mock_client
 
 
-def fn(mcp: FastMCP, name: str):
+def fn(mcp: MCPServer, name: str):
     tool = mcp._tool_manager.get_tool(name)
     assert tool is not None
     return tool.fn
@@ -143,9 +143,9 @@ async def test_annotations_and_read_bounds(tools) -> None:
         "get_app_input",
         "list_app_revisions",
     ):
-        assert registered[name].annotations.readOnlyHint is True
-    assert registered["rollback_app"].annotations.destructiveHint is True
-    assert registered["uninstall_app"].annotations.destructiveHint is True
+        assert registered[name].annotations.read_only_hint is True
+    assert registered["rollback_app"].annotations.destructive_hint is True
+    assert registered["uninstall_app"].annotations.destructive_hint is True
     with pytest.raises(ValueError, match="limit"):
         await fn(mcp, "list_apps")(limit=101)
     with pytest.raises(ValueError, match="timeout_seconds"):

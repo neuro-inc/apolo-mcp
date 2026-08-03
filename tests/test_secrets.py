@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 from yarl import URL
 
 from apolo_mcp._client import reset_client_provider, set_client_provider
@@ -65,7 +65,7 @@ def tools(monkeypatch, tmp_path: Path):
     secrets.rm = AsyncMock()
     sdk = SimpleNamespace(config=config(), secrets=secrets)
     token = set_client_provider(Provider(sdk))
-    mcp = FastMCP("secrets-test")
+    mcp = MCPServer("secrets-test")
     register(mcp)
     try:
         yield mcp, sdk
@@ -201,5 +201,5 @@ async def test_exact_delete_and_annotations(tools):
     with pytest.raises(ValueError, match="exact"):
         await fn(mcp, "delete_secret")("folder/api")
     registered = {item.name: item for item in await mcp.list_tools()}
-    assert registered["list_secrets"].annotations.readOnlyHint is True
-    assert registered["delete_secret"].annotations.destructiveHint is True
+    assert registered["list_secrets"].annotations.read_only_hint is True
+    assert registered["delete_secret"].annotations.destructive_hint is True

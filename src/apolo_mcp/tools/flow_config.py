@@ -16,7 +16,7 @@ from typing import Any, Literal, Protocol
 import aiohttp
 import yaml
 from jsonschema import Draft202012Validator
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 from mcp.types import ToolAnnotations
 
 from ..policy import MutationEffect, authorize_mutation
@@ -26,10 +26,16 @@ from ..workspace import resolve_new_workspace_file, resolve_workspace_path
 
 FlowConfigType = Literal["live", "batch", "project"]
 READ_ONLY = ToolAnnotations(
-    readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=True
+    read_only_hint=True,
+    destructive_hint=False,
+    idempotent_hint=True,
+    open_world_hint=True,
 )
 WRITE = ToolAnnotations(
-    readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=True
+    read_only_hint=False,
+    destructive_hint=False,
+    idempotent_hint=False,
+    open_world_hint=True,
 )
 MAX_SCHEMA_BYTES = 1_000_000
 MAX_CONFIG_BYTES = 1_000_000
@@ -227,7 +233,7 @@ def _metadata(resource: SchemaResource) -> dict[str, str]:
     }
 
 
-def register(mcp: FastMCP) -> None:
+def register(mcp: MCPServer) -> None:
     @mcp.tool(annotations=READ_ONLY)
     async def flow_config_schema(
         config_type: FlowConfigType,

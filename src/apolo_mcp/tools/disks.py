@@ -6,7 +6,7 @@ from datetime import timedelta
 from typing import Any
 
 import apolo_sdk
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 from mcp.types import ToolAnnotations
 
 from .._client import client
@@ -22,24 +22,24 @@ from ..policy import MutationEffect, authorize_mutation
 
 READ_ONLY = ToolAnnotations(
     title="Read persistent disks",
-    readOnlyHint=True,
-    destructiveHint=False,
-    idempotentHint=True,
-    openWorldHint=True,
+    read_only_hint=True,
+    destructive_hint=False,
+    idempotent_hint=True,
+    open_world_hint=True,
 )
 WRITE = ToolAnnotations(
     title="Create a persistent disk",
-    readOnlyHint=False,
-    destructiveHint=False,
-    idempotentHint=False,
-    openWorldHint=True,
+    read_only_hint=False,
+    destructive_hint=False,
+    idempotent_hint=False,
+    open_world_hint=True,
 )
 DESTRUCTIVE = ToolAnnotations(
     title="Delete an exact persistent disk",
-    readOnlyHint=False,
-    destructiveHint=True,
-    idempotentHint=True,
-    openWorldHint=True,
+    read_only_hint=False,
+    destructive_hint=True,
+    idempotent_hint=True,
+    open_world_hint=True,
 )
 
 MAX_LIST_RESULTS = 100
@@ -82,7 +82,7 @@ def _assert_context(item: apolo_sdk.Disk, context: ApoloContext) -> None:
         raise ValueError("disk does not belong to the exact resolved context")
 
 
-def register(mcp: FastMCP) -> None:
+def register(mcp: MCPServer) -> None:
     @mcp.tool(annotations=READ_ONLY)
     async def list_disks(
         limit: int = 50,

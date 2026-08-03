@@ -2,7 +2,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 
 from .policy import initialize_policy
 from .tool_registry import register_tools
@@ -10,14 +10,14 @@ from .tools.jobs import close_all_port_forwards
 
 
 @asynccontextmanager
-async def _lifespan(_server: FastMCP[Any]) -> AsyncIterator[dict[str, Any]]:
+async def _lifespan(_server: MCPServer[Any]) -> AsyncIterator[dict[str, Any]]:
     try:
         yield {}
     finally:
         await close_all_port_forwards()
 
 
-mcp = FastMCP(
+mcp = MCPServer(
     "apolo",
     instructions=(
         "Before any write, discover and show the authenticated username and resolved "

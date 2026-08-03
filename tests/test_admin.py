@@ -4,7 +4,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 
 from apolo_mcp._client import reset_client_provider, set_client_provider
 from apolo_mcp.errors import ApoloToolError
@@ -118,7 +118,7 @@ def tools():
     )
     sdk = SimpleNamespace(config=config, _admin=admin)
     token = set_client_provider(Provider(sdk))
-    mcp = FastMCP("admin-test")
+    mcp = MCPServer("admin-test")
     register(mcp)
     try:
         yield mcp, sdk
@@ -168,7 +168,7 @@ async def test_admin_reads_follow_cli_admin_facade_and_serialize_safely(tools):
 async def test_all_admin_tools_are_read_only_and_bounded(tools):
     mcp, _ = tools
     for tool in mcp._tool_manager._tools.values():
-        assert tool.annotations.readOnlyHint is True
-        assert tool.annotations.destructiveHint is False
+        assert tool.annotations.read_only_hint is True
+        assert tool.annotations.destructive_hint is False
     with pytest.raises(ApoloToolError, match="limit"):
         await fn(mcp, "list_admin_clusters")(1001)

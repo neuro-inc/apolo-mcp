@@ -13,7 +13,7 @@ from time import monotonic
 from typing import Any, Awaitable, Callable
 
 import apolo_sdk
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 from mcp.types import ToolAnnotations
 
 from .._client import client
@@ -39,31 +39,31 @@ from ..security import redact_log_credentials
 
 READ_ONLY = ToolAnnotations(
     title="Read-only Apps operation",
-    readOnlyHint=True,
-    destructiveHint=False,
-    idempotentHint=True,
-    openWorldHint=True,
+    read_only_hint=True,
+    destructive_hint=False,
+    idempotent_hint=True,
+    open_world_hint=True,
 )
 PLAN = ToolAnnotations(
     title="Create a local Apps review plan",
-    readOnlyHint=False,
-    destructiveHint=False,
-    idempotentHint=False,
-    openWorldHint=False,
+    read_only_hint=False,
+    destructive_hint=False,
+    idempotent_hint=False,
+    open_world_hint=False,
 )
 WRITE = ToolAnnotations(
     title="Apply an Apps plan",
-    readOnlyHint=False,
-    destructiveHint=False,
-    idempotentHint=False,
-    openWorldHint=True,
+    read_only_hint=False,
+    destructive_hint=False,
+    idempotent_hint=False,
+    open_world_hint=True,
 )
 DESTRUCTIVE = ToolAnnotations(
     title="Apply a destructive Apps plan",
-    readOnlyHint=False,
-    destructiveHint=True,
-    idempotentHint=False,
-    openWorldHint=True,
+    read_only_hint=False,
+    destructive_hint=True,
+    idempotent_hint=False,
+    open_world_hint=True,
 )
 
 MAX_RESULTS = 100
@@ -410,7 +410,7 @@ def _deny_read_only_before_claim(operation: str, effect: MutationEffect) -> None
         authorize_mutation(operation=operation, effect=effect)
 
 
-def register(mcp: FastMCP) -> None:
+def register(mcp: MCPServer) -> None:
     @mcp.tool(annotations=READ_ONLY)
     async def list_app_templates(
         cluster: str | None = None,

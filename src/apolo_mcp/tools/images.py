@@ -6,7 +6,7 @@ import asyncio
 from typing import Any
 
 import apolo_sdk
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 from mcp.types import ToolAnnotations
 from yarl import URL
 
@@ -19,24 +19,24 @@ from ..policy import MutationEffect, authorize_mutation
 
 READ_ONLY = ToolAnnotations(
     title="Read Apolo registry metadata",
-    readOnlyHint=True,
-    destructiveHint=False,
-    idempotentHint=True,
-    openWorldHint=True,
+    read_only_hint=True,
+    destructive_hint=False,
+    idempotent_hint=True,
+    open_world_hint=True,
 )
 WRITE = ToolAnnotations(
     title="Transfer an image between the local Docker engine and Apolo",
-    readOnlyHint=False,
-    destructiveHint=False,
-    idempotentHint=False,
-    openWorldHint=True,
+    read_only_hint=False,
+    destructive_hint=False,
+    idempotent_hint=False,
+    open_world_hint=True,
 )
 DESTRUCTIVE = ToolAnnotations(
     title="Remove an exact Apolo image tag",
-    readOnlyHint=False,
-    destructiveHint=True,
-    idempotentHint=True,
-    openWorldHint=True,
+    read_only_hint=False,
+    destructive_hint=True,
+    idempotent_hint=True,
+    open_world_hint=True,
 )
 
 MAX_LIST_RESULTS = 100
@@ -113,7 +113,7 @@ def _image(remote: apolo_sdk.RemoteImage) -> dict[str, Any]:
     }
 
 
-def register(mcp: FastMCP) -> None:
+def register(mcp: MCPServer) -> None:
     @mcp.tool(annotations=WRITE)
     async def push_image(
         local_image: str,

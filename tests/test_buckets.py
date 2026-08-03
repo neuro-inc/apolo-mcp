@@ -7,7 +7,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 from yarl import URL
 
 from apolo_mcp._client import reset_client_provider, set_client_provider
@@ -135,7 +135,7 @@ def tools(monkeypatch, tmp_path: Path):
     secrets = SimpleNamespace(get=AsyncMock(return_value=b'{"access_key":"private"}'))
     sdk = SimpleNamespace(config=config(), buckets=buckets, secrets=secrets)
     token = set_client_provider(Provider(sdk))
-    mcp = FastMCP("buckets-test")
+    mcp = MCPServer("buckets-test")
     register(mcp)
     try:
         yield mcp, sdk, tmp_path
@@ -368,6 +368,6 @@ async def test_usage_truthfully_reports_bound_and_annotations(tools):
     assert result["complete"] is True
     assert result["object_count"] == 1
     registered = {item.name: item for item in await mcp.list_tools()}
-    assert registered["list_buckets"].annotations.readOnlyHint is True
-    assert registered["delete_bucket_blob"].annotations.destructiveHint is True
-    assert registered["create_bucket"].annotations.readOnlyHint is False
+    assert registered["list_buckets"].annotations.read_only_hint is True
+    assert registered["delete_bucket_blob"].annotations.destructive_hint is True
+    assert registered["create_bucket"].annotations.read_only_hint is False

@@ -4,7 +4,7 @@ from importlib.metadata import PackageNotFoundError, version
 from typing import Any, Literal
 
 import apolo_sdk
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 from mcp.types import ToolAnnotations
 
 from .. import __version__
@@ -16,10 +16,10 @@ from ..policy import current_policy
 
 READ_ONLY = ToolAnnotations(
     title="Read-only Apolo discovery",
-    readOnlyHint=True,
-    destructiveHint=False,
-    idempotentHint=True,
-    openWorldHint=True,
+    read_only_hint=True,
+    destructive_hint=False,
+    idempotent_hint=True,
+    open_world_hint=True,
 )
 MAX_RESULTS = 100
 
@@ -51,7 +51,7 @@ def _accelerator(preset: Any) -> dict[str, Any] | None:
     return None
 
 
-def register(mcp: FastMCP) -> None:
+def register(mcp: MCPServer) -> None:
     @mcp.tool(annotations=READ_ONLY)
     async def get_apolo_context() -> dict[str, Any]:
         """Return selected context, active policy, and safe client versions.

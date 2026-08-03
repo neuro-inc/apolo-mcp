@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock
 
 import apolo_sdk
 import pytest
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 from yarl import URL
 
 from apolo_mcp._client import reset_client_provider, set_client_provider
@@ -73,7 +73,7 @@ def tools(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     sdk = SimpleNamespace(config=config(), storage=Storage())
     token = set_client_provider(Provider(sdk))
-    mcp = FastMCP("storage-test")
+    mcp = MCPServer("storage-test")
     register(mcp)
     try:
         yield mcp._tool_manager._tools, sdk
@@ -209,8 +209,8 @@ async def test_delete_rejects_root_and_passes_recursive_flag(tools):
 
 
 async def test_storage_annotations(tools):
-    assert tools[0]["read_text"].annotations.readOnlyHint is True
-    assert tools[0]["write_text"].annotations.readOnlyHint is False
-    assert tools[0]["upload_storage_file"].annotations.readOnlyHint is False
-    assert tools[0]["download_storage_file"].annotations.readOnlyHint is False
-    assert tools[0]["delete_storage_path"].annotations.destructiveHint is True
+    assert tools[0]["read_text"].annotations.read_only_hint is True
+    assert tools[0]["write_text"].annotations.read_only_hint is False
+    assert tools[0]["upload_storage_file"].annotations.read_only_hint is False
+    assert tools[0]["download_storage_file"].annotations.read_only_hint is False
+    assert tools[0]["delete_storage_path"].annotations.destructive_hint is True

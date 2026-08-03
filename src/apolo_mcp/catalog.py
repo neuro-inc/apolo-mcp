@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 
 from .tools import (
     admin,
@@ -22,7 +22,7 @@ from .tools import (
 )
 
 
-ToolRegistrar = Callable[[FastMCP], None]
+ToolRegistrar = Callable[[MCPServer], None]
 
 
 @dataclass(frozen=True)

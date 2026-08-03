@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import pytest
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 
 from apolo_mcp.tools import flow_config
 
@@ -65,7 +65,7 @@ def tools(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("APOLO_MCP_POLICY_MODE", "managed")
     monkeypatch.setenv("APOLO_MCP_LEDGER_PATH", str(tmp_path / "ledger.jsonl"))
     token = flow_config.set_flow_schema_provider(Provider())
-    mcp = FastMCP("flow-config-test")
+    mcp = MCPServer("flow-config-test")
     flow_config.register(mcp)
     try:
         yield mcp._tool_manager._tools, workspace
