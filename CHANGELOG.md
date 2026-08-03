@@ -6,7 +6,7 @@ release sequence within that month.
 
 [comment]: # (towncrier release notes start)
 
-## v26.8.0 (2026-08-03)
+## 26.8.0 (2026-08-03)
 
 ### Features
 
