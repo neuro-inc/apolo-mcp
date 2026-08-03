@@ -8,7 +8,7 @@
 
 Return selected context and safe client versions; never credentials.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -36,7 +36,7 @@ Return selected context and safe client versions; never credentials.
 
 List clusters visible to the authenticated user (bounded to 100).
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -70,7 +70,7 @@ List clusters visible to the authenticated user (bounded to 100).
 
 List organizations for an explicit or selected cluster.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -116,7 +116,7 @@ List organizations for an explicit or selected cluster.
 
 List projects for explicit context without changing saved selection.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -174,7 +174,7 @@ List projects for explicit context without changing saved selection.
 
 List bounded compute preset capabilities for a cluster.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -220,7 +220,7 @@ List bounded compute preset capabilities for a cluster.
 
 Resolve a short resource reference under explicit, non-persisted context.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 

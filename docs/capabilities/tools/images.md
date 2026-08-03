@@ -8,7 +8,7 @@
 
 Push a local Docker image to one exact Apolo repository and tag.
 
-**Operation type:** write
+**Operation type:** <mark style="background-color: green;">Write</mark>
 
 **Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
 
@@ -95,7 +95,7 @@ Push a local Docker image to one exact Apolo repository and tag.
 
 Pull one exact Apolo image into the MCP host's local Docker engine.
 
-**Operation type:** write
+**Operation type:** <mark style="background-color: green;">Write</mark>
 
 **Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
 
@@ -189,7 +189,7 @@ Pull one exact Apolo image into the MCP host's local Docker engine.
 
 List repositories in one exact context under a strict output bound.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -259,7 +259,7 @@ List repositories in one exact context under a strict output bound.
 
 List tags for one exact repository under a strict output bound.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -336,7 +336,7 @@ List tags for one exact repository under a strict output bound.
 
 Inspect exact tag metadata: digest and aggregate layer size only.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -413,7 +413,7 @@ Inspect exact tag metadata: digest and aggregate layer size only.
 
 Remove one exact image tag without requesting digest deletion. The operation passes the tag reference to the registry. Tags that happen to share a manifest digest are not separate deletion targets.
 
-**Operation type:** destructive
+**Operation type:** <mark style="background-color: yellow;">Destructive write</mark>
 
 **Annotations:** read-only `false`, destructive `true`, idempotent `true`, open-world `true`
 

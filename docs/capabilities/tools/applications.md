@@ -8,7 +8,7 @@
 
 List templates in an explicitly resolved context, bounded to 100.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -78,7 +78,7 @@ List templates in an explicitly resolved context, bounded to 100.
 
 List bounded versions of one Apps template.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -155,7 +155,7 @@ List bounded versions of one Apps template.
 
 Get the exact template version and current input schema.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -232,7 +232,7 @@ Get the exact template version and current input schema.
 
 List Apps with state filtering and a strict result bound.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -322,7 +322,7 @@ List Apps with state filtering and a strict result bound.
 
 Get one App and verify it belongs to the resolved context.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -394,7 +394,7 @@ Get one App and verify it belongs to the resolved context.
 
 Wait a bounded time for an App to reach a terminal health state.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -476,7 +476,7 @@ Wait a bounded time for an App to reach a terminal health state.
 
 Read bounded UTF-8 logs with credential redaction and truncation metadata. Redaction covers ordinary credential assignments, quoted APOLO_PASSED_CONFIG/APOLO_*TOKEN and dockerconfigjson keys, and JSON or Python-repr environment entries shaped as {name: <sensitive Apolo key>, value: <credential>}.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -580,7 +580,7 @@ Read bounded UTF-8 logs with credential redaction and truncation metadata. Redac
 
 Return bounded, credential-redacted App status events.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -657,7 +657,7 @@ Return bounded, credential-redacted App status events.
 
 Return bounded, credential-redacted output for one App.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -734,7 +734,7 @@ Return bounded, credential-redacted output for one App.
 
 Return bounded App input with likely credential values redacted.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -823,7 +823,7 @@ Return bounded App input with likely credential values redacted.
 
 List bounded configuration revisions after verifying App context.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -900,7 +900,7 @@ List bounded configuration revisions after verifying App context.
 
 Write exact install YAML plus atomic plan.json/PLAN.md for review.
 
-**Operation type:** planning
+**Operation type:** <mark style="background-color: green;">Local planning</mark>
 
 **Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `false`
 
@@ -1019,7 +1019,7 @@ Write exact install YAML plus atomic plan.json/PLAN.md for review.
 
 Seed exact YAML with SDK get_input, patch it, and write a review plan.
 
-**Operation type:** planning
+**Operation type:** <mark style="background-color: green;">Local planning</mark>
 
 **Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `false`
 
@@ -1126,7 +1126,7 @@ Seed exact YAML with SDK get_input, patch it, and write a review plan.
 
 Write a no-YAML rollback plan bound to current and target revisions.
 
-**Operation type:** planning
+**Operation type:** <mark style="background-color: green;">Local planning</mark>
 
 **Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `false`
 
@@ -1220,7 +1220,7 @@ Write a no-YAML rollback plan bound to current and target revisions.
 
 Write a no-YAML uninstall plan bound to exact App/current revision.
 
-**Operation type:** planning
+**Operation type:** <mark style="background-color: green;">Local planning</mark>
 
 **Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `false`
 
@@ -1302,7 +1302,7 @@ Write a no-YAML uninstall plan bound to exact App/current revision.
 
 Apply an install plan identified by ID and reviewed PLAN.md path.
 
-**Operation type:** write
+**Operation type:** <mark style="background-color: green;">Write</mark>
 
 **Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
 
@@ -1379,7 +1379,7 @@ Apply an install plan identified by ID and reviewed PLAN.md path.
 
 Apply one configure plan identified by ID and reviewed PLAN.md path.
 
-**Operation type:** write
+**Operation type:** <mark style="background-color: green;">Write</mark>
 
 **Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
 
@@ -1456,7 +1456,7 @@ Apply one configure plan identified by ID and reviewed PLAN.md path.
 
 Apply one rollback plan identified by ID and reviewed PLAN.md path.
 
-**Operation type:** destructive
+**Operation type:** <mark style="background-color: yellow;">Destructive write</mark>
 
 **Annotations:** read-only `false`, destructive `true`, idempotent `false`, open-world `true`
 
@@ -1533,7 +1533,7 @@ Apply one rollback plan identified by ID and reviewed PLAN.md path.
 
 Apply one uninstall plan identified by ID and reviewed PLAN.md path.
 
-**Operation type:** destructive
+**Operation type:** <mark style="background-color: yellow;">Destructive write</mark>
 
 **Annotations:** read-only `false`, destructive `true`, idempotent `false`, open-world `true`
 

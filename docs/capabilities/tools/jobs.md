@@ -8,7 +8,7 @@
 
 Start a policy-authorized job; direct secret values are forbidden. Mount item schemas, included here for MCP clients that do not expand JSON Schema references: - storage_volumes: {storage, container_path, read_only=false} - disk_volumes: {disk, container_path, read_only=false} - secret_files: {secret, container_path} storage and disk accept short references or exact same-context URIs. secret must be a secret: reference. secret_env maps an environment variable name to a secret: reference; env accepts non-sensitive literal values only.
 
-**Operation type:** write
+**Operation type:** <mark style="background-color: green;">Write</mark>
 
 **Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
 
@@ -401,7 +401,7 @@ Start a policy-authorized job; direct secret values are forbidden. Mount item sc
 
 List jobs using context and bounded status/name/tag/owner/time filters.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -552,7 +552,7 @@ List jobs using context and bounded status/name/tag/owner/time filters.
 
 Get one job and its resolved context.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -624,7 +624,7 @@ Get one job and its resolved context.
 
 Execute one non-interactive command in an owned running job. The executable and argument list are shell-quoted separately; no stdin or TTY is exposed. Output is duration/byte bounded and credential-redacted. Use mounted secrets or secret environment references instead of command arguments for credentials.
 
-**Operation type:** write
+**Operation type:** <mark style="background-color: green;">Write</mark>
 
 **Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
 
@@ -726,7 +726,7 @@ Execute one non-interactive command in an owned running job. The executable and 
 
 Start a loopback-only background forward to one running owned job. Forwarded bytes never enter MCP results. The listener remains active until stop_job_port_forward is called or the MCP server exits.
 
-**Operation type:** write
+**Operation type:** <mark style="background-color: green;">Write</mark>
 
 **Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
 
@@ -808,7 +808,7 @@ Start a loopback-only background forward to one running owned job. Forwarded byt
 
 List active forwards owned by this MCP process and exact context.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -873,7 +873,7 @@ List active forwards owned by this MCP process and exact context.
 
 Stop one exact background forward owned by this MCP process.
 
-**Operation type:** write
+**Operation type:** <mark style="background-color: green;">Write</mark>
 
 **Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
 
@@ -945,7 +945,7 @@ Stop one exact background forward owned by this MCP process.
 
 Poll until terminal state, always bounded by timeout_seconds.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -1027,7 +1027,7 @@ Poll until terminal state, always bounded by timeout_seconds.
 
 Read a bounded log prefix with explicit timeout and truncation metadata.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -1114,7 +1114,7 @@ Read a bounded log prefix with explicit timeout and truncation metadata.
 
 Collect a bounded telemetry summary and optionally bounded raw samples.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -1201,7 +1201,7 @@ Collect a bounded telemetry summary and optionally bounded raw samples.
 
 Extend a job lifespan under full or owned managed policy.
 
-**Operation type:** write
+**Operation type:** <mark style="background-color: green;">Write</mark>
 
 **Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
 
@@ -1278,7 +1278,7 @@ Extend a job lifespan under full or owned managed policy.
 
 Send the SDK's graceful signal under full or owned managed policy.
 
-**Operation type:** write
+**Operation type:** <mark style="background-color: green;">Write</mark>
 
 **Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
 
@@ -1350,7 +1350,7 @@ Send the SDK's graceful signal under full or owned managed policy.
 
 Save an owned job filesystem to a policy-authorized image target.
 
-**Operation type:** write
+**Operation type:** <mark style="background-color: green;">Write</mark>
 
 **Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
 
@@ -1427,7 +1427,7 @@ Save an owned job filesystem to a policy-authorized image target.
 
 Kill a job under full or owned managed policy.
 
-**Operation type:** destructive
+**Operation type:** <mark style="background-color: yellow;">Destructive write</mark>
 
 **Annotations:** read-only `false`, destructive `true`, idempotent `true`, open-world `true`
 

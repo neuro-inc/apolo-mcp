@@ -103,3 +103,35 @@ def test_cli_installs_selected_skill_for_both_clients(tmp_path: Path) -> None:
     )
     assert (project / ".agents" / "skills" / name / "SKILL.md").is_file()
     assert (project / ".claude" / "skills" / name / "SKILL.md").is_file()
+    assert (project / ".agents" / "skills" / name).is_symlink()
+    assert (project / ".claude" / "skills" / name).is_symlink()
+
+
+def test_cli_copy_mode_replaces_existing_snapshot(tmp_path: Path) -> None:
+    source_root = tmp_path / "source"
+    name = SKILL_NAMES[0]
+    skill(source_root / name, "new")
+    project = tmp_path / "project"
+    destination = skill(project / ".agents" / "skills" / name, "old")
+    assert (
+        cli_main(
+            [
+                "skills",
+                "install",
+                "--client",
+                "codex",
+                "--target",
+                "project",
+                "--root",
+                str(project),
+                "--mode",
+                "copy",
+                "--source",
+                str(source_root),
+                name,
+            ]
+        )
+        == 0
+    )
+    assert not destination.is_symlink()
+    assert (destination / "SKILL.md").read_text() == "new"

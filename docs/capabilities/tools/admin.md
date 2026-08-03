@@ -8,7 +8,7 @@
 
 List administrative cluster defaults and maintenance state.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -42,7 +42,7 @@ List administrative cluster defaults and maintenance state.
 
 List users and roles in one exact cluster and optional organization.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -100,7 +100,7 @@ List users and roles in one exact cluster and optional organization.
 
 List administrative organization metadata.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -134,7 +134,7 @@ List administrative organization metadata.
 
 List users, roles, balances, and safe profile fields in one org.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -175,7 +175,7 @@ List users, roles, balances, and safe profile fields in one org.
 
 List organizations and quotas configured in one exact cluster.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -216,7 +216,7 @@ List organizations and quotas configured in one exact cluster.
 
 Get quota and balance for one organization in one cluster.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -257,7 +257,7 @@ Get quota and balance for one organization in one cluster.
 
 List projects in one exact cluster and optional organization.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -310,7 +310,7 @@ List projects in one exact cluster and optional organization.
 
 List users and roles in one exact project.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -368,7 +368,7 @@ List users and roles in one exact project.
 
 Get the same user quota and org balance data as apolo admin.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 

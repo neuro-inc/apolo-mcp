@@ -19,7 +19,10 @@ Never provision the headless agent with the local user's Apolo credentials.
    the user has not supplied exact resources and actions, ask the questionnaire. Do
    not infer broad project access from a vague task.
 3. Propose a unique service-account name, a new secret name, a bounded job lifetime,
-   preset, reviewed slim bootstrap image tag, workspace mount, and output location. Use
+   preset, reviewed slim bootstrap image tag, persistent storage workspace, and output
+   location. The job must mount a dedicated or approved storage path read-write at
+   `/workspace` and use it as its working directory so source and artifacts survive a
+   job restart. Use
    `node:22-bookworm-slim` only as the documented MVP example, not as an
    Apolo-supported image. Reuse or modify an existing account, secret, grant, or job
    only when the user explicitly requests it.
@@ -38,8 +41,10 @@ Never provision the headless agent with the local user's Apolo credentials.
    the approved `apolo acl grant` commands and re-list the role to verify the result.
    Never grant the service account permission to modify its own role or RBAC.
 7. Generate the complete bounded `apolo run` command from the reference. It must mount
-   the service-account secret as `APOLO_PASSED_CONFIG`, set a clean `APOLO_CONFIG`, set
-   `APOLO_MCP_POLICY_MODE=full`, and omit `--pass-config` and the user's `~/.apolo`.
+   the approved storage path read-write at `/workspace`, set `/workspace` as the job
+   working directory, mount the service-account secret as `APOLO_PASSED_CONFIG`, set a
+   clean `APOLO_CONFIG`, set `APOLO_MCP_POLICY_MODE=full`, and omit `--pass-config` and
+   the user's `~/.apolo`.
 8. Before launch, state a concise description of the job and its exact bounded launch
    specification. When the requested workflow includes execution, call the typed MCP
    job operation and rely on the MCP client's normal write approval; do not add a
@@ -56,6 +61,8 @@ Never provision the headless agent with the local user's Apolo credentials.
   interactive job operations absent from MCP.
 - Never print, read back, interpolate, or place credentials in commands. Secret names
   are safe; secret values are not.
+- Never place the service-account configuration, coding-provider credentials, or
+  environment dumps in the persistent workspace.
 - Do not use `full` locally to perform setup. `managed` is sufficient for creating the
   new account, secret, and job.
 - Do not silently expand scope after launch. Produce a new diff and obtain new user

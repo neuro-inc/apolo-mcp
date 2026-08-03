@@ -8,7 +8,7 @@
 
 List a bounded storage directory; the response marks truncation.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -83,7 +83,7 @@ List a bounded storage directory; the response marks truncation.
 
 Return metadata for one exact storage path.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -155,7 +155,7 @@ Return metadata for one exact storage path.
 
 Read a UTF-8 text prefix under a strict byte cap.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -232,7 +232,7 @@ Read a UTF-8 text prefix under a strict byte cap.
 
 Create or update a small UTF-8 object under server policy.
 
-**Operation type:** write
+**Operation type:** <mark style="background-color: green;">Write</mark>
 
 **Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
 
@@ -309,7 +309,7 @@ Create or update a small UTF-8 object under server policy.
 
 Upload one local file to an exact storage path. File bytes are never serialized through MCP. Existing remote files may be overwritten only under full or exact ledger-owned managed policy. An optional positive timeout can bound the transfer when requested by the caller.
 
-**Operation type:** write
+**Operation type:** <mark style="background-color: green;">Write</mark>
 
 **Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
 
@@ -398,7 +398,7 @@ Upload one local file to an exact storage path. File bytes are never serialized 
 
 Download one storage file to a new confined local file. Existing local files are never overwritten and file bytes are never serialized through MCP. An optional positive timeout can bound the transfer when requested by the caller.
 
-**Operation type:** write
+**Operation type:** <mark style="background-color: green;">Write</mark>
 
 **Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
 
@@ -487,7 +487,7 @@ Download one storage file to a new confined local file. Existing local files are
 
 Create an exact directory under server policy.
 
-**Operation type:** write
+**Operation type:** <mark style="background-color: green;">Write</mark>
 
 **Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
 
@@ -569,7 +569,7 @@ Create an exact directory under server policy.
 
 Delete one exact path; recursive deletion removes its entire subtree.
 
-**Operation type:** destructive
+**Operation type:** <mark style="background-color: yellow;">Destructive write</mark>
 
 **Annotations:** read-only `false`, destructive `true`, idempotent `true`, open-world `true`
 

@@ -8,7 +8,7 @@
 
 List accounts whose defaults match one exact resolved context.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -78,7 +78,7 @@ List accounts whose defaults match one exact resolved context.
 
 Get safe service-account metadata in one exact default context.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -150,7 +150,7 @@ Get safe service-account metadata in one exact default context.
 
 Create an account and sink its token without returning token material. File sinks are protected local files. Secret sinks do not use the local filesystem.
 
-**Operation type:** write
+**Operation type:** <mark style="background-color: green;">Write</mark>
 
 **Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
 
@@ -243,7 +243,7 @@ Create an account and sink its token without returning token material. File sink
 
 Delete one exact immutable account ID after context verification.
 
-**Operation type:** destructive
+**Operation type:** <mark style="background-color: yellow;">Destructive write</mark>
 
 **Annotations:** read-only `false`, destructive `true`, idempotent `true`, open-world `true`
 

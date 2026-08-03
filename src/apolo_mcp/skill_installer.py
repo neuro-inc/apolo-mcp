@@ -54,6 +54,14 @@ def install_one(source: Path, destination: Path, *, mode: str, overwrite: bool) 
             raise FileExistsError(f"refusing to replace existing skill: {destination}")
         destination.unlink()
     elif destination.exists():
+        if (
+            mode == "symlink"
+            and destination.is_dir()
+            and _same_tree(source, destination)
+        ):
+            shutil.rmtree(destination)
+            destination.symlink_to(source.resolve(), target_is_directory=True)
+            return "replaced"
         if mode == "copy" and destination.is_dir() and _same_tree(source, destination):
             return "unchanged"
         if not overwrite:
@@ -91,7 +99,7 @@ def add_install_arguments(parser: argparse.ArgumentParser) -> None:
         type=Path,
         help="project root for target project (default: current directory)",
     )
-    parser.add_argument("--mode", choices=("copy", "symlink"), default="copy")
+    parser.add_argument("--mode", choices=("copy", "symlink"), default="symlink")
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--source", type=Path, help=argparse.SUPPRESS)
     parser.add_argument("names", nargs="*", metavar="SKILL")
@@ -116,7 +124,7 @@ def install_from_args(args: argparse.Namespace) -> int:
                 source,
                 destination_root / name,
                 mode=args.mode,
-                overwrite=args.overwrite,
+                overwrite=args.overwrite or args.mode == "copy",
             )
             print(f"{status}: {destination_root / name}")
     return 0

@@ -67,10 +67,9 @@ to a new protected local file or a named Apolo secret and is never included in t
 model-visible tool result. Creation still requires `managed` or `full` policy and the
 user's Apolo permissions.
 
-The tools below are grouped by the skill that guides their use, then by their MCP
-operation type. Read-only operations inspect state. Write and Destructive operations
-are governed by the selected policy mode and Apolo RBAC; an MCP client may additionally
-show a confirmation based on annotations. Local Apps planning appears under Write but
-only creates review files and remains available in `read-only` mode.
-
-{skill_sections}
+The generated [MCP tool reference](../capabilities/tools/README.md) is the tool
+catalogue. It marks each operation as read-only, local planning, write, or destructive
+write and publishes the exact annotations and schemas exposed to MCP clients. Write
+and destructive operations are governed by the selected policy mode and Apolo RBAC;
+an MCP client may additionally show a confirmation based on those annotations. Local
+Apps planning creates review files only and remains available in `read-only` mode.

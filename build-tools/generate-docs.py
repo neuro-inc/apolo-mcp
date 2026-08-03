@@ -118,54 +118,12 @@ def _group_slug(group: str) -> str:
     return next(item.slug for item in CAPABILITY_SPECS if item.title == group)
 
 
-def _tool_href(group: str, tool_name: str) -> str:
-    return f"../capabilities/tools/{_group_slug(group)}.md#{tool_name}"
-
-
-def _safety_tool_list(
-    tools: list[tuple[str, Tool, str]],
-    groups: tuple[str, ...],
-    classifications: frozenset[str],
-) -> str:
-    selected: list[str] = []
-    for group, tool, kind in tools:
-        if group not in groups or kind not in classifications:
-            continue
-        qualifier = (
-            " **Local planning; does not mutate Apolo resources.**"
-            if kind == "planning"
-            else ""
-        )
-        selected.append(
-            f"- [`{tool.name}`]({_tool_href(group, tool.name)}) —"
-            f"{qualifier} {_description(tool.description, tool.name)}"
-        )
-    return "\n".join(selected) if selected else "_None._"
-
-
-def render_safety(tools: list[tuple[str, Tool, str]]) -> str:
-    sections: list[str] = []
-    for skill in SKILL_SPECS:
-        groups = tuple(item.title for item in CAPABILITY_SPECS if item.skill == skill)
-        summary = (
-            f"Tools used by the `{skill.name}` skill."
-            if groups
-            else "This orchestration skill adds no MCP tools; it composes the "
-            "context, job, and resource operations classified above."
-        )
-        sections.extend(
-            [
-                f"## [{skill.display_name}](../capabilities/skills.md#{skill.name})",
-                summary,
-                "### Read-only operations",
-                _safety_tool_list(tools, groups, frozenset({"read-only"})),
-                "### Write operations",
-                _safety_tool_list(tools, groups, frozenset({"planning", "write"})),
-                "### Destructive operations",
-                _safety_tool_list(tools, groups, frozenset({"destructive"})),
-            ]
-        )
-    return "\n\n".join(sections)
+OPERATION_LABELS = {
+    "read-only": '<mark style="background-color: blue;">Read-only</mark>',
+    "planning": '<mark style="background-color: green;">Local planning</mark>',
+    "write": '<mark style="background-color: green;">Write</mark>',
+    "destructive": ('<mark style="background-color: yellow;">Destructive write</mark>'),
+}
 
 
 def render_tool_group(tools: list[tuple[str, Tool, str]], group: str) -> str:
@@ -179,7 +137,7 @@ def render_tool_group(tools: list[tuple[str, Tool, str]], group: str) -> str:
             [
                 f"## `{tool.name}`",
                 _description(tool.description, tool.name),
-                f"**Operation type:** {classification}",
+                f"**Operation type:** {OPERATION_LABELS[classification]}",
                 "**Annotations:** "
                 f"read-only `{str(annotations.readOnlyHint).lower()}`, "
                 f"destructive `{str(annotations.destructiveHint).lower()}`, "
@@ -323,7 +281,6 @@ async def generate(*, check: bool) -> int:
             {
                 "policy_mode_env": POLICY_MODE_ENV,
                 "ledger_env": LEDGER_ENV,
-                "skill_sections": render_safety(tools),
             },
         ),
         Document(

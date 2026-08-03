@@ -16,7 +16,8 @@ Ask only questions not already answered by the user:
    timeout, and output URI bound those workloads?
 6. Does it truly need RBAC delegation? The safe answer is no; ordinary Apolo MCP work
    does not require `manage`.
-7. Which source workspace/storage mount and output location should the R&D job use?
+7. Which persistent storage path should be mounted read-write at `/workspace`, and
+   which subdirectory should contain final outputs?
 8. Should the job be launched now or should setup stop after producing reviewed commands?
 
 ## Grant plan
@@ -60,14 +61,19 @@ apolo run \
   --life-span <BOUNDED_LIFESPAN> \
   --schedule-timeout <BOUNDED_TIMEOUT> \
   --detach \
+  --volume storage:<RND_WORKSPACE_PATH>:/workspace:rw \
+  --workdir /workspace \
   --env APOLO_CONFIG=/tmp/apolo-agent-config \
   --env APOLO_MCP_POLICY_MODE=full \
   --env APOLO_PASSED_CONFIG=secret:<SERVICE_ACCOUNT_SECRET> \
   node:22-bookworm-slim -- sleep infinity
 ```
 
-Add only reviewed workspace/storage mounts and separately named coding-provider secret
-mounts. Never add `--pass-config`; it forwards the launching user's credentials.
+Create or select the exact storage path before launch. Reuse the same path when a
+replacement job must continue the work. Keep repositories, generated artifacts, and a
+sanitized `HANDOFF.md` below `/workspace`; keep service-account and coding-provider
+credentials outside it. Add separately named provider-secret mounts only when needed.
+Never add `--pass-config`; it forwards the launching user's credentials.
 
 ## Handoff
 

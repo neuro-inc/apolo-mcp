@@ -8,7 +8,7 @@
 
 List bucket metadata under a strict result bound.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -78,7 +78,7 @@ List bucket metadata under a strict result bound.
 
 Get safe metadata for one exact bucket ID or name.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -150,7 +150,7 @@ Get safe metadata for one exact bucket ID or name.
 
 Create and journal a bucket when server policy permits writes.
 
-**Operation type:** write
+**Operation type:** <mark style="background-color: green;">Write</mark>
 
 **Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
 
@@ -227,7 +227,7 @@ Create and journal a bucket when server policy permits writes.
 
 Import using bounded JSON credentials from a protected internal source.
 
-**Operation type:** write
+**Operation type:** <mark style="background-color: green;">Write</mark>
 
 **Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
 
@@ -338,7 +338,7 @@ Import using bounded JSON credentials from a protected internal source.
 
 Scan bounded usage; complete=false means the object cap was reached.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -420,7 +420,7 @@ Scan bounded usage; complete=false means the object cap was reached.
 
 Return metadata only for one exact blob key.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -497,7 +497,7 @@ Return metadata only for one exact blob key.
 
 List blob metadata under an SDK-enforced and result-enforced bound.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -584,7 +584,7 @@ List blob metadata under an SDK-enforced and result-enforced bound.
 
 Set public state for one exact immutable bucket ID.
 
-**Operation type:** write
+**Operation type:** <mark style="background-color: green;">Write</mark>
 
 **Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
 
@@ -661,7 +661,7 @@ Set public state for one exact immutable bucket ID.
 
 List safe persistent credential metadata for exact-context buckets. Provider credential values returned internally by the SDK are discarded and never serialized through MCP.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -731,7 +731,7 @@ List safe persistent credential metadata for exact-context buckets. Provider cre
 
 Create persistent credentials and atomically sink them to a 0600 file. Provider credential values are never returned through MCP.
 
-**Operation type:** write
+**Operation type:** <mark style="background-color: green;">Write</mark>
 
 **Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
 
@@ -828,7 +828,7 @@ Create persistent credentials and atomically sink them to a 0600 file. Provider 
 
 Write one exact persistent credential to a new protected local file. Provider credential values are never returned through MCP.
 
-**Operation type:** write
+**Operation type:** <mark style="background-color: green;">Write</mark>
 
 **Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
 
@@ -905,7 +905,7 @@ Write one exact persistent credential to a new protected local file. Provider cr
 
 Delete one exact persistent bucket credential under lifecycle policy.
 
-**Operation type:** destructive
+**Operation type:** <mark style="background-color: yellow;">Destructive write</mark>
 
 **Annotations:** read-only `false`, destructive `true`, idempotent `true`, open-world `true`
 
@@ -977,7 +977,7 @@ Delete one exact persistent bucket credential under lifecycle policy.
 
 Create a short-lived blob URL and write it to a protected local file. The URL is never returned through MCP.
 
-**Operation type:** write
+**Operation type:** <mark style="background-color: green;">Write</mark>
 
 **Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
 
@@ -1064,7 +1064,7 @@ Create a short-lived blob URL and write it to a protected local file. The URL is
 
 Upload one local file. Object bytes are never serialized through MCP. An optional positive timeout can bound the transfer when requested by the caller.
 
-**Operation type:** write
+**Operation type:** <mark style="background-color: green;">Write</mark>
 
 **Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
 
@@ -1158,7 +1158,7 @@ Upload one local file. Object bytes are never serialized through MCP. An optiona
 
 Download one blob to a new local file. Existing files are never overwritten. Blob bytes are never serialized through MCP. An optional positive timeout can bound the transfer when requested by the caller.
 
-**Operation type:** write
+**Operation type:** <mark style="background-color: green;">Write</mark>
 
 **Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
 
@@ -1252,7 +1252,7 @@ Download one blob to a new local file. Existing files are never overwritten. Blo
 
 Delete one exact blob key; recursive/prefix deletion is not exposed.
 
-**Operation type:** destructive
+**Operation type:** <mark style="background-color: yellow;">Destructive write</mark>
 
 **Annotations:** read-only `false`, destructive `true`, idempotent `true`, open-world `true`
 
@@ -1329,7 +1329,7 @@ Delete one exact blob key; recursive/prefix deletion is not exposed.
 
 Recursively delete one exact bucket under full or owned managed policy.
 
-**Operation type:** destructive
+**Operation type:** <mark style="background-color: yellow;">Destructive write</mark>
 
 **Annotations:** read-only `false`, destructive `true`, idempotent `true`, open-world `true`
 

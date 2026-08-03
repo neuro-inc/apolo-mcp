@@ -8,7 +8,7 @@
 
 Explore a bounded root or definition from the version-pinned Flow schema.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -61,7 +61,7 @@ Explore a bounded root or definition from the version-pinned Flow schema.
 
 Validate one canonical .apolo YAML file against its pinned Flow schema.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -119,7 +119,7 @@ Validate one canonical .apolo YAML file against its pinned Flow schema.
 
 Validate and create one new canonical .apolo YAML file without overwrite.
 
-**Operation type:** write
+**Operation type:** <mark style="background-color: green;">Write</mark>
 
 **Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
 
@@ -183,7 +183,7 @@ Validate and create one new canonical .apolo YAML file without overwrite.
 
 List Flow live jobs within explicit context and local path scope. workspace_path is the Flow project root and must contain a real .apolo directory.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -239,7 +239,7 @@ List Flow live jobs within explicit context and local path scope. workspace_path
 
 Resolve one logical Flow job, with a bounded multi-job result. workspace_path is the Flow project root and must contain a real .apolo directory.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -312,7 +312,7 @@ Resolve one logical Flow job, with a bounded multi-job result. workspace_path is
 
 Start a detached Flow live job under the server mutation policy. Set ``detach: true`` on the selected job so this operation returns after submission. Monitor it separately with get, logs, and bounded wait. Pre/post raw-ID comparison journals only newly created jobs when upstream startup times out after submission. workspace_path is the Flow project root and must contain a real .apolo directory. flow_live_run reads .apolo/live.yml or .apolo/live.yaml, whose minimum shape is `kind: live` plus a `jobs` mapping; job_id selects a key in that mapping. Each plain job needs an image and may define cmd or bash. Set `detach: true` on jobs started by MCP, then monitor them with separate get, logs, and bounded wait calls. Optional project settings belong in .apolo/project.yml or .apolo/project.yaml.
 
-**Operation type:** write
+**Operation type:** <mark style="background-color: green;">Write</mark>
 
 **Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
 
@@ -400,7 +400,7 @@ Start a detached Flow live job under the server mutation policy. Set ``detach: t
 
 Read bounded Flow live logs with MCP-side credential redaction. workspace_path is the Flow project root and must contain a real .apolo directory.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -483,7 +483,7 @@ Read bounded Flow live logs with MCP-side credential redaction. workspace_path i
 
 Wait a bounded time for a Flow live job to terminate. workspace_path is the Flow project root and must contain a real .apolo directory.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -566,7 +566,7 @@ Wait a bounded time for a Flow live job to terminate. workspace_path is the Flow
 
 Kill a Flow live job under the server mutation policy. workspace_path is the Flow project root and must contain a real .apolo directory.
 
-**Operation type:** destructive
+**Operation type:** <mark style="background-color: yellow;">Destructive write</mark>
 
 **Annotations:** read-only `false`, destructive `true`, idempotent `false`, open-world `true`
 
@@ -644,7 +644,7 @@ Kill a Flow live job under the server mutation policy. workspace_path is the Flo
 
 Kill all jobs in exactly one explicit Flow context. workspace_path is the Flow project root and must contain a real .apolo directory.
 
-**Operation type:** destructive
+**Operation type:** <mark style="background-color: yellow;">Destructive write</mark>
 
 **Annotations:** read-only `false`, destructive `true`, idempotent `false`, open-world `true`
 
@@ -705,7 +705,7 @@ Kill all jobs in exactly one explicit Flow context. workspace_path is the Flow p
 
 Start a bake only through FlowAPI BatchRunner orchestration. An internal unique correlation tag lets MCP journal a bake even when the upstream runner fails after creating it. workspace_path is the Flow project root and must contain a real .apolo directory. flow_bake_start reads .apolo/<batch>.yml or .yaml, whose minimum shape is `kind: batch` plus a `tasks` list; batch selects that workflow. Each plain task needs an image and may define cmd or bash. Optional project settings belong in .apolo/project.yml or .apolo/project.yaml.
 
-**Operation type:** write
+**Operation type:** <mark style="background-color: green;">Write</mark>
 
 **Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
 
@@ -818,7 +818,7 @@ Start a bake only through FlowAPI BatchRunner orchestration. An internal unique 
 
 List bakes and bounded task state in one explicit context. workspace_path is the Flow project root and must contain a real .apolo directory.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -894,7 +894,7 @@ List bakes and bounded task state in one explicit context. workspace_path is the
 
 Get structured bake, attempt, and bounded task state. workspace_path is the Flow project root and must contain a real .apolo directory.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -960,7 +960,7 @@ Get structured bake, attempt, and bounded task state. workspace_path is the Flow
 
 Read bounded bake task logs with MCP-side credential redaction. workspace_path is the Flow project root and must contain a real .apolo directory.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -1041,7 +1041,7 @@ Read bounded bake task logs with MCP-side credential redaction. workspace_path i
 
 Wait a bounded time for a bake attempt to terminate. workspace_path is the Flow project root and must contain a real .apolo directory.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -1117,7 +1117,7 @@ Wait a bounded time for a bake attempt to terminate. workspace_path is the Flow 
 
 Cancel a bake attempt under the server mutation policy. workspace_path is the Flow project root and must contain a real .apolo directory.
 
-**Operation type:** destructive
+**Operation type:** <mark style="background-color: yellow;">Destructive write</mark>
 
 **Annotations:** read-only `false`, destructive `true`, idempotent `false`, open-world `true`
 
@@ -1188,7 +1188,7 @@ Cancel a bake attempt under the server mutation policy. workspace_path is the Fl
 
 Restart a bake through BatchRunner under the server mutation policy. workspace_path is the Flow project root and must contain a real .apolo directory.
 
-**Operation type:** destructive
+**Operation type:** <mark style="background-color: yellow;">Destructive write</mark>
 
 **Annotations:** read-only `false`, destructive `true`, idempotent `false`, open-world `true`
 

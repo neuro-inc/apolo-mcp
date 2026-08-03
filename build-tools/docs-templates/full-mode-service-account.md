@@ -13,10 +13,12 @@ and run the agent inside a bounded R&D job. The MCP policy remains useful as an
 operational guardrail, while the service account's RBAC becomes the actual security
 boundary.
 
-Use `$apolo-rnd-session-setup` from the trusted local `managed` session to plan and
-provision this workflow. Use `$apolo-rnd-session-operate` inside the resulting job to
-verify isolation, configure Codex or Claude Code, optionally start `tmux`, and hand
-monitoring instructions back to the operator.
+Use the [Apolo R&D Session Setup
+skill](../capabilities/skills/apolo-rnd-session-setup/README.md) from the trusted local
+`managed` session to plan and provision this workflow. Use the [Apolo R&D Session
+Operations skill](../capabilities/skills/apolo-rnd-session-operate/README.md) inside
+the resulting job to verify isolation, configure Codex or Claude Code, optionally
+start `tmux`, and hand monitoring instructions back to the operator.
 
 ## 1. Design the least-privilege grant set
 
@@ -97,6 +99,8 @@ apolo run \
   --name mcp-full-mode-agent \
   --life-span 8h \
   --detach \
+  --volume storage:<RND_WORKSPACE_PATH>:/workspace:rw \
+  --workdir /workspace \
   --env APOLO_CONFIG=/tmp/apolo-agent-config \
   --env APOLO_MCP_POLICY_MODE=full \
   --env APOLO_PASSED_CONFIG=secret:mcp-full-mode-config \
@@ -106,6 +110,11 @@ apolo run \
 This image reference is an MVP example, not an Apolo-supported R&D runtime. After the
 job starts, enter it with `apolo exec <JOB_ID> -- bash`, follow the runtime bootstrap
 above, and then start the selected coding client.
+
+Create or select the storage path before launch and reuse it for replacement jobs.
+Keep source, outputs, and a sanitized `/workspace/HANDOFF.md` there. Do not store the
+service-account configuration, coding-provider credentials, agent authentication
+state, terminal transcripts, or environment dumps in that persistent workspace.
 
 Do **not** use `--pass-config`: that would pass the launching user's current Apolo
 credentials into the job and defeat the service-account isolation. Do not mount the

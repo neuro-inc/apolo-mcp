@@ -225,7 +225,7 @@ def test_installation_forwards_complete_apolo_environment_contract() -> None:
     ):
         assert variable in installation
     assert "APOLO_API_TOKEN" in installation
-    assert "must not" in installation
+    assert "Do not forward `APOLO_API_TOKEN`" in installation
 
 
 def test_gitbook_navigation_excludes_generator_sources() -> None:
@@ -258,25 +258,19 @@ def test_gitbook_navigation_excludes_generator_sources() -> None:
         assert target in summary
 
 
-def test_safety_is_grouped_by_skill_then_operation_type() -> None:
+def test_operation_types_are_published_only_in_tool_reference() -> None:
     module = _generator()
     tools = asyncio.run(module.collect_tools())
     safety = (ROOT / "docs" / "getting-started" / "safety.md").read_text(
         encoding="utf-8"
     )
-    positions = [
-        safety.index(f"## [{skill.display_name}]") for skill in module.SKILL_SPECS
-    ]
-    assert positions == sorted(positions)
-    for index, skill in enumerate(module.SKILL_SPECS):
-        start = safety.index(f"## [{skill.display_name}]")
-        end = positions[index + 1] if index + 1 < len(positions) else len(safety)
-        section = safety[start:end]
-        assert section.index("### Read-only operations") < section.index(
-            "### Write operations"
-        )
-        assert section.index("### Write operations") < section.index(
-            "### Destructive operations"
-        )
-    assert all(safety.count(f"[`{tool.name}`]") == 1 for _, tool, _ in tools)
-    assert "Local planning; does not mutate Apolo resources." in safety
+    assert "## [Apolo Platform User Context]" not in safety
+    assert "MCP tool reference" in safety
+    pages = {
+        path.stem: path.read_text(encoding="utf-8")
+        for path in (ROOT / "docs" / "capabilities" / "tools").glob("*.md")
+    }
+    labels = module.OPERATION_LABELS
+    for group, tool, classification in tools:
+        page = pages[module._group_slug(group)]
+        assert f"**Operation type:** {labels[classification]}" in page

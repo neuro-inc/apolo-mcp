@@ -8,7 +8,7 @@
 
 List names, owners, and context only; never retrieve secret values.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -78,7 +78,7 @@ List names, owners, and context only; never retrieve secret values.
 
 Write a secret to a new mode-0600 local file. The destination must be new, and the secret value is never returned.
 
-**Operation type:** write
+**Operation type:** <mark style="background-color: green;">Write</mark>
 
 **Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
 
@@ -155,7 +155,7 @@ Write a secret to a new mode-0600 local file. The destination must be new, and t
 
 Create a secret without accepting or returning its value. File sources must be private regular files.
 
-**Operation type:** write
+**Operation type:** <mark style="background-color: green;">Write</mark>
 
 **Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
 
@@ -242,7 +242,7 @@ Create a secret without accepting or returning its value. File sources must be p
 
 Delete one exact secret under full or owned managed policy.
 
-**Operation type:** destructive
+**Operation type:** <mark style="background-color: yellow;">Destructive write</mark>
 
 **Annotations:** read-only `false`, destructive `true`, idempotent `true`, open-world `true`
 

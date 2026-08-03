@@ -35,4 +35,9 @@ Do not enable `pipe-pane` or terminal transcript capture by default. Inspect exp
 outputs at their approved storage URI and use bounded Apolo job status/log operations
 for monitoring.
 
+Keep the repository, generated artifacts, and sanitized `/workspace/HANDOFF.md` on the
+mounted storage. Keep Claude Code authentication and user state outside `/workspace`;
+a replacement job continues from the saved work and handoff after authenticating the
+client again.
+
 Do not use permission-bypass flags merely because Apolo MCP is in `full` mode.

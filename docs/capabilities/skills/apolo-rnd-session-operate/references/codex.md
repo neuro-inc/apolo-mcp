@@ -16,7 +16,8 @@ already provisioned job-local authentication store. For noninteractive execution
 Codex supports `CODEX_API_KEY` for `codex exec`; keep it scoped to that process rather
 than exporting it into unrelated commands.
 
-Set `CODEX_HOME` to a job-local path before launch. Keep shell network disabled unless
+Set `CODEX_HOME` to an ephemeral job-local path outside `/workspace` before launch so
+authentication state is not copied into persistent storage. Keep shell network disabled unless
 the task requires it; Apolo MCP's own server connection is separate. After reviewing
 the workspace, start Codex directly. If reconnectability is useful and `tmux` is
 already available or explicitly requested, start a named session instead:
@@ -38,6 +39,10 @@ tmux kill-session -t rnd-codex
 Do not enable `pipe-pane` or terminal transcript capture by default. Inspect expected
 outputs at their approved storage URI and use bounded Apolo job status/log operations
 for monitoring.
+
+Keep the repository, generated artifacts, and sanitized `/workspace/HANDOFF.md` on the
+mounted storage. A replacement job can mount the same path and continue from those
+files; it must authenticate Codex again rather than persisting its credential store.
 
 For a bounded noninteractive task, prefer `codex exec` as the job's main process; it
 does not need `tmux`. Do not use dangerous sandbox or approval bypass settings merely

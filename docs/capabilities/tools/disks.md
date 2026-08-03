@@ -8,7 +8,7 @@
 
 List persistent disks under a strict result bound.
 
-**Operation type:** read-only
+**Operation type:** <mark style="background-color: blue;">Read-only</mark>
 
 **Annotations:** read-only `true`, destructive `false`, idempotent `true`, open-world `true`
 
@@ -78,7 +78,7 @@ List persistent disks under a strict result bound.
 
 Create and journal a bounded disk when server policy permits writes.
 
-**Operation type:** write
+**Operation type:** <mark style="background-color: green;">Write</mark>
 
 **Annotations:** read-only `false`, destructive `false`, idempotent `false`, open-world `true`
 
@@ -174,7 +174,7 @@ Create and journal a bounded disk when server policy permits writes.
 
 Delete one exact disk ID under full or ledger-owned managed policy.
 
-**Operation type:** destructive
+**Operation type:** <mark style="background-color: yellow;">Destructive write</mark>
 
 **Annotations:** read-only `false`, destructive `true`, idempotent `true`, open-world `true`
 

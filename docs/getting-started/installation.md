@@ -2,29 +2,26 @@
 
 # Installation and client configuration
 
-## Prerequisites
+Set up Apolo MCP in three steps:
 
-You need:
+1. Install the Apolo command-line tools and either Codex or Claude Code.
+2. Use `apolo-mcp setup` to register the MCP server and link its skills into the agent.
+3. Set any optional Apolo environment variables before launching the agent; the setup
+   command has already configured the client to forward them when present.
 
-- Python 3.11 or newer;
-- `pipx` for installing Python command-line applications;
-- access to an Apolo cluster, organization, and project;
-- Codex or Claude Code with local stdio MCP support.
+## 1. Install the command-line tools
 
-Docker is required only for image push and pull operations. Platform operations remain
-subject to the permissions and quotas of the authenticated Apolo identity.
+You need Python 3.11 or newer, `pipx`, access to an Apolo cluster, and Codex or Claude
+Code with local stdio MCP support. Docker is required only for image push and pull.
 
-## Install Apolo MCP
-
-Choose one installation. For the complete Apolo client toolkit, including Apolo CLI
-and Apolo MCP, install `apolo-all`:
+Choose one Apolo installation. Install the complete client toolkit:
 
 ```console
 pipx install apolo-all
 apolo login
 ```
 
-To install only Apolo MCP when Apolo CLI is installed separately:
+Or install Apolo MCP alone when the Apolo CLI is already installed separately:
 
 ```console
 pipx install apolo-mcp
@@ -32,169 +29,130 @@ apolo login
 ```
 
 Do not install both packages with `pipx`, and do not inject `apolo-mcp` into the
-`apolo-all` environment. `apolo-all` owns the bundled installation; use the standalone
-package only for an MCP-only installation. Upgrade the package selected above with
-`pipx upgrade apolo-all` or `pipx upgrade apolo-mcp`.
+`apolo-all` environment. Upgrade the selected package with `pipx upgrade apolo-all` or
+`pipx upgrade apolo-mcp`.
 
-The installed stdio entry point is `apolo-mcp`; `python -m apolo_mcp` is equivalent in
-an environment where the package is installed.
+Install and authenticate the selected coding agent according to its vendor's
+instructions, then verify `codex --version` or `claude --version`.
 
-## Configure Codex
+## 2. Configure the agent
 
-Register the server:
+Run one command for the client you use:
 
 ```console
-codex mcp add apolo -- apolo-mcp
-codex mcp list
+apolo-mcp setup codex --policy-mode read-only
+apolo-mcp setup claude --policy-mode read-only
+apolo-mcp setup both --policy-mode read-only
 ```
 
-Keep only environment-variable forwarding rules in Codex's `config.toml`; do not copy
-their values into the file:
+Use only one of these commands. It registers the `apolo-mcp` stdio server at user
+scope, configures the full environment-forwarding contract below, and symlinks every
+packaged skill into the client's user skill directory. The links point into the
+installed package, so `pipx upgrade` updates the skills without a separate import.
+Start a new agent session after setup or package upgrade.
+
+`--policy-mode` is required in the documented workflow and selects the safe fallback
+used when the parent process does not define `APOLO_MCP_POLICY_MODE`. Choose
+`read-only`, `managed`, or `full`; use `read-only` unless you deliberately need writes.
+A forwarded per-launch value overrides this fallback.
+
+The installer preserves unrelated client settings. It updates only the `apolo` MCP
+entry. It refuses to replace a locally modified skill directory; review that directory
+before replacing it explicitly:
+
+```console
+apolo-mcp skills install --client <CLIENT> --overwrite
+```
+
+### Minimal manual configuration
+
+The setup command is preferred. For manual Codex registration, this slim example shows
+only the required policy variable; add the optional names from the forwarding contract
+when you use them:
 
 ```toml
 [mcp_servers.apolo]
 command = "apolo-mcp"
-env_vars = [
-  "APOLO_CONFIG",
-  "APOLO_PASSED_CONFIG",
-  "APOLO_MCP_POLICY_MODE",
-  "APOLO_MCP_LEDGER_PATH",
-  "APOLO_MCP_PLAN_ROOT",
-]
+args = ["serve", "--default-policy", "read-only"]
+env_vars = ["APOLO_MCP_POLICY_MODE"]
 ```
 
-Codex forwards a listed variable only when it exists in the launch environment. The
-first two entries preserve the Apolo identity selected by `apolo-sdk` and therefore by
-the programmatic `apolo-flow` API. `APOLO_CONFIG` selects an on-disk configuration;
-`APOLO_PASSED_CONFIG` carries a sensitive complete configuration in isolated jobs and
-must never be copied into `config.toml`. The two path variables are optional MCP
-overrides for the lifecycle journal and App review plans.
+`env_vars` contains names only. Codex reads their current values from its launch
+environment instead of freezing values or credentials in `config.toml`.
 
-Choose the mode when starting Codex:
-
-```console
-# Default safe mode; the variable is absent.
-codex
-
-# Create resources and manage only their journaled lifecycles.
-APOLO_MCP_POLICY_MODE=managed codex
-
-# Permit all supported mutations allowed by the authenticated Apolo identity.
-APOLO_MCP_POLICY_MODE=full codex
-```
-
-The server reads the policy once when its process starts. Restart Codex after changing
-MCP configuration or policy environment.
-
-## Configure Claude Code
-
-Register a dynamic environment expansion rather than a permanently elevated value:
-
-```console
-claude mcp add apolo \
-  --scope user \
-  -e 'APOLO_CONFIG=${APOLO_CONFIG:-~/.apolo}' \
-  -e 'APOLO_MCP_POLICY_MODE=${APOLO_MCP_POLICY_MODE:-read-only}' \
-  -- apolo-mcp
-claude mcp list
-```
-
-Then select policy per launch:
-
-```console
-claude
-APOLO_MCP_POLICY_MODE=managed claude
-APOLO_MCP_POLICY_MODE=full claude
-```
-
-Claude Code expands the variables when starting the MCP subprocess. The command above
-uses the standard Apolo configuration unless `APOLO_CONFIG` selects another directory.
-For an isolated job authenticated by `APOLO_PASSED_CONFIG`, use the complete
-configuration in the [full-mode service-account guide](../guides/full-mode-service-account.md);
-do not add a passed-config token as a literal user or project setting. Use
-`--scope local` for private current-project configuration, `--scope
-project` for a shared `.mcp.json`, or `--scope user` across projects. The equivalent
-project configuration is:
+The equivalent minimal Claude Code project configuration is:
 
 ```json
 {
   "mcpServers": {
     "apolo": {
+      "type": "stdio",
       "command": "apolo-mcp",
-      "args": [],
+      "args": ["serve", "--default-policy", "read-only"],
       "env": {
-        "APOLO_CONFIG": "${APOLO_CONFIG:-~/.apolo}",
-        "APOLO_MCP_POLICY_MODE": "${APOLO_MCP_POLICY_MODE:-read-only}"
+        "APOLO_MCP_POLICY_MODE": "${APOLO_MCP_POLICY_MODE:-}"
       }
     }
   }
 }
 ```
 
-Restart Claude Code after changing MCP configuration or policy environment.
+Claude Code expands environment references when it launches the server. Use user scope
+for private cross-project configuration, local scope for private current-project
+configuration, or project scope for a shared `.mcp.json`. Never commit expanded
+credentials.
 
-## Forwarded environment contract
+## 3. Forward Apolo environment variables
+
+The setup command configures all variables in this contract. You set values only in
+the shell or protected job environment that launches Codex or Claude Code.
+
+- **Required: `APOLO_MCP_POLICY_MODE`.** Selects `read-only`, `managed`, or `full` for
+  this launch. When it is absent, the `--policy-mode` fallback chosen during setup is
+  used. The server freezes the result at startup.
+- **Optional: `APOLO_CONFIG`.** Selects an on-disk Apolo configuration and identity.
+  Set it before launching the agent when the default `~/.apolo` is not the intended
+  identity.
+- **Optional and sensitive: `APOLO_PASSED_CONFIG`.** Supplies a complete
+  service-account configuration inside an isolated job. Forward it only from that
+  protected environment; never copy its value into client configuration, prompts, or
+  logs.
+- **Optional: `APOLO_MCP_LEDGER_PATH`.** Overrides the append-only lifecycle journal
+  path.
+- **Optional: `APOLO_MCP_PLAN_ROOT`.** Overrides the local directory for immutable App
+  review plans.
 
 `apolo-mcp` uses `apolo-sdk` directly, and its Flow tools use the programmatic
-`apolo-flow` API. Forward these Apolo-owned inputs when they are used by the parent
-client:
+`apolo-flow` API, so these variables select the same identity and context throughout.
+Do not forward `APOLO_API_TOKEN`, `APOLO_API_URL`, or other credential fragments; use
+one of the complete configuration mechanisms above.
 
-| Variable | Purpose | Forwarding rule |
-|---|---|---|
-| `APOLO_CONFIG` | Select an on-disk Apolo configuration and identity. | Forward for local authenticated sessions. |
-| `APOLO_PASSED_CONFIG` | Supply a complete service-account configuration to an isolated job. | Forward only from an already protected job environment; never store its value in client configuration. |
-| `APOLO_MCP_POLICY_MODE` | Select `read-only`, `managed`, or `full`. | Forward dynamically; absence intentionally selects `read-only`. |
-| `APOLO_MCP_LEDGER_PATH` | Override the append-only lifecycle journal path. | Optional; forward only when customized. |
-| `APOLO_MCP_PLAN_ROOT` | Override the local App review-plan directory. | Optional; forward only when customized. |
+Tools that deliberately read a protected source from another environment variable,
+such as secret creation or external-bucket import, require that exact source variable
+for that operation. Add it narrowly and remove it afterward; never configure a blanket
+credential-variable allowlist.
 
-Do not forward `APOLO_API_TOKEN`, `APOLO_API_URL`, or similar credential fragments;
-the SDK authenticates from one of the two complete configuration mechanisms above.
-Legacy `NEUROMATION_CONFIG` and `NEURO_PASSED_CONFIG` aliases are not part of the MCP
-MVP contract. `NEURO_JOB_ID` is injected by Apolo into Flow executor jobs and must not
-be copied from the client. CLI completion, telemetry, and update-check variables do not
-affect this SDK-based MCP server.
+## Advanced skill installation
 
-Tools that deliberately read a protected source from an environment variable, such as
-secret creation or external-bucket import, require that one exact source variable to
-be added to the client configuration. Forward such variables only for the operation
-that needs them and remove them afterward; never add a blanket credential-variable
-allowlist.
-
-## Install the workflow skills
-
-Skills guide Codex and Claude Code through supported multi-step workflows but add no
-tools or permissions. The Python package includes every canonical skill.
-
-Install all skills for one or both clients:
+The setup command symlinks the complete catalogue. The lower-level command can install
+selected skills or target a project instead:
 
 ```console
-apolo-mcp skills install --client codex
-apolo-mcp skills install --client claude
-apolo-mcp skills install --client both
+apolo-mcp skills install --client codex <SKILL_NAME>
+apolo-mcp skills install --client claude --target project
 ```
 
-Use only one of those commands. User installation copies skills to `~/.agents/skills`
-for Codex and `~/.claude/skills` for Claude Code. To install into the current project,
-add `--target project`; use `--root <PROJECT>` to target a different project directory.
-You may name individual skills after the options instead of installing the complete
-catalog.
-
-The installer leaves a matching installation unchanged and refuses to replace a
-locally modified skill. After reviewing the differences, add `--overwrite` to replace
-it. In a source checkout, `--mode symlink` keeps development installations synchronized
-with the checkout. Codex and current Claude Code releases discover skill updates
-automatically; start a new session if a client does not show the newly installed skill.
+Symlink mode is the default. `--mode copy` creates a snapshot and replaces an existing
+installation by default. Use `--root <PROJECT>` with a project target. Codex installs
+skills in `.agents/skills`; Claude Code uses `.claude/skills`.
 
 ## Verify the installation
 
-1. Ask the client to call `get_apolo_context`.
+1. Restart the client and ask it to call `get_apolo_context`.
 2. Confirm the reported identity, cluster, organization, and project.
-3. Start without `APOLO_MCP_POLICY_MODE` and verify that a harmless invalid create
-   request is rejected by `read-only` policy before any platform mutation.
+3. Verify the selected policy in the returned context.
 4. Review the [safety model](safety.md) before enabling `managed` or `full`.
 
 Explicit context supplied to a tool applies only to that call and never changes saved
-Apolo CLI defaults.
-
-For unattended `full` operation inside an isolated R&D job, continue with
+Apolo CLI defaults. For unattended `full` operation, continue with
 [Full mode with a dedicated service account](../guides/full-mode-service-account.md).
