@@ -153,7 +153,7 @@ node --version
 python3 --version
 pipx list
 apolo --version
-apolo-mcp --help
+apolo-mcp --version
 # Run one or both, matching the installation:
 codex --version
 claude --version
