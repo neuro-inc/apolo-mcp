@@ -6,6 +6,7 @@ import argparse
 import os
 import sys
 
+from . import __version__
 from .client_setup import setup_client
 from .policy import POLICY_MODE_ENV, PolicyMode
 from .server import main as serve
@@ -14,6 +15,11 @@ from .skill_installer import add_install_arguments, install_from_args
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="apolo-mcp", description=__doc__)
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
+    )
     commands = parser.add_subparsers(dest="command")
     server = commands.add_parser("serve", help="run the stdio MCP server")
     server.add_argument(

@@ -4,8 +4,10 @@ import json
 import os
 from pathlib import Path
 
+import pytest
 import tomlkit
 
+from apolo_mcp import __version__
 from apolo_mcp.cli import main as cli_main
 from apolo_mcp.client_setup import (
     FORWARDED_ENV,
@@ -13,6 +15,13 @@ from apolo_mcp.client_setup import (
     configure_codex,
 )
 from apolo_mcp.policy import PolicyMode
+
+
+def test_cli_reports_package_version(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit, match="0"):
+        cli_main(["--version"])
+
+    assert capsys.readouterr().out == f"apolo-mcp {__version__}\n"
 
 
 def test_configure_codex_preserves_unrelated_settings(tmp_path: Path) -> None:
