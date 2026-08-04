@@ -6,14 +6,14 @@ release sequence within that month.
 
 [comment]: # (towncrier release notes start)
 
-## 26.8.1 (2026-08-04)
+# Apolo MCP 26.8.1 (2026-08-04)
 
 ### Misc
 
 - [#9](https://github.com/neuro-inc/apolo-mcp/issues/9)
 
 
-## 26.8.0 (2026-08-03)
+# Apolo MCP 26.8.0 (2026-08-03)
 
 ### Features
 
