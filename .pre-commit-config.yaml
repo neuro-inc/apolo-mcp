@@ -23,12 +23,12 @@ repos:
       - id: end-of-file-fixer
       - id: trailing-whitespace
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.1
+    rev: v0.16.6
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
       - id: ruff-format
   - repo: https://github.com/twisted/towncrier
-    rev: 25.8.0
+    rev: 26.9.0
     hooks:
       - id: towncrier-check
