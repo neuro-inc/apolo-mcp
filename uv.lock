@@ -397,7 +397,7 @@ dev = [
 
 [[package]]
 name = "apolo-sdk"
-version = "26.9.0"
+version = "26.10.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiobotocore" },
@@ -414,9 +414,9 @@ dependencies = [
     { name = "pyyaml" },
     { name = "toml" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/6e/a8/460ccf94d2b5fbe0af889e46afbc439fddc82cfd37fdf3dcc8504f00cac8/apolo_sdk-26.9.0.tar.gz", hash = "sha256:376e11c5ad3b76353c8e196c97981217d95b60972dfcd59709ef3d7a6dc2fc48", size = 215596, upload-time = "2026-09-28T09:29:29.585Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/87/54/df7b6c7a5443f38b340244e232446efe82b99a663782e076a9d3c5da0663/apolo_sdk-26.10.0.tar.gz", hash = "sha256:622de9d4dd0e005b8aa440123f8058f5d7ff1f44a0298e9046a765a592bd824d", size = 215559, upload-time = "2026-10-29T14:49:12.156Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/dc/45/12536d3adff1fa1982958820a9b9c5def708380f49d4be9673246747732f/apolo_sdk-26.9.0-py3-none-any.whl", hash = "sha256:0bce83c17be38ad31720ed79a161741e97b5f2f8ab7459eb4e91302f6cd4fdc0", size = 99926, upload-time = "2026-09-28T09:29:28.294Z" },
+    { url = "https://files.pythonhosted.org/packages/c4/57/a421869c10acd2586ee6fa922380b501e09a3d2bc43149efd600e87d5dd8/apolo_sdk-26.10.0-py3-none-any.whl", hash = "sha256:040bdc9b1465e9f12cbebea5c56281a5c7d0f240f66f6f7a35b18b4d23aa6fc5", size = 99937, upload-time = "2026-10-29T14:49:10.744Z" },
 ]
 
 [[package]]
