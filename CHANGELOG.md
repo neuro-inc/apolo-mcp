@@ -6,6 +6,11 @@ release sequence within that month.
 
 [comment]: # (towncrier release notes start)
 
+# Apolo MCP 26.11.0 (2026-11-03)
+
+No significant changes.
+
+
 # Apolo MCP 26.8.1 (2026-08-04)
 
 ### Misc
