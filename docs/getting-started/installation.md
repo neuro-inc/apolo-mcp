@@ -11,7 +11,7 @@ Set up Apolo MCP in three steps:
 
 ## 1. Install the command-line tools
 
-You need Python 3.11 or newer, `pipx`, access to an Apolo cluster, and Codex or Claude
+You need Python 3.12 or newer, `pipx`, access to an Apolo cluster, and Codex or Claude
 Code with local stdio MCP support. Docker is required only for image push and pull.
 
 Choose one Apolo installation. Install the complete client toolkit:

@@ -4,7 +4,7 @@ Use `node:22-bookworm-slim` as an example bootstrap image and record that
 exact mutable tag. Apolo job launch does not currently accept Docker image digest
 references. This is an upstream convenience image, not an Apolo-supported R&D image;
 another glibc-based Debian or Ubuntu image is acceptable when it provides Node.js 22
-and Python 3.11 or newer.
+and Python 3.12 or newer.
 
 Start the bounded job with `sleep infinity`, enter it with `apolo exec`, and install the
 runtime there. Before running package-manager or network commands, show the resolved
