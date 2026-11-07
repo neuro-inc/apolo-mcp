@@ -2,15 +2,15 @@
 
 Set up Apolo MCP in three steps:
 
-1. Install the Apolo command-line tools and either Codex or Claude Code.
+1. Install the Apolo command-line tools and Codex, Claude Code, or Xum (formerly Mux).
 2. Use `apolo-mcp setup` to register the MCP server and link its skills into the agent.
 3. Set any optional Apolo environment variables before launching the agent; the setup
    command has already configured the client to forward them when present.
 
 ## 1. Install the command-line tools
 
-You need Python 3.12 or newer, `pipx`, access to an Apolo cluster, and Codex or Claude
-Code with local stdio MCP support. Docker is required only for image push and pull.
+You need Python 3.12 or newer, `pipx`, access to an Apolo cluster, and Codex, Claude
+Code, or Xum with local stdio MCP support. Docker is required only for image push and pull.
 
 Choose one Apolo installation. Install the complete client toolkit:
 
@@ -31,7 +31,7 @@ Do not install both packages with `pipx`, and do not inject `apolo-mcp` into the
 `pipx upgrade apolo-mcp`.
 
 Install and authenticate the selected coding agent according to its vendor's
-instructions, then verify `codex --version` or `claude --version`.
+instructions, then verify `codex --version`, `claude --version`, or `xum --version`.
 
 ## 2. Configure the agent
 
@@ -40,6 +40,7 @@ Run one command for the client you use:
 ```console
 apolo-mcp setup codex --policy-mode read-only
 apolo-mcp setup claude --policy-mode read-only
+apolo-mcp setup xum --policy-mode read-only
 apolo-mcp setup both --policy-mode read-only
 ```
 
@@ -48,6 +49,7 @@ scope, configures the full environment-forwarding contract below, and symlinks e
 packaged skill into the client's user skill directory. The links point into the
 installed package, so `pipx upgrade` updates the skills without a separate import.
 Start a new agent session after setup or package upgrade.
+`both` continues to configure Codex and Claude Code only; configure Xum separately.
 
 `--policy-mode` is required in the documented workflow and selects the safe fallback
 used when the parent process does not define `APOLO_MCP_POLICY_MODE`. Choose
@@ -100,10 +102,29 @@ for private cross-project configuration, local scope for private current-project
 configuration, or project scope for a shared `.mcp.json`. Never commit expanded
 credentials.
 
+Xum's user configuration is `~/.xum/mcp.jsonc`. When `XUM_ROOT` is set (or its legacy
+alias `MUX_ROOT`), setup uses that directory for both MCP configuration and user skills.
+Setup preserves comments, trailing commas, and unrelated settings. Its minimal manual
+registration is:
+
+```json
+{
+  "servers": {
+    "apolo": "apolo-mcp serve --default-policy read-only"
+  }
+}
+```
+
+Xum runs this command in a shell and inherits the launch environment, including the
+variables below. Setup does not write their values into the configuration. For repo
+overrides, Xum reads `.xum/mcp.jsonc` in the project. In Settings → MCP, enable the
+`apolo` server for the workspace. See Xum's
+[MCP server documentation](https://github.com/coder/xum/blob/main/docs/config/mcp-servers.mdx).
+
 ## 3. Forward Apolo environment variables
 
 The setup command configures all variables in this contract. You set values only in
-the shell or protected job environment that launches Codex or Claude Code.
+the shell or protected job environment that launches Codex, Claude Code, or Xum.
 
 - **Required: `APOLO_MCP_POLICY_MODE`.** Selects `read-only`, `managed`, or `full` for
   this launch. When it is absent, the `--policy-mode` fallback chosen during setup is
@@ -138,11 +159,17 @@ selected skills or target a project instead:
 ```console
 apolo-mcp skills install --client codex <SKILL_NAME>
 apolo-mcp skills install --client claude --target project
+apolo-mcp skills install --client xum --target project
 ```
 
-Symlink mode is the default. `--mode copy` creates a snapshot and replaces an existing
+Symlink mode is the default except for Xum project targets, which copy skills because
+Xum rejects project skill symlinks outside the checkout.
+`--mode copy` creates a snapshot and replaces an existing
 installation by default. Use `--root <PROJECT>` with a project target. Codex installs
-skills in `.agents/skills`; Claude Code uses `.claude/skills`.
+skills in `.agents/skills`; Claude Code uses `.claude/skills`; Xum uses `.xum/skills`.
+User targets use these directories under the home directory. Xum also discovers the
+shared `.agents/skills` locations; see its
+[agent skills documentation](https://github.com/coder/xum/blob/main/docs/agents/agent-skills.mdx).
 
 ## Verify the installation
 

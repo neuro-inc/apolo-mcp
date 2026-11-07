@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -11,7 +12,12 @@ from typing import Any
 import tomlkit
 
 from .policy import POLICY_MODE_ENV, PolicyMode
-from .skill_installer import SKILL_NAMES, install_one, packaged_skills_root
+from .skill_installer import (
+    SKILL_NAMES,
+    destinations,
+    install_one,
+    packaged_skills_root,
+)
 
 
 FORWARDED_ENV = (
@@ -102,11 +108,66 @@ def configure_claude(policy_mode: PolicyMode, *, path: Path | None = None) -> Pa
     return config
 
 
+def _set_jsonc_property(text: str, keys: tuple[str, ...], value: str) -> str:
+    # Mask comments and trailing commas without shifting offsets into the original.
+    clean = re.sub(
+        r'"(?:[^"\\]|\\.)*"|//[^\r\n]*|/\*[\s\S]*?\*/',
+        lambda match: match[0] if match[0].startswith('"') else " " * len(match[0]),
+        text,
+    )
+    clean = re.sub(
+        r'"(?:[^"\\]|\\.)*"|,\s*(?=[}\]])',
+        lambda match: match[0] if match[0].startswith('"') else " " * len(match[0]),
+        clean,
+    )
+    if not clean.strip():
+        text += "\n{}\n"
+        clean += "\n{}\n"
+    document = json.loads(clean)
+    if not isinstance(document, dict):
+        raise ValueError("Xum MCP configuration and servers must be objects")
+    decoder = json.JSONDecoder()
+    cursor = clean.index("{") + 1
+    while True:
+        cursor += len(clean[cursor:]) - len(clean[cursor:].lstrip())
+        if clean[cursor] == "}":
+            break
+        name, cursor = decoder.raw_decode(clean, cursor)
+        cursor = clean.index(":", cursor) + 1
+        cursor += len(clean[cursor:]) - len(clean[cursor:].lstrip())
+        start = cursor
+        _, cursor = decoder.raw_decode(clean, cursor)
+        if name == keys[0]:
+            replacement = (
+                _set_jsonc_property(text[start:cursor], keys[1:], value)
+                if len(keys) > 1
+                else value
+            )
+            return text[:start] + replacement + text[cursor:]
+        cursor += len(clean[cursor:]) - len(clean[cursor:].lstrip())
+        if clean[cursor] == ",":
+            cursor += 1
+    replacement = value
+    for key in reversed(keys[1:]):
+        replacement = "{" + json.dumps(key) + ": " + replacement + "}"
+    entry = "\n  " + json.dumps(keys[0]) + ": " + replacement
+    opening = clean.index("{") + 1
+    return text[:opening] + entry + ("," if document else "") + text[opening:]
+
+
+def configure_xum(policy_mode: PolicyMode, *, path: Path | None = None) -> Path:
+    """Create or update Xum's user-level MCP registration, preserving JSONC comments."""
+    config = path or (destinations("user", "xum", None)[0].parent / "mcp.jsonc")
+    text = config.read_text(encoding="utf-8") if config.exists() else "{}\n"
+    command = "apolo-mcp " + " ".join(_server_args(policy_mode))
+    text = _set_jsonc_property(text, ("servers", "apolo"), json.dumps(command))
+    _atomic_write(config, text)
+    return config
+
+
 def install_linked_skills(client: str) -> list[tuple[str, Path]]:
     """Link all packaged skills into one supported client's user skill directory."""
-    destination_root = (
-        Path.home() / (".agents" if client == "codex" else ".claude") / "skills"
-    ).resolve()
+    destination_root = destinations("user", client, None)[0]
     source_root = packaged_skills_root()
     results: list[tuple[str, Path]] = []
     for name in SKILL_NAMES:
@@ -118,15 +179,15 @@ def install_linked_skills(client: str) -> list[tuple[str, Path]]:
 
 
 def setup_client(client: str, policy_mode: PolicyMode) -> list[str]:
-    """Configure MCP and linked skills for one or both supported clients."""
+    """Configure MCP and linked skills; both retains its Codex/Claude meaning."""
     clients = ("codex", "claude") if client == "both" else (client,)
     messages: list[str] = []
     for item in clients:
-        config = (
-            configure_codex(policy_mode)
-            if item == "codex"
-            else configure_claude(policy_mode)
-        )
+        config = {
+            "codex": configure_codex,
+            "claude": configure_claude,
+            "xum": configure_xum,
+        }[item](policy_mode)
         messages.append(f"configured {item}: {config}")
         messages.extend(
             f"{status}: {destination}"

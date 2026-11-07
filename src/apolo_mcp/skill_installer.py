@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import filecmp
+import os
 import shutil
 from importlib import resources
 from pathlib import Path
@@ -27,12 +28,17 @@ def _same_tree(left: Path, right: Path) -> bool:
 
 
 def _client_base(client: str, target: str, root: Path | None) -> Path:
+    directory = {"codex": ".agents", "claude": ".claude", "xum": ".xum"}[client]
     if target == "user":
-        if client == "codex":
-            return Path.home() / ".agents"
-        return Path.home() / ".claude"
+        if client == "xum":
+            return Path(
+                os.environ.get("XUM_ROOT")
+                or os.environ.get("MUX_ROOT")
+                or Path.home() / directory
+            )
+        return Path.home() / directory
     project = root if root is not None else Path.cwd()
-    return project / (".agents" if client == "codex" else ".claude")
+    return project / directory
 
 
 def destinations(target: str, client: str, root: Path | None) -> list[Path]:
@@ -92,20 +98,30 @@ def packaged_skills_root() -> Path:
 
 
 def add_install_arguments(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--client", choices=("codex", "claude", "both"), required=True)
+    parser.add_argument(
+        "--client", choices=("codex", "claude", "xum", "both"), required=True
+    )
     parser.add_argument("--target", choices=("user", "project"), default="user")
     parser.add_argument(
         "--root",
         type=Path,
         help="project root for target project (default: current directory)",
     )
-    parser.add_argument("--mode", choices=("copy", "symlink"), default="symlink")
+    parser.add_argument(
+        "--mode",
+        choices=("copy", "symlink"),
+        help="default: copy for Xum projects, symlink otherwise",
+    )
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--source", type=Path, help=argparse.SUPPRESS)
     parser.add_argument("names", nargs="*", metavar="SKILL")
 
 
 def install_from_args(args: argparse.Namespace) -> int:
+    # Xum rejects project skill symlinks that escape the checkout.
+    mode = args.mode or (
+        "copy" if args.client == "xum" and args.target == "project" else "symlink"
+    )
     names = tuple(args.names) or SKILL_NAMES
     unknown = sorted(set(names) - set(SKILL_NAMES))
     if unknown:
@@ -123,8 +139,8 @@ def install_from_args(args: argparse.Namespace) -> int:
             status = install_one(
                 source,
                 destination_root / name,
-                mode=args.mode,
-                overwrite=args.overwrite or args.mode == "copy",
+                mode=mode,
+                overwrite=args.overwrite or mode == "copy",
             )
             print(f"{status}: {destination_root / name}")
     return 0

@@ -13,8 +13,10 @@ from apolo_mcp.client_setup import (
     FORWARDED_ENV,
     configure_claude,
     configure_codex,
+    configure_xum,
 )
 from apolo_mcp.policy import PolicyMode
+from apolo_mcp.skill_installer import SKILL_NAMES, packaged_skills_root
 
 
 def test_cli_reports_package_version(capsys: pytest.CaptureFixture[str]) -> None:
@@ -46,6 +48,104 @@ def test_configure_claude_preserves_unrelated_settings(tmp_path: Path) -> None:
     assert apolo["args"] == ["serve", "--default-policy", "full"]
     assert set(apolo["env"]) == set(FORWARDED_ENV)
     assert apolo["env"]["APOLO_PASSED_CONFIG"] == "${APOLO_PASSED_CONFIG:-}"
+
+
+@pytest.mark.parametrize("policy", list(PolicyMode))
+def test_configure_xum_creates_config(tmp_path: Path, policy: PolicyMode) -> None:
+    config = tmp_path / ".xum" / "mcp.jsonc"
+    assert configure_xum(policy, path=config) == config
+    assert json.loads(config.read_text()) == {
+        "servers": {"apolo": f"apolo-mcp serve --default-policy {policy.value}"}
+    }
+    assert config.stat().st_mode & 0o777 == 0o600
+
+
+@pytest.mark.parametrize("text", ["", "// comment", "/* block comment */"])
+def test_configure_xum_accepts_empty_config(tmp_path: Path, text: str) -> None:
+    config = tmp_path / "mcp.jsonc"
+    config.write_text(text)
+    configure_xum(PolicyMode.READ_ONLY, path=config)
+    assert config.read_text().startswith(text)
+    assert '"apolo": "apolo-mcp serve --default-policy read-only"' in config.read_text()
+
+
+@pytest.mark.parametrize("existing", [False, True])
+def test_configure_xum_preserves_jsonc_and_is_idempotent(
+    tmp_path: Path, existing: bool
+) -> None:
+    config = tmp_path / "mcp.jsonc"
+    old = '"apolo": {"command": "old"},' if existing else ""
+    before = (
+        '// header\n{\n  "servers": {\n'
+        '    // keep this server\n    "other": "https://example.com/*path*/",\n'
+        f"    {old}\n  }},\n"
+        '  /* keep plugins */ "enabledPluginServers": ["other",],\n}\n'
+    )
+    config.write_text(before)
+    configure_xum(PolicyMode.MANAGED, path=config)
+    after = config.read_text()
+    assert "// header\n" in after
+    assert '// keep this server\n    "other": "https://example.com/*path*/",' in after
+    assert '/* keep plugins */ "enabledPluginServers": ["other",],' in after
+    assert '"apolo": "apolo-mcp serve --default-policy managed"' in after
+    assert '"command": "old"' not in after
+    configure_xum(PolicyMode.MANAGED, path=config)
+    assert config.read_text() == after
+
+
+def test_configure_xum_adds_servers_without_changing_other_properties(
+    tmp_path: Path,
+) -> None:
+    config = tmp_path / "mcp.jsonc"
+    config.write_text('{"enabledPluginServers": ["plugin"], /* comment */}\n')
+    configure_xum(PolicyMode.READ_ONLY, path=config)
+    assert '"enabledPluginServers": ["plugin"], /* comment */' in config.read_text()
+    assert (
+        '"servers": {"apolo": "apolo-mcp serve --default-policy read-only"}'
+        in config.read_text()
+    )
+
+
+@pytest.mark.parametrize(
+    "text", ["[]", '{"servers": []}', '{"servers": null}', '{"servers":', "{/*broken}"]
+)
+def test_configure_xum_rejects_invalid_config_without_writing(
+    tmp_path: Path, text: str
+) -> None:
+    config = tmp_path / "mcp.jsonc"
+    config.write_text(text)
+    with pytest.raises(ValueError):
+        configure_xum(PolicyMode.READ_ONLY, path=config)
+    assert config.read_text() == text
+
+
+def test_cli_setup_xum_links_skills_without_saving_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path))
+    monkeypatch.delenv("XUM_ROOT", raising=False)
+    monkeypatch.delenv("MUX_ROOT", raising=False)
+    monkeypatch.setenv("APOLO_PASSED_CONFIG", "test-sensitive-value")
+    assert cli_main(["setup", "xum", "--policy-mode", "managed"]) == 0
+    config = tmp_path / ".xum" / "mcp.jsonc"
+    assert "test-sensitive-value" not in config.read_text()
+    assert json.loads(config.read_text())["servers"]["apolo"] == (
+        "apolo-mcp serve --default-policy managed"
+    )
+    for name in SKILL_NAMES:
+        link = tmp_path / ".xum" / "skills" / name
+        assert link.is_symlink()
+        assert link.resolve() == packaged_skills_root() / name
+    assert cli_main(["setup", "xum", "--policy-mode", "managed"]) == 0
+
+
+def test_cli_setup_xum_respects_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("XUM_ROOT", str(tmp_path / "custom"))
+    assert cli_main(["setup", "xum"]) == 0
+    assert (tmp_path / "custom" / "mcp.jsonc").is_file()
+    assert (tmp_path / "custom" / "skills" / SKILL_NAMES[0]).is_symlink()
 
 
 def test_serve_uses_fallback_and_removes_empty_expansions(

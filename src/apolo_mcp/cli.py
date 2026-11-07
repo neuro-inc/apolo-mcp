@@ -31,7 +31,7 @@ def _parser() -> argparse.ArgumentParser:
     setup = commands.add_parser(
         "setup", help="configure MCP and linked skills for an agent client"
     )
-    setup.add_argument("client", choices=("codex", "claude", "both"))
+    setup.add_argument("client", choices=("codex", "claude", "xum", "both"))
     setup.add_argument(
         "--policy-mode",
         choices=tuple(item.value for item in PolicyMode),
@@ -41,7 +41,7 @@ def _parser() -> argparse.ArgumentParser:
     skills = commands.add_parser("skills", help="manage packaged workflow skills")
     skill_commands = skills.add_subparsers(dest="skills_command", required=True)
     install = skill_commands.add_parser(
-        "install", help="install skills for Codex and/or Claude Code"
+        "install", help="install skills for Codex, Claude Code, or Xum"
     )
     add_install_arguments(install)
     return parser
