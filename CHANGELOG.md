@@ -6,6 +6,13 @@ release sequence within that month.
 
 [comment]: # (towncrier release notes start)
 
+# Apolo MCP 26.11.2 (2026-11-07)
+
+## Features
+
+- Add Xum (formerly Mux) client setup and user/project skill installation, preserving existing MCP configuration comments and settings. ([#63](https://github.com/neuro-inc/apolo-mcp/issues/63))
+
+
 # Apolo MCP 26.11.1 (2026-11-03)
 
 No significant changes.
