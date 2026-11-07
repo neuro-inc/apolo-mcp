@@ -14,7 +14,7 @@ values and one-time credentials are intentionally outside the model-visible inte
 
 Follow the
 [installation and client configuration guide](docs/getting-started/installation.md)
-for prerequisites, server and skill installation, Codex and Claude Code registration,
+for prerequisites, server and skill installation, Codex, Claude Code, and Xum registration,
 per-session policy selection, and verification. Local stdio is the only supported
 transport; shared-credential remote service operation is unsupported.
 

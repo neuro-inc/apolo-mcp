@@ -60,6 +60,25 @@ def test_user_destinations_use_supported_skill_locations(
     ]
 
 
+def test_xum_skill_destinations(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: tmp_path / "home"))
+    monkeypatch.delenv("XUM_ROOT", raising=False)
+    monkeypatch.delenv("MUX_ROOT", raising=False)
+    assert destinations("user", "xum", None) == [
+        (tmp_path / "home" / ".xum" / "skills").resolve()
+    ]
+    assert destinations("project", "xum", tmp_path) == [
+        (tmp_path / ".xum" / "skills").resolve()
+    ]
+    monkeypatch.setenv("MUX_ROOT", str(tmp_path / "legacy"))
+    assert destinations("user", "xum", None) == [tmp_path / "legacy" / "skills"]
+    monkeypatch.setenv("XUM_ROOT", str(tmp_path / "custom"))
+    assert destinations("user", "xum", None) == [tmp_path / "custom" / "skills"]
+    assert destinations("project", "xum", tmp_path) == [tmp_path / ".xum" / "skills"]
+
+
 def test_default_skill_set_contains_only_runtime_platform_workflows() -> None:
     assert SKILL_NAMES == (
         "apolo-platform-user-context",
@@ -135,3 +154,30 @@ def test_cli_copy_mode_replaces_existing_snapshot(tmp_path: Path) -> None:
     )
     assert not destination.is_symlink()
     assert (destination / "SKILL.md").read_text() == "new"
+
+
+def test_cli_installs_selected_skill_for_xum(tmp_path: Path) -> None:
+    source_root = tmp_path / "source"
+    name = SKILL_NAMES[0]
+    skill(source_root / name)
+    assert (
+        cli_main(
+            [
+                "skills",
+                "install",
+                "--client",
+                "xum",
+                "--target",
+                "project",
+                "--root",
+                str(tmp_path / "project"),
+                "--source",
+                str(source_root),
+                name,
+            ]
+        )
+        == 0
+    )
+    destination = tmp_path / "project" / ".xum" / "skills" / name
+    assert not destination.is_symlink()
+    assert (destination / "SKILL.md").read_text() == "canonical"

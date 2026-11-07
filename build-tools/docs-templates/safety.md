@@ -24,7 +24,7 @@ afterward has no effect. There is no policy-file override and no tool argument t
 elevate or bypass the running server policy.
 
 Follow the [installation and client configuration](installation.md) for
-Codex and Claude Code registration, environment forwarding, scope selection, skill
+Codex, Claude Code, and Xum registration, environment forwarding, scope selection, skill
 installation, and per-launch policy commands.
 
 Successful mutations are written to an append-only lifecycle journal as `created`,
