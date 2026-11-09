@@ -267,7 +267,7 @@ wheels = [
 
 [[package]]
 name = "apolo-cli"
-version = "26.7.1"
+version = "26.11.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "apolo-sdk" },
@@ -282,29 +282,30 @@ dependencies = [
     { name = "ruamel-yaml" },
     { name = "wcwidth" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f0/fd/ac37cd232a727f1493f0ef731a4a40311108632a2cc2e4cea37fdb6189b6/apolo_cli-26.7.1.tar.gz", hash = "sha256:a15196d7ce34d594b5e98b9528a25f96924c65dfd7cbb08bb3f42fe74eaf9f1a", size = 274237, upload-time = "2026-07-30T09:41:49.653Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/4d/59/98888451190c0882a4edf4d6f8ac027d50b68f10c3b219cb752009ae009f/apolo_cli-26.11.2.tar.gz", hash = "sha256:a57d28758953776eb7a13f07db070c70dd76d71c7fb40e92343f1e09773bb8fd", size = 280265, upload-time = "2026-11-04T17:03:57.851Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d3/56/d177249aa9d63b7da6506f00d1116c1c3f187b8b0651fdd0897dd85d9610/apolo_cli-26.7.1-py3-none-any.whl", hash = "sha256:e13ad25bd62dcaf1937ec22ac49aca2d05d6ce61d52cd19b88eed8d4c1ebf0b6", size = 142109, upload-time = "2026-07-30T09:41:48.247Z" },
+    { url = "https://files.pythonhosted.org/packages/17/63/bd108d15383d6e8d34de2e7b4ddbadbb162100da17ed7a3c5c588044ea1e/apolo_cli-26.11.2-py3-none-any.whl", hash = "sha256:e6958066435bc7702b37a4a599c0f330bf4792c328f71121a38a5354f6816f38", size = 143515, upload-time = "2026-11-04T17:03:56.376Z" },
 ]
 
 [[package]]
 name = "apolo-extras"
-version = "25.9.0"
+version = "26.11.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "apolo-cli" },
+    { name = "apolo-sdk" },
     { name = "click" },
     { name = "pyyaml" },
     { name = "toml" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fb/db/68c9f8ce1430870a1face9adbd47f26b15b76cbaa168e8d9e380463ce606/apolo_extras-25.9.0.tar.gz", hash = "sha256:9cb884938ec58e714e50cd75b5435a91d133a6d840600d1d96de1c9c0e29a969", size = 47189, upload-time = "2025-09-05T13:03:13.853Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/43/ab/d148ae4592b7aa9824a3c3e87cc615b84d12253988cc307aacb22a8e688c/apolo_extras-26.11.1.tar.gz", hash = "sha256:284ac730bd14d5cd381c78384e3d9f9d7a51c5ddcbd66e4edf65da08a714de7e", size = 33263, upload-time = "2026-11-03T15:55:09.133Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b6/c9/3648a80ea6b052f10f0a1dd76b4d321d04bde03812797f9ff6eb446848c4/apolo_extras-25.9.0-py3-none-any.whl", hash = "sha256:0f652cb4ecb35addb0cf1ef351072ed2f1149d43adaa4e0077c1e313bb27c964", size = 61358, upload-time = "2025-09-05T13:03:12.687Z" },
+    { url = "https://files.pythonhosted.org/packages/c3/5e/25e9294c9eaf0012c483f7bc8dd1f9c1cc6367e6231ca7116513e5c4f384/apolo_extras-26.11.1-py3-none-any.whl", hash = "sha256:e77662928652fa0664f42c4842c5d3a2bcdc2b2f577d9f8416148e0d346dc5b3", size = 39507, upload-time = "2026-11-03T15:55:07.751Z" },
 ]
 
 [[package]]
 name = "apolo-flow"
-version = "26.7.2"
+version = "26.11.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "apolo-cli" },
@@ -319,9 +320,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "yarl" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/97/ed/982c8eea5e9a6390d8b3c2fd0909fac15d6d0159582530fc5327b80018d3/apolo_flow-26.7.2.tar.gz", hash = "sha256:458aef331eaf3f5266746a66d6e0ecbdff7a7525b0bb1de0e6213bef6e41072f", size = 100452, upload-time = "2026-07-30T11:29:58.983Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f7/bf/dda8469f19aabcf2e83c39e0dec9f6b703d1af692dd9707de8eea796f490/apolo_flow-26.11.0.tar.gz", hash = "sha256:f7b6ba384f9270670eb29cfe7571bbb0e3dfc2aaae38172cdee45c451877bbb6", size = 101216, upload-time = "2026-11-03T15:57:19.646Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/aa/53/def6f907617a9bbaa4abe1255f9220ac790c5e7be094f9ec8485f213ed74/apolo_flow-26.7.2-py3-none-any.whl", hash = "sha256:a9ad6386573420aadc05fbb5f4e4c8df8dc5ba34905c2a1b1a59fb7d8251f0ee", size = 112200, upload-time = "2026-07-30T11:29:57.872Z" },
+    { url = "https://files.pythonhosted.org/packages/85/ff/6b93d73a4f5d0844f6a5aa7f278b050d8716bff974b2e28c0aec1193cf8f/apolo_flow-26.11.0-py3-none-any.whl", hash = "sha256:f1cac9f7df4bd084468f08dcb3f5639f125f83f4e82ec3e086dfbfbe13aba12c", size = 112689, upload-time = "2026-11-03T15:57:18.199Z" },
 ]
 
 [[package]]
@@ -374,7 +375,7 @@ dev = [
 
 [[package]]
 name = "apolo-sdk"
-version = "26.11.0"
+version = "26.11.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiobotocore" },
@@ -391,9 +392,9 @@ dependencies = [
     { name = "pyyaml" },
     { name = "toml" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ff/2a/5f5510c45575a483941dab1156ed8ab6b665f45b07935633b8128e7c5d65/apolo_sdk-26.11.0.tar.gz", hash = "sha256:6574cf6ed9c0fe92d32a9f12e92653fc66cb3e96f1610b0ea0a2c7650bfe9619", size = 215739, upload-time = "2026-11-02T19:13:51.567Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1b/6e/881f10b65b11cdc14d58fcf51f9712968bf3b60b5f310cbcba3b6eef5686/apolo_sdk-26.11.2.tar.gz", hash = "sha256:822cd785f270687549cc508222f8be2329e27a6bd4bc9a3e40c226ca2156960d", size = 223086, upload-time = "2026-11-04T17:03:55.18Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/16/e3/b1ff7e7a0708c6356721a761e5fa6a1cb3bbd259755adf12b16891686d20/apolo_sdk-26.11.0-py3-none-any.whl", hash = "sha256:ebe0267d710a93b39617243897a30cc1fd7596de55372b970cbb80c67df93689", size = 99938, upload-time = "2026-11-02T19:13:50.457Z" },
+    { url = "https://files.pythonhosted.org/packages/b8/0d/ab5bd4bf201206299eeb20b399ab3025d718ad8f35a89ac765755bbfe68b/apolo_sdk-26.11.2-py3-none-any.whl", hash = "sha256:3c35077337454e750d24f044fed4105abe0a412dc9f993ed35f2c70412eaadf5", size = 102106, upload-time = "2026-11-04T17:03:54.007Z" },
 ]
 
 [[package]]
